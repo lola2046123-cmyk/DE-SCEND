@@ -1,0 +1,256 @@
+{
+  "_meta": {
+    "version": "0.02",
+    "description": "《零号电梯》事件概率与数值配置表。修改此文件即可调整游戏平衡，无需改动代码。",
+    "lastUpdated": "2026-04-09"
+  },
+
+  "thresholds": {
+    "_comment": "基础事件带阈值（未受偏移/乘客/环境影响时）。单随机数 r∈[0,1) 按区间映射到四种结果。",
+    "liquidationMax": 0.12,
+    "negativeMax": 0.25,
+    "positiveMax": 0.85
+  },
+
+  "outcomeBands": {
+    "_comment": "各结果带的资产倍率参数",
+    "liquidation": {
+      "creditsMultiplier": 0
+    },
+    "negative": {
+      "creditsMultiplierMin": 0.7,
+      "creditsMultiplierMax": 0.9
+    },
+    "positive": {
+      "creditsMultiplierMin": 1.1,
+      "creditsMultiplierMax": 1.2
+    },
+    "double": {
+      "creditsMultiplier": 2
+    }
+  },
+
+  "corruption": {
+    "_comment": "偏移指数系统。影响清算带宽度，各事件结果后累积不同数值。",
+    "max": 3.0,
+    "liquidationShift": 0.05,
+    "liquidationShiftCap": 0.20,
+    "perFloor": 0.08,
+    "onPositive": 0.05,
+    "onNegative": 0.12,
+    "onDouble": 0.35,
+    "onReroll": 0.22,
+    "onVipAuditRelief": -0.11,
+    "onDangerUnveil": 0.17
+  },
+
+  "floorLeverage": {
+    "_comment": "楼层杠杆系数。养猪期(1-3)平稳，之后指数级扩张。",
+    "earlyFloorMax": 3,
+    "earlyLeverage": 1.8,
+    "growthPerFloor": 0.65,
+    "maxLeverage": 8.0
+  },
+
+  "pigPeriod": {
+    "_comment": "养猪期（前N层保护期）：清算概率锁0，负面限幅。",
+    "maxFloor": 3,
+    "liquidationLocked": true,
+    "negativeMaxRatio": 0.55,
+    "negativeMinThreshold": 0.06,
+    "maxLossRate": -0.12,
+    "stakeFloorToInitialBet": true
+  },
+
+  "baselineGrowth": {
+    "_comment": "每升一层的基线资产增长倍率",
+    "multiplier": 1.1
+  },
+
+  "floorsJumped": {
+    "_comment": "每次上行随机跳跃的楼层数范围",
+    "min": 1,
+    "max": 8
+  },
+
+  "breach": {
+    "_comment": "Hiss Breach（入侵）系统。开门后概率触发，限时内不撤离则自动清算。",
+    "baseProbability": 0.10,
+    "minFloor": 5,
+    "durationMs": 5000,
+    "minProbability": 0.028,
+    "maxProbability": 0.44,
+    "dangerBonus": 0.075,
+    "vipReduction": -0.042,
+    "vipDangerComboBonus": 0.115
+  },
+
+  "passenger": {
+    "_comment": "乘客身份系统。控制上下车、类型权重、阈值/资本修正、伪装概率。",
+    "maxOnboard": 2,
+    "boardChance": 0.40,
+    "departChance": 0.30,
+    "minFloor": 3,
+    "types": {
+      "VIP": {
+        "weight": 35,
+        "liquidationShift": -0.04,
+        "negShift": -0.02,
+        "creditsMod": 1.15,
+        "disguiseChance": 0,
+        "volatile": false
+      },
+      "SCAMMER": {
+        "weight": 35,
+        "liquidationShift": 0.06,
+        "negShift": 0.03,
+        "creditsMod": 0.85,
+        "disguiseChance": 1.0,
+        "volatile": false
+      },
+      "DANGER": {
+        "weight": 30,
+        "liquidationShift": 0.08,
+        "negShift": 0.02,
+        "creditsMod": 1.0,
+        "disguiseChance": 0.5,
+        "volatile": true
+      }
+    },
+    "combos": {
+      "vipScammer": {
+        "liquidationShift": 0.035,
+        "negShift": 0.02,
+        "creditsMult": 1.2
+      },
+      "vipDanger": {
+        "liquidationShift": -0.048,
+        "negShift": 0.062,
+        "creditsMult": 0.93
+      }
+    },
+    "volatilePositiveChance": 0.6,
+    "volatilePositiveMult": 1.25,
+    "volatileNegativeMult": 0.75
+  },
+
+  "surprise": {
+    "_comment": "惊喜事件。非清算后额外掷骰触发，概率随贪婪(楼层)增长。",
+    "minFloor": 3,
+    "coinRain": {
+      "baseProbability": 0.05,
+      "creditsBonusRatio": 0.25
+    },
+    "skipFloor": {
+      "baseProbability": 0.04,
+      "floorsToSkip": 1
+    },
+    "greedSaturationFloor": 30
+  },
+
+  "envEvents": {
+    "_comment": "环境事件。每5层轮换一次，持续至下次覆盖。",
+    "triggerInterval": 5,
+    "minFloor": 5,
+    "events": {
+      "LIGHTS_OUT": {
+        "description": "灯光熄灭 / 本层倍率封蔽",
+        "mechanicEffect": "display_only"
+      },
+      "CORRUPTION_SURGE": {
+        "description": "偏移涨潮 / 偏移增速×2",
+        "corruptionMultiplier": 2
+      },
+      "BAND_DRIFT": {
+        "description": "阈值漂移 / 危险带扩张",
+        "liquidationShiftBonus": 0.028
+      }
+    }
+  },
+
+  "safeNode": {
+    "_comment": "伪救赎安全屋。指定楼层首次到达触发，可选净化(扣资产清偏移)或跳过。",
+    "floors": [5, 10],
+    "purgeCostRatio": 0.20,
+    "purgeResetsCorruption": true
+  },
+
+  "quota": {
+    "_comment": "配额系统。玩家须积累资产超过此值才可正常撤离。",
+    "target": 10000,
+    "pressureMaxShift": 0.065,
+    "pressureLinearFactor": 0.075,
+    "nearQuotaRange": 0.2,
+    "nearQuotaPeakShift": 0.038
+  },
+
+  "item": {
+    "_comment": "物品系统（软盘/模块盘）。初始数量、模式、制动保留比例。",
+    "floppyDisk": {
+      "initialCount": 3,
+      "brakeRetainRatio": 0.30
+    }
+  },
+
+  "bossChallenge": {
+    "_comment": "委员会质询。撤离时若连胜达标且命中概率则弹出质询。",
+    "minConsecutiveWins": 2,
+    "triggerProbability": 0.30
+  },
+
+  "biome": {
+    "_comment": "场景Biome切换。按楼层范围自动换肤。",
+    "ranges": [
+      { "minFloor": 1,  "maxFloor": 10, "biome": "admin" },
+      { "minFloor": 11, "maxFloor": 25, "biome": "maintenance" },
+      { "minFloor": 26, "maxFloor": 9999, "biome": "supernatural" }
+    ]
+  },
+
+  "cardSelection": {
+    "_comment": "丧尸楼层卡牌选取系统。电梯开门后出现灵异人物，弹出3张身份卡牌供选择，翻牌揭示收益或爆仓事件。",
+    "enabled": true,
+    "cardsPerRound": 3,
+    "preShowDelayMs": 2500,
+    "figureAppearMs": 800,
+    "cardFlipMs": 600,
+    "resultShowMs": 2000,
+
+    "ghostFigures": [
+      { "id": "medic",   "src": "assets/subjects/Subject 02.png", "name": "亡灵医师", "weight": 50 },
+      { "id": "wraith",  "src": "assets/subjects/Subject 03.png", "name": "血蚀怨灵", "weight": 50 }
+    ],
+
+    "identities": [
+      { "id": "elder",    "name": "神秘老人",   "glyph": "👴", "weight": 25, "luckBias":  0.05 },
+      { "id": "child",    "name": "诡异小孩",   "glyph": "👦", "weight": 20, "luckBias": -0.08 },
+      { "id": "handsome", "name": "俊美青年",   "glyph": "🧑", "weight": 20, "luckBias":  0.0  },
+      { "id": "woman",    "name": "苍白女人",   "glyph": "👩", "weight": 15, "luckBias":  0.03 },
+      { "id": "shadow",   "name": "无面黑影",   "glyph": "🕴️", "weight": 10, "luckBias": -0.12 },
+      { "id": "doctor",   "name": "白衣医生",   "glyph": "🧑‍⚕️", "weight": 10, "luckBias":  0.06 }
+    ],
+
+    "rewardEvents": [
+      { "id": "windfall",         "name": "意外横财",   "description": "在墙缝中发现一笔遗忘的应急基金",         "creditsBonusRatio": 0.30, "corruptionDelta": 0,     "weight": 25 },
+      { "id": "energy_crystal",   "name": "能量晶体",   "description": "捡到高纯度能量晶体，价值不菲",           "creditsBonusRatio": 0.20, "corruptionDelta": 0.05,  "weight": 30 },
+      { "id": "audit_pass",       "name": "审计通过",   "description": "本层审计结果良好，配额压力暂时缓解",     "creditsBonusRatio": 0.10, "corruptionDelta": -0.15, "weight": 20 },
+      { "id": "ghost_tip",        "name": "幽灵线报",   "description": "一个声音在耳边低语了下一层的安全路径",   "creditsBonusRatio": 0.05, "corruptionDelta": -0.10, "weight": 15 },
+      { "id": "time_rift",        "name": "时间裂缝",   "description": "短暂的时空扭曲让你的资产翻了个跟斗",     "creditsBonusRatio": 0.50, "corruptionDelta": 0.20,  "weight": 8  },
+      { "id": "blessed",          "name": "祝福之光",   "description": "一道暖光笼罩电梯，偏移指数大幅回退",     "creditsBonusRatio": 0.08, "corruptionDelta": -0.30, "weight": 7  }
+    ],
+
+    "bustEvents": [
+      { "id": "ghost_tax",        "name": "亡灵税",     "description": "这一层的幽灵向你征收了通行税",           "creditsLossRatio": 0.25, "corruptionDelta": 0.10,  "weight": 25 },
+      { "id": "curse",            "name": "楼层诅咒",   "description": "踏入了被诅咒的区域，资产被侵蚀",         "creditsLossRatio": 0.35, "corruptionDelta": 0.15,  "weight": 20 },
+      { "id": "trap_floor",       "name": "陷阱楼层",   "description": "地板突然塌陷，紧急制动消耗了大量资源",   "creditsLossRatio": 0.20, "corruptionDelta": 0.08,  "weight": 22 },
+      { "id": "hiss_whisper",     "name": "希斯低语",   "description": "希斯的低语侵入意识，偏移指数急剧飙升",   "creditsLossRatio": 0.10, "corruptionDelta": 0.35,  "weight": 18 },
+      { "id": "reality_collapse", "name": "现实崩塌",   "description": "楼层空间折叠，资产被压缩至极限",         "creditsLossRatio": 0.50, "corruptionDelta": 0.25,  "weight": 10 },
+      { "id": "soul_drain",       "name": "灵魂汲取",   "description": "某种存在吸走了你的生命能量和资产",       "creditsLossRatio": 0.40, "corruptionDelta": 0.20,  "weight": 10 }
+    ],
+
+    "rewardTotalWeight": 0.55,
+    "bustTotalWeight": 0.45,
+
+    "_note": "rewardTotalWeight + bustTotalWeight = 1.0。每张卡的收益/爆仓由此概率决定，再在对应池中按 weight 加权随机选取具体事件。identities 的 luckBias 会额外偏移该卡的收益概率。"
+  }
+}

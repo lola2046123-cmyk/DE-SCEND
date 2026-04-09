@@ -4,9 +4,9 @@
  * 新增：
  *   - corruption（偏移指数）：影响赔率曲线，随楼层 / 结果累积
  *   - inventory (物品栏)：物品系统入口，含 The Floppy Disk
- *   - 事件带重构：BOOM_MAX = base + corruption * BOOM_SHIFT
+ *   - 事件带：LIQUIDATION_MAX = base + corruption × LIQUIDATION_SHIFT（强制清算带）
  *   - useItem(id) / rerollCurrentFloor()
- *   - HISS_BREACH 状态：开门后 10% 概率触发 5s 倒计时，超时自动 Boom
+ *   - HISS_BREACH：开门后 10% 概率触发 5s 倒计时，超时触发强制清算
  */
 
 (function (global) {
@@ -18,9 +18,9 @@
 
   /** 基础事件带阈值（未受腐蚀时） */
   var THRESHOLDS = {
-    BOOM_MAX:     0.12,
-    NEGATIVE_MAX: 0.25,
-    POSITIVE_MAX: 0.85
+    LIQUIDATION_MAX: 0.12,
+    NEGATIVE_MAX:    0.25,
+    POSITIVE_MAX:    0.85
   };
 
   var STATES = {
@@ -29,10 +29,24 @@
     EVALUATING:  'EVALUATING',
     REVEALING:   'REVEALING',
     DECIDING:    'DECIDING',
-    HISS_BREACH: 'HISS_BREACH',   // 新增：偏移突破倒计时（Hiss Breach）
+    HISS_BREACH: 'HISS_BREACH',
+    SAFE_NODE:   'SAFE_NODE',    // 补给站（第 5/10 层伪救赎安全屋）
     GAME_OVER:   'GAME_OVER',
-    CASHED_OUT:  'CASHED_OUT'
+    CASHED_OUT:  'CASHED_OUT',
+    DEBT_CASHOUT: 'DEBT_CASHOUT'  // 配额未达成时强行撤离
   };
+
+  /** 伪救赎安全屋楼层（每局仅触发一次） */
+  var SAFE_NODE_FLOORS = [5, 10];
+
+  /**
+   * 楼层杠杆系数。
+   * 养猪期（1-3 层）平稳放大，5 层起指数级扩张，让本金越大暴富越快、抽水越狠。
+   */
+  function floorLeverage(floor) {
+    if (floor <= 3) return 1.8;
+    return Math.min(8.0, 1.8 + (floor - 3) * 0.65);
+  }
 
   /**
    * 偏移指数参数
@@ -40,13 +54,12 @@
    *   corruption 取值范围 [0, MAX]（浮点数）
    *   corruptionRatio = corruption / MAX  → [0, 1] 供 UI 使用
    *
-   * BOOM_SHIFT 决定偏移指数对爆炸概率的放大系数：
-   *   BOOM_MAX_effective = THRESHOLDS.BOOM_MAX + corruption × BOOM_SHIFT
-   *   最大时（corruption=3）：0.12 + 3×0.05 = 0.27，是基础值的 2.25 倍
+   * LIQUIDATION_SHIFT：偏移指数对「强制清算」概率带的放大系数
+   *   LIQUIDATION_MAX_effective = THRESHOLDS.LIQUIDATION_MAX + corruption × LIQUIDATION_SHIFT
    */
   var CORRUPTION = {
-    MAX:          3.0,
-    BOOM_SHIFT:   0.05,    // final_event_chance = base + corruption * BOOM_SHIFT
+    MAX:               3.0,
+    LIQUIDATION_SHIFT: 0.05,
     PER_FLOOR:    0.08,    // 每升一层
     ON_POSITIVE:  0.05,    // 正面结果：贪婪副作用
     ON_NEGATIVE:  0.12,    // 负面结果：创伤加剧
@@ -70,25 +83,80 @@
     TYPES: {
       VIP: {
         identity: 'VIP', weight: 35,
-        thresholdMod: { boomShift: -0.04, negShift: -0.02 },
+        thresholdMod: { liquidationShift: -0.04, negShift: -0.02 },
         creditsMod: 1.15,
         disguiseChance: 0
       },
       SCAMMER: {
         identity: 'SCAMMER', weight: 35,
-        thresholdMod: { boomShift: 0.06, negShift: 0.03 },
+        thresholdMod: { liquidationShift: 0.06, negShift: 0.03 },
         creditsMod: 0.85,
         disguiseChance: 1.0
       },
       DANGER: {
         identity: 'DANGER', weight: 30,
-        thresholdMod: { boomShift: 0.08, negShift: 0.02 },
+        thresholdMod: { liquidationShift: 0.08, negShift: 0.02 },
         creditsMod: 1.0,
         volatile: true,
         disguiseChance: 0.5
       }
     }
   };
+
+  /* =====================================================================
+   * 事件叙事词典
+   * ===================================================================== */
+
+  var OUTCOME_NARRATIVE_POOL = {
+    DOUBLE: [
+      { tag: '资产裂变', text: '触发高维金融漏洞，账面暴增 · 视同意外分红入账' },
+      { tag: '意外分红', text: '系统发放特别超额津贴 · 高阶收容物估值暴增' },
+      { tag: '财富跃升', text: '跨维度套利窗口开放 · 杠杆已自动拉满' }
+    ],
+    POSITIVE_HIGH: [
+      { tag: '财富跃升', text: '大额账面增值 · 流动性注入' },
+      { tag: '盲盒大奖', text: '截获高价值能量晶体 · 收益自动结算' },
+      { tag: '资产裂变', text: '高频套利成功执行 · 本金倍率激活' }
+    ],
+    POSITIVE_LOW: [
+      { tag: '意外分红', text: '合规红利入账 · 可继续上行放大收益' },
+      { tag: '特别津贴', text: '微额系统补贴已入账 · 继续上行可翻倍' }
+    ],
+    NEGATIVE: [
+      { tag: '恶意做空', text: '遭遇不明机构做空 · 账面强制收缩' },
+      { tag: '违规罚款', text: '触犯联邦法案 §7.3 · 强制扣款执行' },
+      { tag: '通货膨胀', text: '跨维度购买力蒸发 · 资产被迫缩水' }
+    ],
+    LIQUIDATION: [
+      { tag: '强制清算', text: '联邦控制局启动破产程序 · 账面核销' }
+    ]
+  };
+
+  /**
+   * 根据 outcome 返回叙事文案对象 { tag, text }。
+   * 供 UI 在结果前 0.5s 展示「事件短文本」制造悬念。
+   * @param {object} outcome
+   * @returns {{ tag: string, text: string }|null}
+   */
+  function getOutcomeNarrative(outcome) {
+    if (!outcome) return null;
+    var pool;
+    if (outcome.kind === 'DOUBLE') {
+      pool = OUTCOME_NARRATIVE_POOL.DOUBLE;
+    } else if (outcome.kind === 'POSITIVE') {
+      pool = (outcome.creditsMultiplier >= 1.16 || (outcome._effectiveMultiplier && outcome._effectiveMultiplier >= 1.16))
+        ? OUTCOME_NARRATIVE_POOL.POSITIVE_HIGH
+        : OUTCOME_NARRATIVE_POOL.POSITIVE_LOW;
+    } else if (outcome.kind === 'NEGATIVE') {
+      pool = OUTCOME_NARRATIVE_POOL.NEGATIVE;
+    } else if (outcome.kind === 'LIQUIDATION') {
+      pool = OUTCOME_NARRATIVE_POOL.LIQUIDATION;
+    } else {
+      return null;
+    }
+    if (!pool || !pool.length) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
 
   /** 动态环境事件（每 5 层轮换） */
   var ENV_EVENT_IDS = ['LIGHTS_OUT', 'CORRUPTION_SURGE', 'BAND_DRIFT'];
@@ -98,14 +166,15 @@
   }
 
   function aggregatePassengerModifiers(passengers) {
-    var boom = 0, neg = 0, cred = 1;
+    var liq = 0, neg = 0, cred = 1;
     var hasVolatile = false;
     var hasVip = false, hasScammer = false, hasDanger = false;
-    var i, p;
+    var i, p, tm;
     for (i = 0; i < passengers.length; i++) {
       p = passengers[i];
-      boom += (p.thresholdMod && p.thresholdMod.boomShift) || 0;
-      neg  += (p.thresholdMod && p.thresholdMod.negShift)  || 0;
+      tm = p.thresholdMod;
+      liq += (tm && (tm.liquidationShift != null ? tm.liquidationShift : tm.boomShift)) || 0;
+      neg += (tm && tm.negShift) || 0;
       if (p.creditsMod && p.creditsMod !== 1) cred *= p.creditsMod;
       if (p.volatile) hasVolatile = true;
       if (p.identity === 'VIP') hasVip = true;
@@ -113,23 +182,22 @@
       if (p.identity === 'DANGER') hasDanger = true;
     }
     if (hasVip && hasScammer) {
-      boom += 0.035;
-      neg  += 0.02;
+      liq += 0.035;
+      neg += 0.02;
       cred *= 1.2;
     }
-    /* P1：审计员 × 希斯同厢 — 结构风险被行政压制，负向带与叙事张力上升 */
     if (hasVip && hasDanger) {
-      boom -= 0.048;
-      neg  += 0.062;
+      liq -= 0.048;
+      neg += 0.062;
       cred *= 0.93;
     }
     return {
-      boomShift: boom,
-      negShift:  neg,
-      creditsMult: cred,
-      hasVolatile: hasVolatile,
-      comboVipScammer: hasVip && hasScammer,
-      comboVipDanger: hasVip && hasDanger
+      liquidationShift: liq,
+      negShift:         neg,
+      creditsMult:      cred,
+      hasVolatile:      hasVolatile,
+      comboVipScammer:  hasVip && hasScammer,
+      comboVipDanger:   hasVip && hasDanger
     };
   }
 
@@ -180,7 +248,7 @@
   ITEM_REGISTRY['floppy-disk'] = {
     id:   'floppy-disk',
     name: 'Bureau Module',
-    description: '审查：揭露乘客伪装。应急制动：下一次垂直坠毁时强制保留 30% 资产。',
+    description: '审查：揭露乘客伪装。应急制动：下一次触发强制清算时保留约 30% 账面资产。',
     modes: {
       scan: {
         usableIn: [STATES.DECIDING, STATES.HISS_BREACH],
@@ -192,10 +260,10 @@
       brake: {
         usableIn: [STATES.DECIDING, STATES.HISS_BREACH],
         canUse: function (ctrl) {
-          return !ctrl.boomMitigationPending;
+          return !ctrl.brakeMitigationPending;
         },
         onUse: function (ctrl) {
-          ctrl.boomMitigationPending = true;
+          ctrl.brakeMitigationPending = true;
           return { ok: true, mode: 'brake' };
         }
       }
@@ -207,24 +275,35 @@
    * ===================================================================== */
 
   /**
-   * 根据偏移指数和乘客修正计算有效阈值。
-   *
-   * @param {number}      corruption ∈ [0, CORRUPTION.MAX]
-   * @param {object|null} passenger  当前乘客（可选）
-   * @returns {{ boomMax, negMax, posMax }}
+   * @param {number}      corruption
+   * @param {object[]}    passengers
+   * @param {string|null} envEventId
+   * @param {number}      [quotaShift=0]  配额压力附加偏移
+   * @param {number}      [floor=0]       当前楼层（1-3 层养猪期保护）
+   * @returns {{ liquidationMax, negMax, posMax }}
    */
-  function computeEffectiveThresholds(corruption, passengers, envEventId) {
-    var shift  = Math.min(corruption * CORRUPTION.BOOM_SHIFT, 0.20);
-    var agg    = aggregatePassengerModifiers(passengers || []);
-    var pBoom  = agg.boomShift;
-    var pNeg   = agg.negShift;
+  function computeEffectiveThresholds(corruption, passengers, envEventId, quotaShift, floor) {
+    var shift = Math.min(corruption * CORRUPTION.LIQUIDATION_SHIFT, 0.20);
+    var agg   = aggregatePassengerModifiers(passengers || []);
+    var pLiq  = agg.liquidationShift || 0;
+    var pNeg  = agg.negShift;
+    quotaShift = quotaShift || 0;
+    floor = floor || 0;
     if (envEventId === 'BAND_DRIFT') {
-      pBoom += 0.028;
+      pLiq += 0.028;
+    }
+    /* 养猪期（第 1-3 层）：强制锁定破产概率为 0，负面区间同步压缩 */
+    if (floor > 0 && floor <= 3) {
+      return {
+        liquidationMax: 0,
+        negMax:         Math.max(0.06, THRESHOLDS.NEGATIVE_MAX * 0.55),
+        posMax:         THRESHOLDS.POSITIVE_MAX
+      };
     }
     return {
-      boomMax: Math.max(0.02, THRESHOLDS.BOOM_MAX     + shift + pBoom),
-      negMax:  Math.max(0.08, THRESHOLDS.NEGATIVE_MAX + shift + pBoom + pNeg),
-      posMax:  THRESHOLDS.POSITIVE_MAX
+      liquidationMax: Math.max(0.02, THRESHOLDS.LIQUIDATION_MAX + shift + pLiq + quotaShift),
+      negMax:         Math.max(0.08, THRESHOLDS.NEGATIVE_MAX + shift + pLiq + pNeg + quotaShift * 0.8),
+      posMax:         THRESHOLDS.POSITIVE_MAX
     };
   }
 
@@ -234,24 +313,26 @@
    * @param {number}       corruption  当前偏移指数（默认 0）
    * @param {object[]}     passengers  乘客列表（可空）
    * @param {string|null}  envEventId  当前环境事件
+   * @param {number}       [quotaShift=0]
+   * @param {number}       [floor=0]   当前楼层（养猪期保护透传）
    */
-  function rollEventFromR(r, corruption, passengers, envEventId) {
+  function rollEventFromR(r, corruption, passengers, envEventId, quotaShift, floor) {
     if (r < 0 || r >= 1) throw new Error('rollEventFromR: r must be in [0, 1)');
     corruption = corruption || 0;
-    var T = computeEffectiveThresholds(corruption, passengers || [], envEventId || null);
+    var T = computeEffectiveThresholds(corruption, passengers || [], envEventId || null, quotaShift || 0, floor || 0);
 
-    if (r < T.boomMax) {
+    if (r < T.liquidationMax) {
       return {
-        kind: 'BOOM', raw: r,
-        band: '[0, ' + T.boomMax.toFixed(3) + ')',
+        kind: 'LIQUIDATION', raw: r,
+        band: '[0, ' + T.liquidationMax.toFixed(3) + ')',
         creditsMultiplier: 0
       };
     }
     if (r < T.negMax) {
-      var tN = (r - T.boomMax) / (T.negMax - T.boomMax);
+      var tN = (r - T.liquidationMax) / (T.negMax - T.liquidationMax);
       return {
         kind: 'NEGATIVE', raw: r,
-        band: '[' + T.boomMax.toFixed(3) + ', ' + T.negMax.toFixed(3) + ')',
+        band: '[' + T.liquidationMax.toFixed(3) + ', ' + T.negMax.toFixed(3) + ')',
         creditsMultiplier: 0.7 + tN * 0.2
       };
     }
@@ -303,13 +384,14 @@
   function createAudioStub() {
     return {
       playStateTransition: function (f, t) { void f; void t; },
-      playOutcome:    function (k) { void k; },
-      playSurprise:   function (k) { void k; },
-      playBreach:     function ()  {},
-      resumeIfNeeded: function ()  {},
+      playOutcome:      function (k) { void k; },
+      playSurprise:     function (k) { void k; },
+      playBreach:       function ()  {},
+      resumeIfNeeded:   function ()  {},
       playCommitteePulse: function () {},
       playLeverPull:    function () {},
-      tryPlaySlot:      function () {}
+      tryPlaySlot:      function () {},
+      playQuotaReached: function () {}
     };
   }
 
@@ -332,7 +414,7 @@
       state: [], outcome: [], surprise: [], cashOut: [],
       corruption: [], breach: [], reroll: [],
       passengerBoard: [], passengerLeave: [], passengerReveal: [],
-      envEvent: [], passengerStack: []
+      envEvent: [], passengerStack: [], uiWarning: []
     };
     this._breachTimer   = null;
     this._breachDeadline = 0;
@@ -352,16 +434,21 @@
   GameController.PASSENGER                 = PASSENGER;
   GameController.createPassenger           = createPassenger;
   GameController.ENV_EVENT_IDS             = ENV_EVENT_IDS;
+  GameController.SAFE_NODE_FLOORS          = SAFE_NODE_FLOORS;
+  GameController.floorLeverage             = floorLeverage;
+  GameController.getOutcomeNarrative       = getOutcomeNarrative;
+  GameController.OUTCOME_NARRATIVE_POOL    = OUTCOME_NARRATIVE_POOL;
 
   /* ---- 重置 ---- */
   GameController.prototype.reset = function () {
     this.floor               = 1;
     this.credits             = this.initialBet;
     this.corruption          = 0;
+    this.quota               = 10000;          // 本局回收指标（固定）
     this.inventory           = [{ id: 'floppy-disk', count: 3 }];
     this.passengers          = [];
     this.activeEnvEvent      = null;
-    this.boomMitigationPending = false;
+    this.brakeMitigationPending = false;
     this.state               = STATES.IDLE;
     this.rngLog              = [];
     this.lastOutcome         = null;
@@ -369,6 +456,10 @@
     this.lastPayout          = null;
     this._floorCreditsBefore = null;  // 用于 reroll 回滚
     this._pendingBreach      = false;
+    this._quotaCrossed       = false; // 是否已触发 quota-reached 音效
+    this._liquidationDebtAmount = 0;  // 强制清算时的负债快照（供 UI）
+    this._peakCredits        = this.initialBet;  // 本局最高持有记录
+    this._safeNodeVisited    = {};    // { floor: true } 已访问的安全屋
     this._clearBreachTimer();
     this._emitState(STATES.IDLE, null);
   };
@@ -386,7 +477,14 @@
   });
 
   GameController.prototype.getEffectiveThresholds = function () {
-    return computeEffectiveThresholds(this.corruption, this.passengers, this.activeEnvEvent);
+    return computeEffectiveThresholds(this.corruption, this.passengers, this.activeEnvEvent, 0, this.floor);
+  };
+
+  /** 本局最高持有资产记录（供结算界面展示） */
+  GameController.prototype._updatePeakCredits = function () {
+    if (this.credits > this._peakCredits) {
+      this._peakCredits = this.credits;
+    }
   };
 
   Object.defineProperty(GameController.prototype, 'passenger', {
@@ -394,6 +492,16 @@
       return this.passengers && this.passengers.length ? this.passengers[0] : null;
     }
   });
+
+  /** 净资产 = 当前资产 - 配额（负值代表负债） */
+  GameController.prototype.getNetAsset = function () {
+    return this.credits - this.quota;
+  };
+
+  /** 当前负债额（正值代表欠款，0 代表已达标） */
+  GameController.prototype.getDebt = function () {
+    return Math.max(0, this.quota - this.credits);
+  };
 
   GameController.prototype.getTheoreticalCredits = function () {
     return this.initialBet * Math.pow(1.1, this.floor - 1);
@@ -419,6 +527,7 @@
   GameController.prototype.onPassengerReveal = function (fn) { this._listeners.passengerReveal.push(fn); };
   GameController.prototype.onEnvEvent        = function (fn) { this._listeners.envEvent.push(fn); };
   GameController.prototype.onPassengerStack  = function (fn) { this._listeners.passengerStack.push(fn); };
+  GameController.prototype.onUiWarning       = function (fn) { this._listeners.uiWarning.push(fn); };
 
   /* ---- 事件派发 ---- */
   GameController.prototype._emitState = function (next, prev) {
@@ -490,6 +599,16 @@
   GameController.prototype._emitPassengerStack = function () {
     for (var i = 0; i < this._listeners.passengerStack.length; i++) {
       try { this._listeners.passengerStack[i](this.passengers.slice(), this); } catch (e) { console.error(e); }
+    }
+  };
+
+  /**
+   * 配额未达成拦截事件。
+   * @param {{ text, quota, credits, debt }} data
+   */
+  GameController.prototype._emitUiWarning = function (data) {
+    for (var i = 0; i < this._listeners.uiWarning.length; i++) {
+      try { this._listeners.uiWarning[i](data, this); } catch (e) { console.error(e); }
     }
   };
 
@@ -605,20 +724,23 @@
     this._breachDeadline = Date.now() + BREACH_MS;
     this._emitBreach();
     this._breachTimer = setTimeout(function () {
-      self._autoBoom();
+      self._autoLiquidate();
     }, BREACH_MS);
   };
 
   /**
-   * 倒计时归零：强制 Boom，不走正常事件带，特殊标记 autoBoom: true。
+   * 倒计时归零：强制清算，不走正常事件带。
    */
-  GameController.prototype._autoBoom = function () {
+  GameController.prototype._autoLiquidate = function () {
     if (this.state !== STATES.HISS_BREACH) return;
     this._clearBreachTimer();
+    this._liquidationDebtAmount = (this.credits < this.quota)
+      ? Math.max(0, Math.floor(this.quota - this.credits))
+      : 0;
     this.credits     = 0;
     this.lastOutcome = {
-      kind: 'BOOM', raw: -1, band: 'HISS_AUTO_BOOM',
-      creditsMultiplier: 0, autoBoom: true
+      kind: 'LIQUIDATION', raw: -1, band: 'HISS_AUTO_LIQUIDATION',
+      creditsMultiplier: 0, autoLiquidate: true
     };
     this._emitOutcome(this.lastOutcome);
     this._setState(STATES.GAME_OVER);
@@ -628,12 +750,14 @@
 
   GameController.prototype.canGoUp = function () {
     return this.state === STATES.IDLE || this.state === STATES.DECIDING;
+    /* 注意：SAFE_NODE 状态下不允许上行，必须先通过 resolveSafeNode 完成选择 */
   };
 
-  /** Hiss Breach 期间仍可结算撤离 */
+  /** Hiss Breach / 安全屋期间均可结算撤离 */
   GameController.prototype.canCashOut = function () {
-    return this.state === STATES.IDLE    ||
-           this.state === STATES.DECIDING ||
+    return this.state === STATES.IDLE       ||
+           this.state === STATES.DECIDING   ||
+           this.state === STATES.SAFE_NODE  ||
            this.state === STATES.HISS_BREACH;
   };
 
@@ -659,16 +783,43 @@
     return { ok: true };
   };
 
-  GameController.prototype._applyBaselineGrowth = function () { this.credits *= 1.1; };
+  GameController.prototype._applyBaselineGrowth = function () {
+    this.credits *= 1.1;
+    this._updatePeakCredits();
+  };
 
+  /**
+   * 动态复利杠杆结算。
+   *
+   * 公式：delta = stake × (creditsMultiplier - 1) × leverage
+   *   - stake    = 本层进入快照（_floorCreditsBefore），优先用快照保证可审计性
+   *   - leverage = floorLeverage(floor)，楼层越高、波动越大
+   *
+   * 养猪期特例（1-3 层）：
+   *   - 负面 delta 最多扣减 stake × 12%（排除极大额度负面扣减）
+   *   - stake 向下保底为 initialBet，避免滚雪球式快速归零
+   */
   GameController.prototype._applyOutcomeToCredits = function (outcome) {
-    if (outcome.kind === 'BOOM') { this.credits = 0; return; }
-    this.credits *= outcome.creditsMultiplier;
+    if (outcome.kind === 'LIQUIDATION') { this.credits = 0; return; }
+    var stake = this._floorCreditsBefore !== null ? this._floorCreditsBefore : this.credits;
+    /* 养猪期：用初始注资保底（避免前几层小亏后雪崩） */
+    if (this.floor <= 3) stake = Math.max(stake, this.initialBet);
+    var lev  = floorLeverage(this.floor);
+    var rate = outcome.creditsMultiplier - 1;   // 正 = 赚，负 = 亏
+    /* 养猪期限幅：最大亏损不超过 stake 的 12% */
+    if (this.floor <= 3 && rate < 0) rate = Math.max(rate, -0.12);
+    var delta = Math.round(stake * rate * lev);
+    this.credits = Math.max(0, this.credits + delta);
+    /* 把实际有效倍率写回 outcome，供叙事判断 */
+    outcome._effectiveDelta      = delta;
+    outcome._effectiveMultiplier = stake > 0 ? (this.credits / stake) : 1;
+    this._updatePeakCredits();
   };
 
   GameController.prototype._applySurprise = function (surprise) {
     if (surprise.kind === SurpriseEvent.KINDS.COIN_RAIN) {
       this.credits += surprise.creditsBonus;
+      this._updatePeakCredits();
     }
     if (surprise.kind === SurpriseEvent.KINDS.SKIP_FLOOR) {
       for (var i = 0; i < surprise.floorBonus; i++) {
@@ -690,15 +841,37 @@
     if (this.state !== STATES.ASCENDING) return { ok: false, reason: 'not_ascending' };
     this._setState(STATES.EVALUATING);
 
-    /* 基线增长 + 快照 */
-    this.floor += 1;
-    this._applyBaselineGrowth();
+    /* 随机楼层跳跃（1-8 层），逐层累积基线增长与偏移 */
+    var floorsJumped = Math.floor(this._rng() * 8) + 1;
+    for (var fj = 0; fj < floorsJumped; fj++) {
+      this.floor += 1;
+      this._applyBaselineGrowth();
+      if (fj > 0) this._addCorruption(CORRUPTION.PER_FLOOR);
+    }
     this._floorCreditsBefore = this.credits;
 
     /* 乘客生命周期（到站后先下后上） */
     var pEvents = this._updatePassengers();
 
-    /* 每 5 层：动态环境事件轮换 */
+    /* 伪救赎安全屋：第 5 / 10 层（每局首次到达时触发） */
+    if (SAFE_NODE_FLOORS.indexOf(this.floor) >= 0 && !this._safeNodeVisited[this.floor]) {
+      var safeOutcome = {
+        kind: 'SAFE_NODE', raw: -1, band: 'SAFE_NODE',
+        creditsMultiplier: 1, purgePrice: Math.round(this.credits * 0.20)
+      };
+      this.lastOutcome = safeOutcome;
+      this._emitOutcome(safeOutcome);
+      this._pendingBreach = false;
+      this._setState(STATES.REVEALING);
+      return {
+        ok: true, outcome: safeOutcome, surprise: null, safeNode: true,
+        floorsJumped: floorsJumped,
+        passengerBoarded: pEvents.boarded, passengerDeparted: pEvents.departed,
+        envEvent: null, envActive: this.activeEnvEvent
+      };
+    }
+
+    /* 每 5 层：动态环境事件轮换（安全屋层已提前返回，此处不重复触发） */
     var envRoll = null;
     if (this.floor >= 5 && this.floor % 5 === 0) {
       envRoll = rollEnvEventId(this._rng);
@@ -706,21 +879,44 @@
       this._emitEnvEvent({ id: envRoll, floor: this.floor });
     }
 
-    /* 主事件（偏移指数 + 乘客叠加 + 环境） */
+    /* 配额压力动态调整（越欠越险 + 临门一脚非线性波动） */
+    var quotaShift = 0;
+    if (this.quota > 0) {
+      var qRatio = this.credits / this.quota;
+      if (qRatio < 1) {
+        /* 基础欠债压力：线性，最大 0.065 */
+        quotaShift = Math.min(0.065, (1 - qRatio) * 0.075);
+      }
+      /* 临门一脚：qRatio ∈ [0.8, 1.2] 时产生非线性脉冲，峰值约 ±0.038 */
+      var distFromQuota = Math.abs(qRatio - 1.0);
+      if (distFromQuota < 0.2) {
+        var near = 1 - distFromQuota / 0.2;
+        quotaShift += 0.038 * near * near;
+      }
+    }
+
+    /* 主事件（偏移指数 + 乘客叠加 + 环境 + 配额压力 + 楼层养猪期保护） */
     var r       = this._rng();
-    var outcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent);
+    var outcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, quotaShift, this.floor);
+
+    if (outcome.kind === 'LIQUIDATION') {
+      this._liquidationDebtAmount = (this._floorCreditsBefore < this.quota)
+        ? Math.max(0, Math.floor(this.quota - this._floorCreditsBefore))
+        : 0;
+    }
+
     this._applyOutcomeToCredits(outcome);
 
-    /* 应急制动：坠毁时保留 30%（相对本层基线快照） */
-    if (outcome.kind === 'BOOM' && this.boomMitigationPending) {
+    /* 应急制动：强制清算时保留约 30%（相对本层基线快照） */
+    if (outcome.kind === 'LIQUIDATION' && this.brakeMitigationPending) {
       this.credits = Math.max(0, Math.floor(this._floorCreditsBefore * 0.3));
       outcome.mitigated = true;
       outcome.displayKind = 'MITIGATED';
-      this.boomMitigationPending = false;
+      this.brakeMitigationPending = false;
     }
 
     /* 乘客资本修正（叠加 + 组合加成） */
-    if (this.passengers.length && outcome.kind !== 'BOOM') {
+    if (this.passengers.length && outcome.kind !== 'LIQUIDATION') {
       var agg = aggregatePassengerModifiers(this.passengers);
       this.credits *= agg.creditsMult;
       if (agg.hasVolatile) {
@@ -729,6 +925,17 @@
     }
 
     this._applyCorruptionForOutcome(outcome);
+
+    /* 配额穿越：资产首次从负转正时触发音效（每局仅一次） */
+    if (!this._quotaCrossed && outcome.kind !== 'LIQUIDATION') {
+      var preCredits = this._floorCreditsBefore || 0;
+      if (preCredits < this.quota && this.credits >= this.quota) {
+        this._quotaCrossed = true;
+        if (typeof this.audio.playQuotaReached === 'function') {
+          this.audio.playQuotaReached();
+        }
+      }
+    }
 
     var pid = this.passengers.map(function (x) { return x.identity; }).join('+') || null;
     this.rngLog.push({
@@ -746,9 +953,8 @@
     this.lastOutcome = outcome;
     this._emitOutcome(outcome);
 
-    /* SurpriseEvent（仅非 BOOM） */
     var surprise = null;
-    if (outcome.kind !== 'BOOM') {
+    if (outcome.kind !== 'LIQUIDATION') {
       var sr = this._rng();
       surprise = SurpriseEvent.tryTrigger(this, sr);
       if (surprise) {
@@ -770,6 +976,7 @@
     this._setState(STATES.REVEALING);
     return {
       ok: true, outcome: outcome, surprise: surprise,
+      floorsJumped: floorsJumped,
       passengerBoarded: pEvents.boarded, passengerDeparted: pEvents.departed,
       envEvent: envRoll, envActive: this.activeEnvEvent
     };
@@ -785,10 +992,15 @@
   GameController.prototype.finishReveal = function () {
     if (this.state !== STATES.REVEALING) return { ok: false, reason: 'not_revealing' };
 
-    /* BOOM → GAME_OVER（应急制动已缓和的坠毁除外） */
-    if (this.lastOutcome && this.lastOutcome.kind === 'BOOM' && !this.lastOutcome.mitigated) {
+    if (this.lastOutcome && this.lastOutcome.kind === 'LIQUIDATION' && !this.lastOutcome.mitigated) {
       this._setState(STATES.GAME_OVER);
       return { ok: true, gameOver: true, breach: false };
+    }
+
+    /* 安全屋：切换到 SAFE_NODE 等待玩家选择 */
+    if (this.lastOutcome && this.lastOutcome.kind === 'SAFE_NODE') {
+      this._setState(STATES.SAFE_NODE);
+      return { ok: true, gameOver: false, breach: false, safeNode: true };
     }
 
     /* Hiss Breach → 进入 HISS_BREACH，启动倒计时 */
@@ -804,7 +1016,67 @@
     return { ok: true, gameOver: false, breach: false };
   };
 
+  /**
+   * 伪救赎安全屋：玩家选择净化（扣 20% 清零偏移指数）或跳过。
+   * @param {'purge'|'skip'} choice
+   */
+  GameController.prototype.resolveSafeNode = function (choice) {
+    if (this.state !== STATES.SAFE_NODE) return { ok: false, reason: 'not_safe_node' };
+    this._safeNodeVisited[this.floor] = true;
+    var cost = 0;
+    if (choice === 'purge') {
+      cost = Math.round(this.credits * 0.20);
+      this.credits = Math.max(0, this.credits - cost);
+      this.corruption = 0;
+      this._emitCorruption();
+      this._updatePeakCredits();
+    }
+    this._setState(STATES.DECIDING);
+    return { ok: true, choice: choice, cost: cost };
+  };
+
   /* ---- 结算撤离 ---- */
+
+  /**
+   * 公共撤离入口（带配额拦截）。
+   * - 净资产 < 0 → 拦截，发出 UI_WARNING 事件，返回 { ok: false, reason: 'quota_not_met' }
+   * - 净资产 ≥ 0 → 调用 cashOut()，正常结算
+   */
+  GameController.prototype.requestCashOut = function () {
+    if (!this.canCashOut()) return { ok: false, reason: 'invalid_state' };
+    if (this.getNetAsset() < 0) {
+      var creditsNow = Math.floor(this.credits);
+      var debt       = Math.floor(this.getDebt());
+      this._emitUiWarning({
+        text: '行政警告：指标未达成。\n当前收集额：¥' + creditsNow +
+              '，目标配额：¥' + this.quota +
+              '。\n若强行撤离，差额（¥' + debt + '）将从您的物理器官中等价扣除。',
+        quota:   this.quota,
+        credits: creditsNow,
+        debt:    debt
+      });
+      return { ok: false, reason: 'quota_not_met', debt: debt };
+    }
+    return this.cashOut();
+  };
+
+  /**
+   * 强行割肉撤离（配额未达成时玩家主动确认）。
+   * 资产归零视为 GAME OVER，展示《资产清算通知书》。
+   */
+  GameController.prototype.forceDebtCashOut = function () {
+    if (!this.canCashOut()) return { ok: false, reason: 'invalid_state' };
+    this._clearBreachTimer();
+    var payout = Math.floor(this.credits);
+    var debt   = Math.floor(this.getDebt());
+    this.lastPayout = payout;
+    this._setState(STATES.DEBT_CASHOUT);
+    for (var i = 0; i < this._listeners.cashOut.length; i++) {
+      try { this._listeners.cashOut[i](payout, this, { debtForced: true, debt: debt }); } catch (e) { console.error(e); }
+    }
+    this.reset();
+    return { ok: true, payout: payout, debt: debt, debtForced: true };
+  };
 
   GameController.prototype.cashOut = function () {
     if (!this.canCashOut()) return { ok: false, reason: 'invalid_state' };
@@ -818,8 +1090,6 @@
     this.reset();
     return { ok: true, payout: payout };
   };
-
-  /* ---- BOOM 确认 ---- */
 
   GameController.prototype.acknowledgeGameOver = function () {
     if (this.state !== STATES.GAME_OVER) return { ok: false, reason: 'not_game_over' };
@@ -860,10 +1130,10 @@
    * - 仅在 DECIDING 状态下可调用（canUseItem 已保证）
    * - 回滚至 _floorCreditsBefore（基线后、结果前的快照）
    * - 消耗 CORRUPTION.ON_REROLL 偏移指数（干预代价）
-   * - 新结果若为 BOOM → 直接进入 GAME_OVER
+   * - 新结果若为 LIQUIDATION → 直接进入 GAME_OVER
    * - 不重新触发 SurpriseEvent（重掷代价之一）
    *
-   * @returns {{ ok, newOutcome, boom }}
+   * @returns {{ ok, newOutcome, liquidated }}
    */
   GameController.prototype.rerollCurrentFloor = function () {
     if (this.state !== STATES.DECIDING) return { ok: false, reason: 'not_deciding' };
@@ -880,9 +1150,9 @@
     /* 偏移指数代价（先加，再用新偏移指数掷骰） */
     this._addCorruption(CORRUPTION.ON_REROLL);
 
-    /* 重掷（使用最新偏移指数，代价立即体现） */
+    /* 重掷（使用最新偏移指数，代价立即体现；楼层养猪期保护继续有效） */
     var r          = this._rng();
-    var newOutcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent);
+    var newOutcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, 0, this.floor);
     this._applyOutcomeToCredits(newOutcome);
     this._applyCorruptionForOutcome(newOutcome);
 
@@ -900,14 +1170,12 @@
     this._emitOutcome(newOutcome);
     this._emitReroll(newOutcome);
 
-    /* 重掷到 BOOM → 立即 GAME_OVER */
-    if (newOutcome.kind === 'BOOM') {
+    if (newOutcome.kind === 'LIQUIDATION') {
       this._setState(STATES.GAME_OVER);
-      return { ok: true, newOutcome: newOutcome, boom: true };
+      return { ok: true, newOutcome: newOutcome, liquidated: true };
     }
 
-    /* 正常重掷：留在 DECIDING，UI 更新文字即可 */
-    return { ok: true, newOutcome: newOutcome, boom: false };
+    return { ok: true, newOutcome: newOutcome, liquidated: false };
   };
 
   global.GameController = GameController;

@@ -21,17 +21,19 @@
    * 可独立调音量、可挂 effect chain（compressor / reverb 等）。
    */
   var SLOTS = [
-    'IDLE',         // 待机氛围音
-    'ASCENDING',    // 上升机械声
-    'DOOR_OPEN',    // 门滑开金属声
-    'DOOR_CLOSE',   // 门合拢撞击
-    'BOOM',         // 爆炸 / 死亡
-    'POSITIVE',     // 正面增益
-    'NEGATIVE',     // 负面减损
-    'DOUBLE',       // ×2 超现实
-    'CASH_OUT',     // 结算撤离
-    'COIN_RAIN',    // 金币雨
-    'SKIP_FLOOR'    // 跳层闪光
+    'IDLE',          // 待机氛围音
+    'ASCENDING',     // 上升机械声
+    'DOOR_OPEN',     // 门滑开金属声
+    'DOOR_CLOSE',    // 门合拢撞击
+    'LIQUIDATION',   // 强制清算 / 破产带
+    'POSITIVE',      // 正面增益
+    'NEGATIVE',      // 负面减损
+    'DOUBLE',        // ×2 超现实
+    'CASH_OUT',      // 结算撤离
+    'COIN_RAIN',     // 金币雨
+    'SKIP_FLOOR',    // 跳层闪光
+    'QUOTA_REACHED', // 配额达成：神圣解锁叮声（净资产从负转正时触发）
+    'BREACH'         // Hiss 入侵警报
   ];
 
   /**
@@ -44,7 +46,7 @@
     'DECIDING→ASCENDING':  'ASCENDING',
     'EVALUATING→REVEALING':'DOOR_OPEN',
     'REVEALING→DECIDING':  null,
-    'REVEALING→GAME_OVER': 'BOOM',
+    'REVEALING→GAME_OVER': 'LIQUIDATION',
     'GAME_OVER→IDLE':      'IDLE',
     'DECIDING→CASHED_OUT': 'CASH_OUT',
     'CASHED_OUT→IDLE':     'IDLE'
@@ -52,7 +54,7 @@
 
   /** 主事件结果 → 插槽名 */
   var SLOT_MAP_OUTCOMES = {
-    BOOM:     'BOOM',
+    LIQUIDATION: 'LIQUIDATION',
     DOUBLE:   'DOUBLE',
     POSITIVE: 'POSITIVE',
     NEGATIVE: 'NEGATIVE'
@@ -230,7 +232,7 @@
 
   /**
    * 由 GameController._emitOutcome 调用。
-   * @param {string} kind  'BOOM' | 'DOUBLE' | 'POSITIVE' | 'NEGATIVE'
+   * @param {string} kind  'LIQUIDATION' | 'DOUBLE' | 'POSITIVE' | 'NEGATIVE'
    */
   AudioEngine.prototype.playOutcome = function (kind) {
     var slotName = SLOT_MAP_OUTCOMES[kind];
@@ -354,6 +356,123 @@
       src.stop(t0 + 0.18);
     } catch (e) {
       console.warn('[AudioEngine] playLeverPull:', e);
+    }
+  };
+
+  /**
+   * Hiss Breach 入侵警报：低频共鸣 + 高频刺激（不依赖 loadSlot）。
+   */
+  AudioEngine.prototype.playBreach = function () {
+    this.resumeIfNeeded();
+    if (!this._ctx || !this._master) return;
+    if (this._ctx.state === 'suspended') return;
+    try {
+      var ctx = this._ctx;
+      var master = this._master;
+      var t0 = ctx.currentTime;
+
+      /* 低频警报律动 */
+      var o1 = ctx.createOscillator();
+      o1.type = 'sawtooth';
+      o1.frequency.setValueAtTime(55, t0);
+      o1.frequency.setValueAtTime(62, t0 + 0.08);
+      o1.frequency.setValueAtTime(55, t0 + 0.16);
+      var g1 = ctx.createGain();
+      g1.gain.setValueAtTime(0.0001, t0);
+      g1.gain.exponentialRampToValueAtTime(0.055, t0 + 0.03);
+      g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35);
+      o1.connect(g1);
+      g1.connect(master);
+      o1.start(t0);
+      o1.stop(t0 + 0.4);
+
+      /* 高频刺激 */
+      var o2 = ctx.createOscillator();
+      o2.type = 'square';
+      o2.frequency.setValueAtTime(1200, t0 + 0.06);
+      o2.frequency.exponentialRampToValueAtTime(900, t0 + 0.25);
+      var g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.0001, t0 + 0.058);
+      g2.gain.exponentialRampToValueAtTime(0.028, t0 + 0.07);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.3);
+      o2.connect(g2);
+      g2.connect(master);
+      o2.start(t0 + 0.058);
+      o2.stop(t0 + 0.35);
+    } catch (e) {
+      console.warn('[AudioEngine] playBreach:', e);
+    }
+  };
+
+  /**
+   * 配额达成——神圣解锁叮声：清脆高频铃声 + 泛音 + 自然延迟余韵。
+   * 触发条件：净资产首次从负转正（由 GameController 调用）。
+   */
+  AudioEngine.prototype.playQuotaReached = function () {
+    this.resumeIfNeeded();
+    if (!this._ctx || !this._master) return;
+    if (this._ctx.state === 'suspended') return;
+    try {
+      var ctx = this._ctx;
+      var master = this._master;
+      var t0 = ctx.currentTime;
+
+      /* 主音 A6（1760 Hz）—— 清亮基音，长衰减 */
+      var o1 = ctx.createOscillator();
+      o1.type = 'sine';
+      o1.frequency.setValueAtTime(1760, t0);
+      o1.frequency.exponentialRampToValueAtTime(1752, t0 + 2.0);
+      var g1 = ctx.createGain();
+      g1.gain.setValueAtTime(0.0001, t0);
+      g1.gain.exponentialRampToValueAtTime(0.20, t0 + 0.004);  /* 极快启音 */
+      g1.gain.exponentialRampToValueAtTime(0.07, t0 + 0.35);
+      g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.4);
+      o1.connect(g1);
+      g1.connect(master);
+      o1.start(t0);
+      o1.stop(t0 + 2.6);
+
+      /* 五度泛音 E7（2637 Hz）—— 谐波共鸣 */
+      var o2 = ctx.createOscillator();
+      o2.type = 'sine';
+      o2.frequency.setValueAtTime(2637, t0);
+      var g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.0001, t0);
+      g2.gain.exponentialRampToValueAtTime(0.10, t0 + 0.003);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.2);
+      o2.connect(g2);
+      g2.connect(master);
+      o2.start(t0);
+      o2.stop(t0 + 1.4);
+
+      /* 八度确认音 A5（880 Hz）—— 低一层支撑 */
+      var o3 = ctx.createOscillator();
+      o3.type = 'sine';
+      o3.frequency.setValueAtTime(880, t0);
+      var g3 = ctx.createGain();
+      g3.gain.setValueAtTime(0.0001, t0);
+      g3.gain.exponentialRampToValueAtTime(0.12, t0 + 0.005);
+      g3.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.9);
+      o3.connect(g3);
+      g3.connect(master);
+      o3.start(t0);
+      o3.stop(t0 + 1.1);
+
+      /* 延迟余韵（模拟铃声在空旷机械厅的反射） */
+      var delay = ctx.createDelay(0.5);
+      delay.delayTime.value = 0.22;
+      var dfb = ctx.createGain();
+      dfb.gain.value = 0.30;
+      var dout = ctx.createGain();
+      dout.gain.value = 0.14;
+      g1.connect(delay);
+      delay.connect(dfb);
+      dfb.connect(delay);
+      delay.connect(dout);
+      dout.connect(master);
+
+    } catch (e) {
+      console.warn('[AudioEngine] playQuotaReached:', e);
     }
   };
 

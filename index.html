@@ -285,6 +285,43 @@
     transition: opacity .4s ease;
   }
   .card-result-bar.active { opacity: 1; }
+  .card-result-bar.card-result-bar--reward-tier-1 {
+    color: #8fd9a8;
+    letter-spacing: 0.16em;
+    animation: card-result-reward-glow 1.4s ease-in-out infinite;
+  }
+  .card-result-bar.card-result-bar--reward-tier-2 {
+    color: #b8f5c8;
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    animation: card-result-reward-glow 1.15s ease-in-out infinite;
+  }
+  .card-result-bar.card-result-bar--reward-tier-3 {
+    color: #e8ffd8;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 12px rgba(180, 255, 200, 0.45);
+    animation: card-result-reward-glow 0.95s ease-in-out infinite;
+  }
+  .card-result-bar.card-result-bar--reward-tier-4 {
+    color: #ffffff;
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 14px rgba(255, 240, 160, 0.75), 0 0 28px rgba(120, 255, 200, 0.35);
+    animation: card-result-reward-glow 0.8s ease-in-out infinite;
+  }
+  @keyframes card-result-reward-glow {
+    0%, 100% { opacity: 1; filter: brightness(1); }
+    50%      { opacity: 0.94; filter: brightness(1.2); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card-result-bar.card-result-bar--reward-tier-1,
+    .card-result-bar.card-result-bar--reward-tier-2,
+    .card-result-bar.card-result-bar--reward-tier-3,
+    .card-result-bar.card-result-bar--reward-tier-4 {
+      animation: none;
+    }
+  }
 
   @media (max-width: 400px) {
     .card-hand { gap: 10px; }
@@ -684,6 +721,75 @@
     backdrop-filter: none;
     max-width: none;
   }
+  .hud__readout-label--mission {
+    color: rgba(245, 213, 71, 0.55);
+    letter-spacing: 0.14em;
+  }
+  .hud__mission-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+    max-width: 100%;
+  }
+  .hud__mission-line {
+    margin: 0;
+    font-family: "Inter", system-ui, -apple-system, "PingFang SC", sans-serif;
+    font-size: clamp(0.42rem, 1.85vw, 0.56rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1.45;
+    color: rgba(245, 213, 71, 0.92);
+    text-shadow:
+      0 0 8px rgba(245, 200, 60, 0.35),
+      0 0 20px rgba(200, 160, 40, 0.15);
+    white-space: normal;
+    text-align: right;
+  }
+  .hud__mission-bracket { opacity: 0.75; font-weight: 800; }
+  .hud__mission-sep { opacity: 0.55; margin: 0 0.12em; }
+  .hud__mission-gold {
+    color: #ffe566;
+    text-shadow: 0 0 10px rgba(255, 220, 100, 0.45);
+  }
+  .hud__mission-banner--hidden {
+    display: none !important;
+  }
+  .hud__asset-play-row--hidden {
+    display: none !important;
+  }
+  .hud__net-asset--pre-hidden {
+    display: none !important;
+  }
+  .hud__live-credits-line {
+    display: none;
+    margin: 0;
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: var(--hud-readout-main-size);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    color: var(--hud-readout);
+    text-shadow:
+      0 0 6px var(--hud-readout-glow),
+      0 0 18px rgba(248, 165, 155, 0.28);
+    font-variant-numeric: tabular-nums;
+    align-items: baseline;
+    gap: 0.15em;
+  }
+  .stage.stage--immersive-play .hud__live-credits-line {
+    display: inline-flex;
+    justify-content: flex-end;
+  }
+  .hud__live-label {
+    font-size: 0.42em;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: rgba(248, 165, 155, 0.5);
+    margin-right: 0.2em;
+  }
+  .hud__net-asset--hidden {
+    display: none !important;
+  }
   .hud__led-value {
     font: inherit;
     font-weight: inherit;
@@ -1056,6 +1162,107 @@
     0% { opacity: 0; transform: scale(0.5); filter: blur(6px); }
     40% { opacity: 1; transform: scale(1.06); filter: blur(0); }
     100% { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+  /* 正收益分档：停留更久 + 金绿激励色 + 峰值「悬停」强化积极反馈 */
+  @keyframes credits-delta-pop-gain-t1 {
+    0%   { opacity: 0; transform: scale(0.52); filter: blur(5px); color: #c8ffd8; }
+    38%  { opacity: 1; transform: scale(1.08); filter: blur(0); color: #e8fff0; }
+    72%  { opacity: 1; transform: scale(1.03); }
+    100% { opacity: 1; transform: scale(1); color: var(--hud-readout); }
+  }
+  @keyframes credits-delta-pop-gain-t2 {
+    0%   { opacity: 0; transform: scale(0.48); filter: blur(7px); color: #9cf5c0; }
+    32%  { opacity: 1; transform: scale(1.14); filter: blur(0); color: #fff8e0;
+           text-shadow: 0 0 14px rgba(255, 220, 120, 0.55), 0 0 32px rgba(120, 220, 160, 0.35); }
+    58%  { transform: scale(1.08); }
+    82%  { opacity: 1; transform: scale(1.04); }
+    100% { opacity: 1; transform: scale(1); color: var(--hud-readout); }
+  }
+  @keyframes credits-delta-pop-gain-t3 {
+    0%   { opacity: 0; transform: scale(0.42) rotate(-2deg); filter: blur(8px); color: #7af0a8; }
+    28%  { opacity: 1; transform: scale(1.2) rotate(0deg); filter: blur(0); color: #fffce8;
+           text-shadow: 0 0 18px rgba(255, 230, 100, 0.7), 0 0 48px rgba(80, 255, 180, 0.4); }
+    50%  { transform: scale(1.12); }
+    75%  { opacity: 1; transform: scale(1.06); }
+    100% { opacity: 1; transform: scale(1); color: var(--hud-readout); }
+  }
+  @keyframes credits-delta-pop-gain-t4 {
+    0%   { opacity: 0; transform: scale(0.38) rotate(-3deg); filter: blur(10px); color: #5cf598; }
+    22%  { opacity: 1; transform: scale(1.28) rotate(1deg); filter: blur(0); color: #ffffff;
+           text-shadow: 0 0 22px rgba(255, 245, 160, 0.95), 0 0 60px rgba(255, 200, 60, 0.55), 0 0 90px rgba(100, 255, 200, 0.35); }
+    45%  { transform: scale(1.18) rotate(0deg); }
+    70%  { opacity: 1; transform: scale(1.1); }
+    88%  { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); color: var(--hud-readout); }
+  }
+  .credits-delta-flash--gain-tier-1 { animation: credits-delta-pop-gain-t1 1.28s cubic-bezier(0.16, 1.05, 0.26, 1) forwards; }
+  .credits-delta-flash--gain-tier-2 { animation: credits-delta-pop-gain-t2 1.58s cubic-bezier(0.14, 1.08, 0.24, 1) forwards; }
+  .credits-delta-flash--gain-tier-3 { animation: credits-delta-pop-gain-t3 1.92s cubic-bezier(0.12, 1.1, 0.22, 1) forwards; }
+  .credits-delta-flash--gain-tier-4 { animation: credits-delta-pop-gain-t4 2.28s cubic-bezier(0.1, 1.12, 0.2, 1) forwards; }
+  .outcome-narrative--triumph .outcome-narrative__tag {
+    animation: outcome-triumph-pulse 2.4s ease-in-out infinite;
+  }
+  .outcome-narrative--triumph-t3 .outcome-narrative__tag,
+  .outcome-narrative--triumph-t4 .outcome-narrative__tag {
+    animation-duration: 1.85s;
+  }
+  @keyframes outcome-triumph-pulse {
+    0%, 100% { opacity: 1; filter: brightness(1); }
+    50%      { opacity: 0.92; filter: brightness(1.18); text-shadow: 0 0 20px rgba(255, 210, 80, 0.5); }
+  }
+  #money.money-hud-gain-pulse {
+    animation: money-hud-gain-pulse 0.95s cubic-bezier(0.2, 1.1, 0.3, 1) both;
+  }
+  @keyframes money-hud-gain-pulse {
+    0%   { transform: scale(1); filter: brightness(1); }
+    35%  { transform: scale(1.06); filter: brightness(1.25); color: #fff8e4;
+           text-shadow: 0 0 12px rgba(255, 220, 120, 0.65), 0 0 28px rgba(100, 255, 180, 0.35); }
+    100% { transform: scale(1); filter: brightness(1); }
+  }
+  #money.money-hud-gain-pulse--t3,
+  #money.money-hud-gain-pulse--t4 {
+    animation-duration: 1.15s;
+    animation-name: money-hud-gain-pulse-strong;
+  }
+  @keyframes money-hud-gain-pulse-strong {
+    0%   { transform: scale(1); filter: brightness(1); }
+    30%  { transform: scale(1.1); filter: brightness(1.38); color: #ffffff;
+           text-shadow: 0 0 16px rgba(255, 235, 150, 0.85), 0 0 40px rgba(255, 200, 80, 0.45); }
+    100% { transform: scale(1); filter: brightness(1); }
+  }
+  .car.asset-gain-aura {
+    transition: box-shadow 0.35s ease, filter 0.35s ease;
+  }
+  .car.asset-gain-aura--t1 {
+    box-shadow: inset 0 0 50px rgba(0,0,0,.72), 0 0 22px rgba(120, 220, 160, 0.22);
+    filter: saturate(1.06) brightness(1.03);
+  }
+  .car.asset-gain-aura--t2 {
+    box-shadow: inset 0 0 48px rgba(0,0,0,.68), 0 0 32px rgba(255, 220, 100, 0.32);
+    filter: saturate(1.1) brightness(1.06);
+  }
+  .car.asset-gain-aura--t3 {
+    box-shadow: inset 0 0 42px rgba(40,30,10,.55), 0 0 42px rgba(255, 210, 80, 0.42);
+    filter: saturate(1.14) brightness(1.1);
+  }
+  .car.asset-gain-aura--t4 {
+    box-shadow: inset 0 0 38px rgba(60,45,10,.5), 0 0 52px rgba(255, 230, 120, 0.55), 0 0 88px rgba(255, 180, 40, 0.22);
+    filter: saturate(1.2) brightness(1.14);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .credits-delta-flash--gain-tier-1,
+    .credits-delta-flash--gain-tier-2,
+    .credits-delta-flash--gain-tier-3,
+    .credits-delta-flash--gain-tier-4 {
+      animation: credits-delta-pop 0.85s ease forwards;
+    }
+    .outcome-narrative--triumph .outcome-narrative__tag { animation: none; }
+    #money.money-hud-gain-pulse,
+    #money.money-hud-gain-pulse--t3,
+    #money.money-hud-gain-pulse--t4 { animation: none; }
+    .car.asset-gain-aura--t1, .car.asset-gain-aura--t2, .car.asset-gain-aura--t3, .car.asset-gain-aura--t4 {
+      box-shadow: none; filter: none;
+    }
   }
   #money.money-odometer {
     font-variant-numeric: tabular-nums;
@@ -2555,15 +2762,15 @@
    * 授权面板：强制配额协议条款样式
    * ======================================================= */
   .risk-auth-panel__terms-block {
-    background: rgba(30, 8, 5, 0.6);
-    border: 1px solid #2a1010;
-    border-left: 3px solid #7a2020;
+    background: rgba(10, 18, 14, 0.82);
+    border: 1px solid rgba(55, 110, 85, 0.35);
+    border-left: 3px solid rgba(74, 222, 128, 0.5);
     padding: 0.65rem 0.85rem;
     font-family: "Courier New", monospace;
     font-size: clamp(0.48rem, 2.1vw, 0.58rem);
     line-height: 1.75;
     letter-spacing: 0.03em;
-    color: rgba(200, 195, 188, 0.82);
+    color: rgba(210, 218, 212, 0.88);
   }
   .risk-auth-panel__terms-row {
     display: flex;
@@ -2593,12 +2800,53 @@
     white-space: normal;
     text-align: right;
   }
+  .risk-auth-panel__terms-val--opportunity {
+    flex: 1;
+    font-weight: 700;
+    color: #5ce38a;
+    text-shadow: 0 0 12px rgba(80, 220, 130, 0.35);
+    white-space: normal;
+    text-align: right;
+    line-height: 1.55;
+  }
+  .risk-auth-panel__terms-val--risk-dark {
+    flex: 1;
+    font-size: clamp(0.4rem, 1.75vw, 0.48rem);
+    font-weight: 500;
+    color: rgba(95, 22, 22, 0.96);
+    text-shadow: 0 0 0 1px rgba(40, 0, 0, 0.35);
+    white-space: normal;
+    text-align: right;
+    line-height: 1.55;
+    animation: risk-clause-pulse-dark 2.8s ease-in-out infinite;
+  }
+  @keyframes risk-clause-pulse-dark {
+    0%, 100% { opacity: 1; filter: brightness(1); }
+    50%      { opacity: 0.88; filter: brightness(0.82); }
+  }
   .risk-auth-panel__clause {
     margin-top: 0.4rem;
     font-size: clamp(0.38rem, 1.7vw, 0.45rem);
     letter-spacing: 0.04em;
-    color: rgba(160, 80, 70, 0.72);
+    color: rgba(55, 18, 18, 0.88);
     font-style: italic;
+    line-height: 1.5;
+    animation: risk-clause-pulse-dark 3.2s ease-in-out infinite;
+  }
+  .risk-auth-panel__val-note {
+    display: block;
+    margin-top: 0.2em;
+    font-weight: 400;
+    font-size: 0.88em;
+    color: rgba(180, 200, 175, 0.72);
+    text-shadow: none;
+    white-space: normal;
+    line-height: 1.45;
+  }
+  .risk-auth-panel__terms-val--leverage {
+    white-space: normal;
+    text-align: right;
+    line-height: 1.45;
   }
 
   /* =======================================================
@@ -2775,19 +3023,22 @@
     font-size: clamp(0.52rem, 2.1vw, 0.68rem);
     letter-spacing: 0.28em;
     text-transform: uppercase;
-    color: var(--bureau-white-dim);
+    color: rgba(200, 220, 200, 0.72);
     display: block;
     text-align: center;
+    text-shadow: 0 0 12px rgba(120, 200, 140, 0.12);
   }
   .deploy-panel__divider {
     width: 100%; border: none; border-top: 1px solid #232323; margin: 0;
   }
   .deploy-panel__title {
     font-family: "Courier New", monospace;
-    font-size: clamp(.8rem, 3.5vw, 1.02rem); font-weight: 900;
-    letter-spacing: .18em; text-transform: uppercase;
-    color: var(--bureau-white-hot); text-align: center; display: block;
+    font-size: clamp(.72rem, 3.2vw, 0.95rem); font-weight: 900;
+    letter-spacing: .12em; text-transform: none;
+    color: #fff8e8;
+    text-align: center; display: block;
     padding-bottom: .1rem; width: 100%;
+    text-shadow: 0 0 18px rgba(255, 210, 100, 0.22);
   }
   .deploy-panel__input-wrap {
     display: flex;
@@ -2805,7 +3056,7 @@
   .deploy-panel__currency {
     font-family: "Courier New", monospace;
     font-size: clamp(1.15rem, 4.2vw, 1.45rem);
-    color: var(--hiss-red);
+    color: #d4a84b;
     flex-shrink: 0;
   }
   #deploy-amount {
@@ -2849,13 +3100,14 @@
     -webkit-tap-highlight-color: transparent;
   }
   .preset-btn:hover, .preset-btn.active {
-    background: var(--hiss-red-deep); border-color: var(--hiss-red-hot);
-    color: var(--bureau-white-hot);
+    background: rgba(22, 80, 55, 0.88);
+    border-color: rgba(74, 222, 128, 0.55);
+    color: #ecfdf5;
   }
   .deploy-panel__status {
     font-family: "Courier New", monospace;
     font-size: .52rem; letter-spacing: .28em; text-transform: uppercase;
-    color: var(--hiss-red-hot); min-height: 1em; text-align: center;
+    color: rgba(245, 213, 71, 0.75); min-height: 1em; text-align: center;
     opacity: 0; transition: opacity .15s ease;
   }
   .deploy-panel__status.active {
@@ -2922,6 +3174,79 @@
     filter: grayscale(1);
     box-shadow: none;
     animation: none;
+  }
+
+  .deploy-panel__cta-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+    width: 100%;
+  }
+  .deploy-panel__btn--launch {
+    text-transform: none;
+    letter-spacing: 0.08em;
+    line-height: 1.35;
+    border-width: 2px;
+    background: linear-gradient(180deg, rgba(32, 120, 72, 0.92), rgba(18, 78, 48, 0.98));
+    border-color: rgba(255, 210, 100, 0.75);
+    color: #f4fff8;
+    text-shadow: 0 0 12px rgba(120, 255, 180, 0.25);
+  }
+  .deploy-panel__btn--launch:hover:not(:disabled) {
+    background: linear-gradient(180deg, rgba(42, 145, 88, 0.95), rgba(24, 95, 58, 1));
+    border-color: #ffe080;
+    color: #ffffff;
+  }
+  .deploy-panel__btn--launch.deploy-panel__btn--armed:not(:disabled) {
+    background: linear-gradient(180deg, rgba(38, 140, 82, 0.98), rgba(22, 98, 58, 1));
+    border-color: #ffd45c;
+    color: #ffffff;
+    animation: deploy-launch-gold-pulse 2.1s ease-in-out infinite;
+    box-shadow:
+      0 0 22px rgba(255, 200, 80, 0.45),
+      0 0 40px rgba(80, 200, 120, 0.2);
+    filter: none;
+    opacity: 1;
+  }
+  @keyframes deploy-launch-gold-pulse {
+    0%, 100% {
+      box-shadow: 0 0 18px rgba(255, 200, 80, 0.38), 0 0 36px rgba(60, 180, 100, 0.18);
+      border-color: rgba(255, 210, 100, 0.85);
+    }
+    50% {
+      box-shadow: 0 0 32px rgba(255, 230, 140, 0.65), 0 0 56px rgba(100, 220, 160, 0.28);
+      border-color: #fff0a0;
+    }
+  }
+  .deploy-panel__btn--launch .deploy-panel__btn-line-sub {
+    display: block;
+    font-size: 0.78em;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    margin-top: 0.2em;
+    opacity: 0.92;
+  }
+  .deploy-panel__btn--decline {
+    min-height: auto;
+    padding: 0.42rem 0.5rem;
+    font-size: clamp(0.48rem, 2vw, 0.58rem);
+    letter-spacing: 0.1em;
+    text-transform: none;
+    color: rgba(120, 125, 132, 0.88);
+    border: 1px solid rgba(60, 62, 68, 0.85);
+    background: rgba(18, 18, 20, 0.65);
+    font-weight: 500;
+  }
+  .deploy-panel__btn--decline:hover:not(:disabled) {
+    color: rgba(160, 165, 172, 0.95);
+    border-color: rgba(90, 94, 102, 0.9);
+    background: rgba(28, 28, 32, 0.75);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .deploy-panel__btn--launch.deploy-panel__btn--armed:not(:disabled) {
+      animation: none;
+    }
   }
 
   /* 窄手机：四档额度 2×2，避免单格过挤 */
@@ -3370,7 +3695,7 @@
     max-height: 40%;
   }
 
-  /* 轿厢右壁 · 应急制动拉杆（偏移指数 >20% 时出现；与软盘「制动」同源） */
+  /* 轿厢右壁 · 应急制动拉杆（偏移指数越过警戒刻度时出现；与软盘「制动」同源） */
   .car__manual-brace {
     position: absolute;
     top: 28%;
@@ -4700,6 +5025,7 @@
     }
   }
 </style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -4710,9 +5036,9 @@
 
 <!--
   全局主要操作入口（与首次访问说明、无障碍标签对应）：
-  PRE_GAME     #deploy-amount · 四档 .preset-btn（100/500/1K/5K）· #btn-deploy
+  PRE_GAME     #deploy-amount · 四档 .preset-btn（100/200/500/1000）· #btn-deploy
   PLAYING      #core-btn-deploy 上行 · #core-btn-withdraw 风险撤离
-  PLAYING      #manual-brace 应急制动拉杆（偏移>20%，与软盘制动同源）
+  PLAYING      #manual-brace 应急制动拉杆（偏移越过警戒刻度时显示，与软盘制动同源）
   PLAYING      Space → #radial-ascend / #radial-cash / #radial-scan / #radial-brace / #radial-close
   PLAYING      乘客层点按 → #inspection-menu-scan
   HISS         #breach-overlay 倒计时内仍可撤离；#core-trigger-override 为状态章（非独立结算钮）
@@ -4726,7 +5052,7 @@
   <div class="start-screen__title">零号电梯<br>运行记录</div>
   <div class="start-screen__subtitle">联邦控制局 · 垂直探测组</div>
   <div class="start-screen__line" aria-hidden="true"></div>
-  <div class="start-screen__prompt">[ 点击进入 ]</div>
+  <div class="start-screen__prompt">[ 点击进入 · 启动电梯 ]</div>
   <div class="start-screen__hint">CLICK TO INITIALIZE ELEVATOR PROTOCOL</div>
 </div>
 
@@ -4785,7 +5111,7 @@
     <p class="safe-node__title" id="safe-node-title">发现补给站</p>
     <p class="safe-node__subtitle">第 <span id="safe-node-floor">5</span> 层 · 特殊节点</p>
     <div class="safe-node__offer">
-      支付当前净资产的 <strong>20%</strong>，可清零全部偏移指数（Corruption），恢复基准概率曲线。<br>
+      支付一笔划扣（具体金额见下方「支付额」），可清零全部偏移指数（Corruption），恢复基准概率曲线。<br>
       <span class="safe-node__cost" id="safe-node-cost">支付额：¥ 0</span>
     </div>
     <p class="safe-node__trap-hint">注意：净化会拖慢配额达成速度 · 局方不为因此产生的负债负责</p>
@@ -4819,17 +5145,20 @@
             <span class="hud__led-value" id="floor">1</span>
           </div>
         </div>
-        <div class="hud__readout-col hud__readout-col--asset hud__asset-counter" id="asset-counter" aria-label="资产余额">
-          <span class="hud__readout-label">回收进度</span>
-          <div class="hud__readout-main hud__readout-main--asset">
-            <span class="hud__readout-currency" aria-hidden="true">¥</span>
-            <span id="money">100</span>
-            <span class="hud__quota-sep" aria-hidden="true">/</span>
-            <span id="quota-display" class="hud__quota-target">10000</span>
+        <div class="hud__readout-col hud__readout-col--asset hud__asset-counter" id="asset-counter" aria-label="资产与配额">
+          <span class="hud__readout-label" id="hud-asset-label">许可概要</span>
+          <div class="hud__mission-wrap" id="hud-pre-mission">
+            <p class="hud__mission-line" id="hud-mission-line">[ 离场目标：¥1,000（离场配额） // 探测杠杆 ¥200 ]</p>
           </div>
-          <div class="hud__net-asset" id="net-asset-row">
+          <div class="hud__readout-main hud__readout-main--asset hud__asset-play-row hud__asset-play-row--hidden" id="hud-asset-play-row">
+            <span class="hud__readout-currency" aria-hidden="true">¥</span>
+            <span id="money">200</span>
+            <span class="hud__quota-sep" aria-hidden="true">/</span>
+            <span id="quota-display" class="hud__quota-target">1000</span>
+          </div>
+          <div class="hud__net-asset hud__net-asset--pre-hidden" id="net-asset-row">
             <span class="hud__net-asset__label">净资产</span>
-            <span class="hud__net-asset__value hud__net-asset__value--negative" id="net-asset-value">- ¥9900</span>
+            <span class="hud__net-asset__value hud__net-asset__value--negative" id="net-asset-value">- ¥800</span>
           </div>
         </div>
       </div>
@@ -4851,7 +5180,7 @@
     </div>
     <div class="status-dock__chip status-dock__chip--hidden status-dock__chip--alert" id="dock-brake">
       <span class="status-dock__glyph" aria-hidden="true">⛔</span>
-      <span class="status-dock__float">应急制动待命<br>清算时保留约 30%</span>
+      <span class="status-dock__float">应急制动待命<br>清算时划回留存金（例：基准¥200≈¥60）</span>
     </div>
     <div class="status-dock__chip status-dock__chip--hidden" id="dock-stack">
       <span class="status-dock__glyph" aria-hidden="true">⊕</span>
@@ -4868,42 +5197,56 @@
       <!-- ▼ 风险资产授权面板 —— 游戏开始前覆盖电梯厢 -->
       <div class="deploy-panel risk-auth-panel deploy-panel--pre-reveal" id="deploy-panel">
         <div class="risk-auth-panel__inner">
-          <span class="deploy-panel__badge">联邦控制局 // 垂直探测强制配额协议 · 第 VII 版</span>
+          <span class="deploy-panel__badge">联邦控制局 // 资产增益许可处 // ASCENT 0</span>
           <hr class="deploy-panel__divider">
-          <span class="deploy-panel__title">《垂直探测强制配额协议》</span>
+          <span class="deploy-panel__title">《联邦资产探测增益许可 [A-092 档案]》</span>
 
-          <!-- 霸王条款表格 -->
           <div class="risk-auth-panel__terms-block">
             <div class="risk-auth-panel__terms-row">
               <span class="risk-auth-panel__terms-key">【资产注资】</span>
-              <span class="risk-auth-panel__terms-val">¥ 2,000 <span style="font-weight:400;color:rgba(180,170,140,0.6);font-size:0.85em;">（局方垫付）</span></span>
+              <span class="risk-auth-panel__terms-val risk-auth-panel__terms-val--leverage">
+                ¥ <span id="protocol-leverage-val">200</span>
+                <span class="risk-auth-panel__val-note">（由局方垫付本金，作为您的初始探测杠杆）</span>
+              </span>
             </div>
             <div class="risk-auth-panel__terms-row">
-              <span class="risk-auth-panel__terms-key">【离场配额】</span>
-              <span class="risk-auth-panel__terms-val">¥ 10,000 <span style="font-weight:400;color:rgba(255,100,80,0.75);font-size:0.85em;">（未达标严禁撤离）</span></span>
+              <span class="risk-auth-panel__terms-key">【探测目标】</span>
+              <span class="risk-auth-panel__terms-val" style="white-space:normal;text-align:right;">
+                收集总资产 ≥ ¥ <span id="protocol-quota-val">1,000</span> 的局方配额。
+              </span>
             </div>
             <div class="risk-auth-panel__terms-row">
-              <span class="risk-auth-panel__terms-key">【违约条款】</span>
-              <span class="risk-auth-panel__terms-val--danger">若未能达成配额触发破产清算，差额将从您的个人账户及直系亲属信托中强制扣除</span>
+              <span class="risk-auth-panel__terms-key">【增益逻辑】</span>
+              <span class="risk-auth-panel__terms-val--opportunity">一旦资产越过配额临界点，<strong>100%</strong> 的超额净利润将全部归您所有。</span>
             </div>
-            <p class="risk-auth-panel__clause">* 按下确认键，即视为被测试者完全理解并接受本协议全部条款，包含但不限于劳役附加条款。</p>
+            <div class="risk-auth-panel__terms-row">
+              <span class="risk-auth-panel__terms-key">【风险告知】</span>
+              <span class="risk-auth-panel__terms-val--risk-dark">若探测中止或资不抵债（触发破产清算），本金及差额将通过《失信协议》等价扣除您的<strong>个人等级分及所有局内特权</strong>。</span>
+            </div>
+            <p class="risk-auth-panel__clause">＊ 按下确认键，即视为您接受上述风险，并自愿让渡<strong>底层器官优先折偿顺位</strong>以折抵未偿债务（不涉及生命权让渡，适用局内信用折抵规则）。</p>
           </div>
 
-          <h2 class="risk-auth-panel__h2">确认授权额度</h2>
+          <h2 class="risk-auth-panel__h2">探测杠杆额度</h2>
+          <p class="risk-auth-panel__protocol-note">局方垫付本金 · 可调升以放大上行收益（亦放大波动）</p>
           <div class="deploy-panel__input-wrap">
             <span class="deploy-panel__currency">¥</span>
-            <input type="number" id="deploy-amount" value="2000" min="10" max="99999" placeholder="2000" inputmode="numeric" autocomplete="off">
+            <input type="number" id="deploy-amount" value="200" min="10" max="99999" placeholder="200" inputmode="numeric" autocomplete="off">
           </div>
           <div class="deploy-panel__presets">
-            <button type="button" class="preset-btn" data-val="1000">1K</button>
-            <button type="button" class="preset-btn" data-val="2000">2K</button>
-            <button type="button" class="preset-btn" data-val="5000">5K</button>
-            <button type="button" class="preset-btn" data-val="10000">10K</button>
+            <button type="button" class="preset-btn" data-val="100">100</button>
+            <button type="button" class="preset-btn" data-val="200">200</button>
+            <button type="button" class="preset-btn" data-val="500">500</button>
+            <button type="button" class="preset-btn" data-val="1000">1000</button>
           </div>
-          <div class="deploy-panel__status" id="deploy-status">等待授权确认...</div>
-          <button type="button" class="deploy-panel__btn" id="btn-deploy">
-            [ 按下确认键，即视为您接受强制劳役条款 ]
-          </button>
+          <div class="deploy-panel__status" id="deploy-status">等待启动电梯或调整探测杠杆…</div>
+          <div class="deploy-panel__cta-stack">
+            <button type="button" class="deploy-panel__btn deploy-panel__btn--launch" id="btn-deploy">
+              [ 启动电梯 ]<span class="deploy-panel__btn-line-sub">申请阶层跃升</span>
+            </button>
+            <button type="button" class="deploy-panel__btn deploy-panel__btn--decline" id="btn-decline-probe">
+              [ 维持现状 ] — 放弃本次探测许可
+            </button>
+          </div>
         </div>
       </div>
       <!-- ▲ 风险资产授权面板 END -->
@@ -4956,7 +5299,7 @@
         </div>
       </div>
 
-      <button type="button" class="car__manual-brace" id="manual-brace" aria-label="应急制动" title="应急制动（武装后若触发强制清算，保留约30%账面资产）"></button>
+      <button type="button" class="car__manual-brace" id="manual-brace" aria-label="应急制动" title="应急制动（武装后若触发强制清算，按基准划回留存金；例：基准¥200时约¥60）"></button>
 
       <div class="car__light-sweep"      aria-hidden="true"></div>
       <div class="car__shaft-blur"       aria-hidden="true"></div>
@@ -5104,7 +5447,7 @@
   var _bootSafetyTimer = null;
   var _bootFinishOnce = false;
   var DEPLOY_SEAL_MESSAGE =
-    '契约已签署。零号电梯运行记录已初始化。愿委员会保佑你的理智。';
+    '增益许可已归档。探测杠杆已武装，零号电梯运行记录同步至垂直档案。';
   var EVACUATION_DIRECTIVE =
     '见好就收是一种平庸的美德，局长。请带走你的配额。';
   var PASSENGER_COMMITTEE = {
@@ -5141,8 +5484,53 @@
   var BRAKE_MS         = 220;
   var SLAM_OFFSET_MS   = 640;
   var SLAM_DUR_MS      = 240;
-  var REVEAL_MS        = 1150;
+  var REVEAL_MS        = 1150; /* 兼容旧逻辑；开门后实际节拍见 pace() + deltaFlashMs */
   var FLASH_MS         = 120;
+
+  function pace(key, def) {
+    try {
+      var v = GameController.cfg('uiPacing.' + key, def);
+      return (typeof v === 'number' && !isNaN(v) && v >= 0) ? v : def;
+    } catch (e) { return def; }
+  }
+
+  function gainFlashHoldMultForTier(tier) {
+    if (!tier || tier < 1) return 1;
+    var t = Math.min(4, Math.max(1, tier));
+    var fall = [1.32, 1.58, 1.98, 2.45];
+    return pace('gainFlashHoldMultTier' + t, fall[t - 1]);
+  }
+
+  function cardRewardHoldMult(tier) {
+    if (!tier || tier < 1) return 1;
+    var t = Math.min(4, Math.max(1, tier));
+    var fall = [1.22, 1.45, 1.72, 2.02];
+    return pace('cardRewardResultMultTier' + t, fall[t - 1]);
+  }
+
+  /**
+   * 正收益动效档位 1–4：结合「本次增值 / 进入本层前账面」与事件类型（翻倍/金层/高倍率）。
+   */
+  function computeGainVisualTier(delta, basisCredits, outcome) {
+    var d = Math.floor(delta);
+    if (d <= 0) return 0;
+    var b = Math.max(1, Math.floor(basisCredits != null ? basisCredits : 1));
+    var r = d / b;
+    if (outcome && outcome.kind === 'DOUBLE') return 4;
+    var t = 1;
+    if (outcome && outcome.goldenFloor) t = Math.max(t, 4);
+    else if (outcome && outcome.kind === 'POSITIVE') {
+      var em = outcome._effectiveMultiplier != null ? outcome._effectiveMultiplier : outcome.creditsMultiplier;
+      var cm = outcome.creditsMultiplier != null ? outcome.creditsMultiplier : 1;
+      if (em >= 1.22 || cm >= 1.18) t = Math.max(t, 3);
+      else if (em >= 1.1 || cm >= 1.1) t = Math.max(t, 2);
+    }
+    if (r >= 0.52) t = Math.max(t, 4);
+    else if (r >= 0.26) t = Math.max(t, 3);
+    else if (r >= 0.09) t = Math.max(t, 2);
+    else if (r >= 0.018) t = Math.max(t, 1);
+    return Math.min(4, Math.max(1, t));
+  }
 
   var GLOW_SAFE   = { r: 90,  g: 160, b: 210 };
   var GLOW_DANGER = { r: 180, g: 25,  b: 15  };
@@ -5322,7 +5710,7 @@
       enqueueFirstVisitHint(radialScanBtn, '审查乘客，消耗软盘模块次数', 'radial-scan');
     }
     if (radialBraceBtn && !radialBraceBtn.disabled) {
-      enqueueFirstVisitHint(radialBraceBtn, '应急制动：若发生强制清算，可保留约 30% 账面资产', 'radial-brake');
+      enqueueFirstVisitHint(radialBraceBtn, '应急制动：若发生强制清算，按基准划回留存金（例：基准¥200≈¥60）', 'radial-brake');
     }
     enqueueFirstVisitHint(radialCloseBtn, '关闭指令圆盘', 'radial-close');
   }
@@ -5432,7 +5820,7 @@
       manualBraceEl.classList.add('car__manual-brace--pull');
       setTimeout(function () { manualBraceEl.classList.remove('car__manual-brace--pull'); }, 420);
     }
-    flashCommitteePassengerDirective('应急制动已武装。若触发强制清算，将按规程保留约 30% 账面资产。');
+      flashCommitteePassengerDirective('应急制动已武装。若触发强制清算，将按规程划回留存金（例：基准¥200≈¥60）。');
     syncUI();
   }
 
@@ -5441,7 +5829,65 @@
   var deployAmountEl = document.getElementById('deploy-amount');
   var deployStatusEl = document.getElementById('deploy-status');
   var btnDeploy      = document.getElementById('btn-deploy');
+  var btnDeclineProbe = document.getElementById('btn-decline-probe');
+  var hudPreMissionEl = document.getElementById('hud-pre-mission');
+  var hudMissionLineEl = document.getElementById('hud-mission-line');
+  var hudAssetPlayRowEl = document.getElementById('hud-asset-play-row');
+  var hudAssetLabelEl = document.getElementById('hud-asset-label');
+  var netAssetRowEl = document.getElementById('net-asset-row');
+  var protocolLeverageValEl = document.getElementById('protocol-leverage-val');
+  var protocolQuotaValEl = document.getElementById('protocol-quota-val');
   var themeBgmEl     = document.getElementById('theme-bgm');
+
+  function formatYuanComma(n) {
+    var x = Math.floor(Math.max(0, n));
+    return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
+  function getDeployAmountDraft() {
+    if (!deployAmountEl) return 200;
+    var raw = String(deployAmountEl.value || '').trim();
+    var v = parseInt(raw, 10);
+    if (raw === '' || isNaN(v) || v < 10 || v > 99999) return 200;
+    return v;
+  }
+
+  function updatePreGameMissionLine() {
+    if (!hudMissionLineEl) return;
+    var q = 1000;
+    if (typeof game !== 'undefined' && game && game.quota != null) {
+      q = Math.floor(game.quota);
+    }
+    var lev = getDeployAmountDraft();
+    hudMissionLineEl.textContent =
+      '[ 离场目标：¥' + formatYuanComma(q) + '（离场配额） // 探测杠杆 ¥' + formatYuanComma(lev) + ' ]';
+  }
+
+  function refreshProtocolLeverageDisplay() {
+    if (protocolLeverageValEl) {
+      protocolLeverageValEl.textContent = String(getDeployAmountDraft());
+    }
+    if (protocolQuotaValEl) {
+      var q = 1000;
+      if (typeof game !== 'undefined' && game && game.quota != null) {
+        q = Math.floor(game.quota);
+      }
+      protocolQuotaValEl.textContent = formatYuanComma(q);
+    }
+  }
+
+  function applyHudPhaseLayout() {
+    if (!hudAssetPlayRowEl || !hudPreMissionEl) return;
+    var pre = uiPhase === UI_PHASE.BOOTING || uiPhase === UI_PHASE.PRE_GAME;
+    hudPreMissionEl.classList.toggle('hud__mission-banner--hidden', !pre);
+    hudAssetPlayRowEl.classList.toggle('hud__asset-play-row--hidden', pre);
+    if (netAssetRowEl) {
+      netAssetRowEl.classList.toggle('hud__net-asset--pre-hidden', pre);
+    }
+    if (hudAssetLabelEl) {
+      hudAssetLabelEl.textContent = pre ? '许可概要' : '回收进度';
+    }
+  }
 
   function tryStartThemeBgm() {
     if (!themeBgmEl || themeBgmEl.dataset.started === '1') return;
@@ -5487,6 +5933,11 @@
     if (phase !== UI_PHASE.PLAYING) {
       closeRadialCommand();
       hideInspectionMenu();
+    }
+    applyHudPhaseLayout();
+    if (isBooting || isPreGame) {
+      updatePreGameMissionLine();
+      refreshProtocolLeverageDisplay();
     }
   }
 
@@ -5652,9 +6103,11 @@
 
       stageEl.classList.remove('stage--booting');
       setUIPhase(UI_PHASE.PRE_GAME);
-      deployAmountEl.value = '';
-      presetBtns.forEach(function (b) { b.classList.remove('active'); });
+      deployAmountEl.value = '200';
+      presetBtns.forEach(function (b) { b.classList.toggle('active', b.dataset.val === '200'); });
       updateDeployArmedState();
+      updatePreGameMissionLine();
+      refreshProtocolLeverageDisplay();
       bootCompleted = true;
     }
 
@@ -5684,13 +6137,12 @@
     }, BOOT_TOTAL_MS + 120);
   }
 
-  setUIPhase(UI_PHASE.BOOTING);
-
   /* ===========================================================
    * 引擎
    * =========================================================== */
   var audioEngine    = new AudioEngine();
-  var game           = new GameController({ initialBet: 2000, audio: audioEngine });
+  var game           = new GameController({ initialBet: 200, audio: audioEngine });
+  setUIPhase(UI_PHASE.BOOTING);
   var consecutiveWins = 0;    // 连胜次数（UI 层追踪，用于 BOSS 触发）
   var _glitchInterval = null; // 偏移指数 Glitch 定时器
 
@@ -6109,18 +6561,25 @@
     settle();
   }
 
-  /** 资产柜：机械里程表式跳字（非平滑插值） */
-  function runMoneyOdometer(from, to, onComplete) {
+  var _moneyOdometerGainTier = 0;
+
+  /** 资产柜：机械里程表式跳字（非平滑插值）；大额增值时略放慢跳字并可在结束后触发 HUD 脉冲 */
+  function runMoneyOdometer(from, to, onComplete, odometerOpts) {
+    odometerOpts = odometerOpts || {};
     clearTimeout(_moneyOdometerTimer);
     _moneyOdometerTimer = null;
     _moneyOdometerGuard = true;
     from = Math.max(0, Math.floor(from));
     to = Math.max(0, Math.floor(to));
+    _moneyOdometerGainTier = (to > from && odometerOpts.gainTier != null)
+      ? Math.max(0, Math.floor(odometerOpts.gainTier))
+      : 0;
     moneyEl.classList.add('money-odometer');
     if (from === to) {
       moneyEl.textContent = String(to);
       moneyEl.classList.remove('money-odometer');
       _moneyOdometerGuard = false;
+      _moneyOdometerGainTier = 0;
       if (onComplete) onComplete();
       return;
     }
@@ -6131,6 +6590,16 @@
         moneyEl.classList.remove('money-odometer');
         _moneyOdometerGuard = false;
         _moneyOdometerTimer = null;
+        var pulseTier = _moneyOdometerGainTier;
+        _moneyOdometerGainTier = 0;
+        if (to > from && pulseTier >= 1) {
+          var gt = Math.min(4, pulseTier);
+          moneyEl.classList.remove('money-hud-gain-pulse', 'money-hud-gain-pulse--t1', 'money-hud-gain-pulse--t2', 'money-hud-gain-pulse--t3', 'money-hud-gain-pulse--t4');
+          moneyEl.classList.add('money-hud-gain-pulse', 'money-hud-gain-pulse--t' + gt);
+          setTimeout(function () {
+            moneyEl.classList.remove('money-hud-gain-pulse', 'money-hud-gain-pulse--t1', 'money-hud-gain-pulse--t2', 'money-hud-gain-pulse--t3', 'money-hud-gain-pulse--t4');
+          }, 720 + gt * 150);
+        }
         if (onComplete) onComplete();
         return;
       }
@@ -6141,21 +6610,27 @@
       cur += chunk;
       if ((diff > 0 && cur > to) || (diff < 0 && cur < to)) cur = to;
       moneyEl.textContent = String(Math.max(0, cur));
-      _moneyOdometerTimer = setTimeout(tick, 34 + Math.floor(Math.random() * 26));
+      var delay = 34 + Math.floor(Math.random() * 26);
+      if (to > from && odometerOpts.gainTier >= 2) {
+        delay += 10 + (odometerOpts.gainTier - 1) * 12;
+      }
+      _moneyOdometerTimer = setTimeout(tick, delay);
     }
     tick();
   }
 
-  function formatDeltaFlashHTML(delta) {
+  function formatDeltaFlashHTML(delta, gainTier) {
     var d = Math.floor(delta);
     var cls = d > 0 ? 'credits-delta-flash--gain' : d < 0 ? 'credits-delta-flash--loss' : 'credits-delta-flash--zero';
+    if (d > 0 && gainTier >= 1) cls += ' credits-delta-flash--gain-tier-' + Math.min(4, gainTier);
     var sign = d > 0 ? '+' : '';
     return '<span class="credits-delta-flash ' + cls + '">' + sign + '\u00a5' + Math.abs(d) + '</span>';
   }
 
   /** 事件心理学锚点：正面用分红/跃升/裂变；负面用罚款/做空/通胀（仅文案层） */
-  function formatOutcomeNarrativeHTML(outcome) {
+  function formatOutcomeNarrativeHTML(outcome, gainTier) {
     if (!outcome || outcome.kind === 'LIQUIDATION' || outcome.mitigated) return '';
+    gainTier = gainTier == null ? 0 : gainTier;
     var tag, sub, penal = false;
     if (outcome.kind === 'DOUBLE') {
       tag = '资产裂变';
@@ -6175,23 +6650,35 @@
     } else {
       return '';
     }
-    return '<span class="outcome-narrative' + (penal ? ' outcome-narrative--penalty' : '') + '">' +
+    var triumph = '';
+    if (!penal && gainTier >= 2) {
+      triumph = ' outcome-narrative--triumph outcome-narrative--triumph-t' + Math.min(4, gainTier);
+    }
+    return '<span class="outcome-narrative' + (penal ? ' outcome-narrative--penalty' : '') + triumph + '">' +
       '<span class="outcome-narrative__tag">' + tag + '</span>' +
       '<span class="outcome-narrative__sub">' + sub + '</span></span>';
   }
 
-  function flashCreditsDeltaInScene(delta, outcome) {
+  function flashCreditsDeltaInScene(delta, outcome, opts) {
+    opts = opts || {};
+    var baseMs = pace('deltaFlashMs', 1120);
+    var d = Math.floor(delta);
+    var gainTier = d > 0 ? computeGainVisualTier(d, opts.basisCredits, outcome) : 0;
+    var holdMs = d > 0 ? Math.round(baseMs * gainFlashHoldMultForTier(gainTier)) : baseMs;
     sceneContentEl.classList.add('scene-content--delta-only');
-    sceneContentEl.insertAdjacentHTML('beforeend', formatDeltaFlashHTML(delta));
-    var narHtml = formatOutcomeNarrativeHTML(outcome);
-    if (narHtml) sceneContentEl.insertAdjacentHTML('beforeend', narHtml);
+    sceneContentEl.insertAdjacentHTML('beforeend', formatDeltaFlashHTML(delta, gainTier));
+    if (!opts.skipInSceneNarrative) {
+      var narHtml = formatOutcomeNarrativeHTML(outcome, gainTier);
+      if (narHtml) sceneContentEl.insertAdjacentHTML('beforeend', narHtml);
+    }
     var node = sceneContentEl.querySelector('.credits-delta-flash');
     var narr = sceneContentEl.querySelector('.outcome-narrative');
     setTimeout(function () {
       if (node && node.parentNode) node.parentNode.removeChild(node);
       if (narr && narr.parentNode) narr.parentNode.removeChild(narr);
       sceneContentEl.classList.remove('scene-content--delta-only');
-    }, 1120);
+    }, holdMs);
+    return holdMs;
   }
 
   /* ===========================================================
@@ -6285,6 +6772,7 @@
    */
   function showNarrativeFlash(narrative, isPenalty, cb) {
     if (!narrativeFlashOverlayEl || !narrative) { if (cb) cb(); return; }
+    var nMs = pace('narrativeFlashMs', 520);
     narrativeFlashTagEl.textContent  = '[ ' + narrative.tag + ' ]';
     narrativeFlashTextEl.textContent = narrative.text;
     narrativeFlashTagEl.className = 'narrative-flash__tag' + (isPenalty ? ' narrative-flash__tag--penalty' : '');
@@ -6294,7 +6782,7 @@
       narrativeFlashOverlayEl.classList.remove('active');
       narrativeFlashOverlayEl.setAttribute('aria-hidden', 'true');
       if (cb) cb();
-    }, 500);
+    }, nMs);
   }
 
   /* ===========================================================
@@ -6377,7 +6865,7 @@
     if (resultEvaluationEl) { resultEvaluationEl.hidden = true; resultEvaluationEl.innerHTML = ''; }
 
     var isDebt = (type === 'liquidation' && data.debt > 0) || type === 'debtcashout';
-    var badDebtFig = data.quota != null ? Math.floor(data.quota) : (typeof game !== 'undefined' ? Math.floor(game.quota) : 10000);
+    var badDebtFig = data.quota != null ? Math.floor(data.quota) : (typeof game !== 'undefined' ? Math.floor(game.quota) : 1000);
     /* 最高持有记录 */
     var peakFig = (typeof game !== 'undefined' && game._peakCredits != null)
       ? Math.floor(game._peakCredits)
@@ -6429,7 +6917,7 @@
       if (resultEvaluationEl) {
         resultEvaluationEl.hidden = false;
         var evalText =
-          '评估结论：未能达成 ¥' + (data.quota || 10000) + ' 局方配额。\n' +
+          '评估结论：未能达成 ¥' + (data.quota || 1000) + ' 局方配额。\n' +
           (peakFig > 0
             ? '该员工此前最高曾掌握 ¥' + peakFig + ' 的财富。\n'
             : '') +
@@ -6447,7 +6935,7 @@
         '<span class="result-overlay__footer-item">STATUS: CLEARED</span>';
 
     } else if (isDebt) {
-      var debtQuota   = data.quota  || (typeof game !== 'undefined' ? game.quota : 10000);
+      var debtQuota   = data.quota  || (typeof game !== 'undefined' ? game.quota : 1000);
       var debtAmount  = data.debt   || 0;
       var debtPayout  = data.payout || 0;
       var debtFloor   = data.floor  || 1;
@@ -6502,15 +6990,18 @@
     if (type === 'liquidation' || type === 'debtcashout') {
       resultConfirmEl.textContent = '[ 申请破产重组 (再借一笔，我要翻本) ]';
       enqueueFirstVisitHint(resultConfirmEl, '关闭清算通知后返回授权，可再次申请额度', 'result-confirm');
+      document.body.classList.add('hiss-breach-active');
     } else {
       resultConfirmEl.textContent = '确认并归档';
       enqueueFirstVisitHint(resultConfirmEl, '确认并关闭档案，返回授权界面', 'result-confirm');
+      document.body.classList.remove('hiss-breach-active');
     }
     resultOverlayEl.classList.add('active');
   }
 
   resultConfirmEl.addEventListener('click', function () {
     resultOverlayEl.classList.remove('active');
+    document.body.classList.remove('hiss-breach-active');
     if (_resultCallback) { _resultCallback(); _resultCallback = null; }
   });
 
@@ -6550,6 +7041,7 @@
                '\n目标配额：¥' + data.quota +
                '\n\n若强行撤离，差额 <strong>¥' + data.debt + '</strong> 将从您的物理器官中等价扣除。';
     debtWarningTextEl.innerHTML = text;
+    document.body.classList.add('hiss-breach-active');
     debtWarningOverlayEl.classList.add('active');
     debtWarningOverlayEl.setAttribute('aria-hidden', 'false');
   }
@@ -6558,6 +7050,7 @@
     if (!debtWarningOverlayEl) return;
     debtWarningOverlayEl.classList.remove('active');
     debtWarningOverlayEl.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('hiss-breach-active');
   }
 
   function executeCashout() {
@@ -6605,6 +7098,7 @@
   function showBreach(deadline) {
     if (!breachEl || !breachTimerEl || !breachFillEl) return;
     _breachDeadline = deadline;
+    document.body.classList.add('hiss-breach-active');
     breachEl.classList.add('active');
     screenEl.classList.add('hiss-breach');
     function tick() {
@@ -6621,6 +7115,7 @@
 
   function hideBreach() {
     if (_breachRAF) { cancelAnimationFrame(_breachRAF); _breachRAF = null; }
+    document.body.classList.remove('hiss-breach-active');
     if (breachEl) breachEl.classList.remove('active');
     if (screenEl) screenEl.classList.remove('hiss-breach');
   }
@@ -6768,15 +7263,15 @@
     if (uiPhase === UI_PHASE.PRE_GAME && btnDeploy && deployPanelEl) {
       var d = window.getComputedStyle(deployPanelEl).display;
       if (d !== 'none') {
-        enqueueFirstVisitHint(btnDeploy, '确认授权额度后点此开始运行记录', 'btn-deploy');
+        enqueueFirstVisitHint(btnDeploy, '确认探测杠杆后点此启动电梯', 'btn-deploy');
         if (deployAmountEl) {
-          enqueueFirstVisitHint(deployAmountEl, '手动输入授权额度，范围 10～99999', 'deploy-amount');
+          enqueueFirstVisitHint(deployAmountEl, '手动调整局方垫付探测杠杆，范围 10～99999', 'deploy-amount');
         }
         presetBtns.forEach(function (pb) {
           var v = pb && pb.dataset && pb.dataset.val;
           if (!v) return;
           var label = v === '1000' ? '1K' : v === '5000' ? '5K' : '¥' + v;
-          enqueueFirstVisitHint(pb, '快捷填入授权额度 ' + label, 'preset-' + v);
+          enqueueFirstVisitHint(pb, '快捷填入探测杠杆 ' + label, 'preset-' + v);
         });
       }
     }
@@ -6788,7 +7283,7 @@
         enqueueFirstVisitHintPrepended(coreTriggerDeployEl, '上行：关门升层，按局内规则结算资产', 'core-deploy');
       }
       if (manualBraceEl && manualBraceEl.classList.contains('car__manual-brace--visible')) {
-        enqueueFirstVisitHint(manualBraceEl, '应急制动：武装后，若发生强制清算可保留约 30% 账面资产', 'manual-brace');
+        enqueueFirstVisitHint(manualBraceEl, '应急制动：武装后，若发生强制清算按基准划回留存金（例：基准¥200≈¥60）', 'manual-brace');
       }
     }
   }
@@ -6816,6 +7311,11 @@
     syncPassengerSubjectArt();
     tryEnqueueMainPhaseFirstHints();
     updateNetAssetDisplay();
+    applyHudPhaseLayout();
+    if (uiPhase === UI_PHASE.BOOTING || uiPhase === UI_PHASE.PRE_GAME) {
+      updatePreGameMissionLine();
+      refreshProtocolLeverageDisplay();
+    }
   }
 
   function updateNetAssetDisplay() {
@@ -6898,8 +7398,12 @@
       'liquidation-shock', 'liquidation-shock--mitigated', 'open', 'coin-rain-glow', 'ascending',
       'braking', 'door-slam', 'corrupted', 'hiss-breach',
       'corruption-critical', 'pre-game--clearing', 'car--deploy-ram', 'sinking',
-      'wealth-burst', 'wealth-burst--mega'
+      'wealth-burst', 'wealth-burst--mega',
+      'asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4'
     );
+    if (moneyEl) {
+      moneyEl.classList.remove('money-hud-gain-pulse', 'money-hud-gain-pulse--t1', 'money-hud-gain-pulse--t2', 'money-hud-gain-pulse--t3', 'money-hud-gain-pulse--t4');
+    }
     if (coreTriggerDeployEl) coreTriggerDeployEl.classList.remove('core-trigger--impact');
     stageEl.classList.remove('stage--liquidation-shock', 'hiss-red-explosion', 'stage--phase-dim');
     stageEl.style.setProperty('--greed',      '0');
@@ -6942,13 +7446,15 @@
     deployPanelEl.style.display = '';
     deployPanelEl.style.animation = '';
     deployPanelEl.style.opacity = '';
-    deployAmountEl.value = '100';
+    deployAmountEl.value = '200';
     presetBtns.forEach(function (b) {
-      b.classList.toggle('active', b.dataset.val === '100');
+      b.classList.toggle('active', b.dataset.val === '200');
     });
     updateDeployArmedState();
+    updatePreGameMissionLine();
+    refreshProtocolLeverageDisplay();
     deployStatusEl.classList.remove('active', 'deploy-panel__status--seal');
-    deployStatusEl.textContent = '授权中...';
+    deployStatusEl.textContent = '等待启动电梯或调整探测杠杆…';
   }
 
   /* ===========================================================
@@ -7000,21 +7506,24 @@
   /* ===========================================================
    * SurpriseEvent 视觉
    * =========================================================== */
-  function spawnCoins(count) {
+  function spawnCoins(count, glowTier) {
+    glowTier = Math.max(1, Math.min(4, glowTier == null ? 2 : glowTier));
+    var stagger = 48 + Math.max(0, 14 - glowTier * 2);
     for (var i = 0; i < count; i++) {
       (function (delay, leftPct) {
         setTimeout(function () {
           var coin = document.createElement('span');
           coin.className = 'coin';
           coin.style.left = leftPct + '%';
-          coin.style.animationDuration = (1.0 + Math.random() * 0.7).toFixed(2) + 's';
+          coin.style.animationDuration = (1.05 + Math.random() * (0.55 + glowTier * 0.08)).toFixed(2) + 's';
           sceneContentEl.appendChild(coin);
-          setTimeout(function () { if (coin.parentNode) coin.parentNode.removeChild(coin); }, 2200);
+          setTimeout(function () { if (coin.parentNode) coin.parentNode.removeChild(coin); }, 2400 + glowTier * 220);
         }, delay);
-      })(i * 55, 8 + Math.random() * 84);
+      })(i * stagger, 8 + Math.random() * 84);
     }
+    var glowMs = 1980 + glowTier * 480;
     screenEl.classList.add('coin-rain-glow');
-    setTimeout(function () { screenEl.classList.remove('coin-rain-glow'); }, 1700);
+    setTimeout(function () { screenEl.classList.remove('coin-rain-glow'); }, glowMs);
   }
 
   function triggerSkipFlash() {
@@ -7029,10 +7538,18 @@
     triggerFlash('rgba(255,230,80,.35)', 200);
   }
 
-  function applySurpriseVisual(s) {
+  function applySurpriseVisual(s, visualTier) {
     if (!s) return;
-    if (s.kind === GameController.SurpriseEvent.KINDS.COIN_RAIN)  { spawnCoins(22); audioEngine.playSurprise('COIN_RAIN'); }
-    if (s.kind === GameController.SurpriseEvent.KINDS.SKIP_FLOOR) { triggerSkipFlash(); audioEngine.playSurprise('SKIP_FLOOR'); }
+    var vt = Math.max(1, Math.min(4, visualTier == null ? 2 : visualTier));
+    if (s.kind === GameController.SurpriseEvent.KINDS.COIN_RAIN) {
+      spawnCoins(14 + vt * 15, vt);
+      audioEngine.playSurprise('COIN_RAIN');
+    }
+    if (s.kind === GameController.SurpriseEvent.KINDS.SKIP_FLOOR) {
+      triggerSkipFlash();
+      if (vt >= 3) setTimeout(function () { triggerFlash('rgba(255,230,120,.28)', 220); }, 320);
+      audioEngine.playSurprise('SKIP_FLOOR');
+    }
   }
 
   /* ===========================================================
@@ -7090,13 +7607,17 @@
     sceneEl.className = 'scene ' + biomeClass(game.floor);
     var snap = game._floorCreditsBefore != null ? Math.floor(game._floorCreditsBefore) : Math.floor(game.credits);
     var deltaR = Math.floor(game.credits) - snap;
+    var rrTier = deltaR > 0 ? computeGainVisualTier(deltaR, snap, newOutcome) : 0;
+    var rrHold = deltaR > 0
+      ? Math.round(pace('deltaFlashMs', 1120) * gainFlashHoldMultForTier(rrTier))
+      : pace('rerollSceneClearMs', 1050);
     sceneContentEl.classList.add('scene-content--delta-only');
-    var narR = formatOutcomeNarrativeHTML(newOutcome);
-    sceneContentEl.innerHTML = formatDeltaFlashHTML(deltaR) + (narR || '');
+    var narR = formatOutcomeNarrativeHTML(newOutcome, rrTier);
+    sceneContentEl.innerHTML = formatDeltaFlashHTML(deltaR, rrTier) + (narR || '');
     setTimeout(function () {
       sceneContentEl.innerHTML = '';
       sceneContentEl.classList.remove('scene-content--delta-only');
-    }, 950);
+    }, rrHold);
     if (newOutcome.kind === 'LIQUIDATION') {
       runMoneyOdometer(snap, Math.floor(game.credits), function () { syncUI(); });
       syncUI();
@@ -7110,20 +7631,32 @@
         showResult('liquidation', { floor: _rerollLiqFloor, corruption: _rerollLiqCor, debt: _rerollLiqDebt, quota: _rerollLiqQuota }, function () {
           game.acknowledgeGameOver(); resetVisual(); syncUI();
         });
-      }, 600);
+      }, pace('liquidationPanelDelayMs', 780));
     } else {
       consecutiveWins = (newOutcome.kind === 'POSITIVE' || newOutcome.kind === 'DOUBLE')
         ? consecutiveWins + 1 : 0;
+      var rg = deltaR > 0 ? rrTier : 0;
+      if (deltaR > 0 && newOutcome.kind !== 'LIQUIDATION') {
+        screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
+        screenEl.classList.add('asset-gain-aura', 'asset-gain-aura--t' + Math.max(1, rg));
+        setTimeout(function () {
+          screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
+        }, 820 + rg * 400);
+      }
       if (newOutcome.kind === 'DOUBLE') {
         screenEl.classList.add('wealth-burst', 'wealth-burst--mega');
         setTimeout(function () {
           screenEl.classList.remove('wealth-burst', 'wealth-burst--mega');
-        }, 1300);
+        }, 2000 + rg * 200);
       } else if (newOutcome.kind === 'POSITIVE' && newOutcome.creditsMultiplier >= 1.16) {
         screenEl.classList.add('wealth-burst');
-        setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1000);
+        setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1400 + rg * 180);
+      } else if (newOutcome.kind === 'POSITIVE' && rg >= 3) {
+        screenEl.classList.add('wealth-burst');
+        setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1180 + rg * 150);
       }
-      runMoneyOdometer(snap, Math.floor(game.credits), function () { syncUI(); });
+      var odG = deltaR > 0 ? computeGainVisualTier(deltaR, snap, newOutcome) : 0;
+      runMoneyOdometer(snap, Math.floor(game.credits), function () { syncUI(); }, { gainTier: odG });
       syncUI();
     }
   });
@@ -7150,7 +7683,7 @@
         showResult('liquidation', { floor: _hissLiqFloor, corruption: _hissLiqCor, debt: _hissLiqDebt, quota: _hissLiqQuota }, function () {
           game.acknowledgeGameOver(); resetVisual(); syncUI();
         });
-      }, 600);
+      }, pace('liquidationPanelDelayMs', 780));
     }
     /* 安全屋：显示弹窗 */
     if (next === GameController.STATES.SAFE_NODE) {
@@ -7202,6 +7735,7 @@
       }
       if (resultOverlayEl && resultOverlayEl.classList.contains('active')) {
         resultOverlayEl.classList.remove('active');
+        document.body.classList.remove('hiss-breach-active');
         if (_resultCallback) { _resultCallback(); _resultCallback = null; }
         e.preventDefault();
         return;
@@ -7280,7 +7814,7 @@
         syncPassengerSlotsFromGame();
         updateStatusDock();
         syncPassengerSubjectArt();
-      }, 470);
+      }, pace('passengerResyncDelayMs', 520));
 
       var o = done.outcome, surprise = done.surprise;
 
@@ -7288,10 +7822,6 @@
       stopScrambleSettleFloorOnly(game.floor, moneyBefore);
       if (done.floorsJumped >= 3) triggerSkipFlash();
       stopCommitteeWhispers();
-
-      /* 结算完成即刻滚余额，不必等开门；与制动并行，强化「钱先动起来」 */
-      runMoneyOdometer(moneyBefore, moneyAfter, function () { syncUI(); });
-      syncUI();
 
       applyDirectorFigureState('braking');
 
@@ -7308,24 +7838,36 @@
         screenEl.classList.add('door-slam');
         setTimeout(function () { screenEl.classList.remove('door-slam'); }, 180);
 
+        syncUI();
+        var _odGainTier = moneyAfter > moneyBefore ? computeGainVisualTier(moneyAfter - moneyBefore, moneyBefore, o) : 0;
+        setTimeout(function () {
+          runMoneyOdometer(moneyBefore, moneyAfter, function () { syncUI(); }, { gainTier: _odGainTier });
+        }, pace('odometerDelayAfterOpenMs', 160));
+
         /* 安全屋：跳过金额闪烁，直接进入 finishReveal */
         if (o.kind === 'SAFE_NODE') {
-          syncUI();
           setTimeout(function () {
             var fr = game.finishReveal();
             /* SAFE_NODE → onStateChange 里 showSafeNodeOverlay 接管 */
             if (fr.ok) syncUI();
-          }, REVEAL_MS);
+          }, pace('safeNodeOverlayDelayMs', REVEAL_MS));
           return;
         }
 
-        /* 叙事悬念：先显 0.5s 文案，再出金额 + 特效 */
+        /* 叙事悬念：先显覆层文案，再出金额 + 特效（避免与场景内叙事重复） */
         var narrative = typeof GameController.getOutcomeNarrative === 'function'
           ? GameController.getOutcomeNarrative(o) : null;
         var isPenalty = (o.kind === 'NEGATIVE' || o.kind === 'LIQUIDATION');
 
-        function _showAmountAndEffects() {
-          flashCreditsDeltaInScene(deltaMoney, o);
+        function _showAmountAndEffects(skipDupNarrative) {
+          var holdMs = flashCreditsDeltaInScene(deltaMoney, o, {
+            skipInSceneNarrative: !!skipDupNarrative,
+            basisCredits: moneyBefore
+          });
+          var revealSettleMs = holdMs + pace('afterDeltaHoldMs', 420);
+          var gainTier = deltaMoney > 0 ? computeGainVisualTier(Math.floor(deltaMoney), moneyBefore, o) : 0;
+          var vizTier = Math.max(gainTier, surprise ? 2 : 0);
+
           syncUI();
 
           if (o.kind === 'LIQUIDATION') {
@@ -7341,24 +7883,42 @@
             consecutiveWins = (o.kind === 'POSITIVE' || o.kind === 'DOUBLE')
               ? consecutiveWins + 1 : 0;
           }
+
+          if (gainTier >= 1 && o.kind !== 'LIQUIDATION') {
+            screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
+            screenEl.classList.add('asset-gain-aura', 'asset-gain-aura--t' + gainTier);
+            setTimeout(function () {
+              screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
+            }, 880 + gainTier * 420);
+          }
+
           if (o.kind === 'DOUBLE') {
             spawnPapers(45);
             screenEl.classList.add('wealth-burst', 'wealth-burst--mega');
             setTimeout(function () {
               screenEl.classList.remove('wealth-burst', 'wealth-burst--mega');
-            }, 1300);
+            }, 1980 + gainTier * 220);
           } else if (o.kind === 'POSITIVE' && (o._effectiveMultiplier >= 1.16 || o.creditsMultiplier >= 1.16)) {
             screenEl.classList.add('wealth-burst');
-            setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1000);
+            setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1380 + gainTier * 200);
+          } else if (o.kind === 'POSITIVE' && gainTier >= 3) {
+            screenEl.classList.add('wealth-burst');
+            setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1150 + gainTier * 160);
           }
-          if (surprise) setTimeout(function () { applySurpriseVisual(surprise); syncUI(); }, 100);
+
+          if (surprise) {
+            setTimeout(function () {
+              applySurpriseVisual(surprise, vizTier);
+              syncUI();
+            }, holdMs + pace('surpriseAfterDeltaMs', 300));
+          }
 
           setTimeout(function () {
             if (game.state === GameController.STATES.CARD_SELECTION) {
               syncUI();
               var ghost = pickGhostFigure();
               spawnElevatorGhost(ghost);
-              var cardDelayMs = GameController.cfg('cardSelection.preShowDelayMs', 2500);
+              var cardDelayMs = GameController.cfg('cardSelection.preShowDelayMs', 3200);
               setTimeout(function () {
                 if (_pendingCardHand && game.state === GameController.STATES.CARD_SELECTION) {
                   showCardSelection(_pendingCardHand);
@@ -7376,24 +7936,25 @@
               var _fgLiqQuota = game.quota;
               var _fgLiqFloor = game.floor;
               var _fgLiqCor   = game.corruptionRatio;
+              var liqPanelMs = pace('liquidationPanelDelayMs', 720);
               setTimeout(function () {
                 showResult('liquidation', { floor: _fgLiqFloor, corruption: _fgLiqCor, debt: _fgLiqDebt, quota: _fgLiqQuota }, function () {
                   game.acknowledgeGameOver(); resetVisual(); syncUI();
                 });
-              }, 250);
+              }, liqPanelMs);
               return;
             }
 
             if (fr.safeNode) return;
             if (fr.breach) showBreach(game._breachDeadline);
             syncUI();
-          }, REVEAL_MS);
+          }, revealSettleMs);
         }
 
         if (narrative && o.kind !== 'LIQUIDATION') {
-          showNarrativeFlash(narrative, isPenalty, _showAmountAndEffects);
+          showNarrativeFlash(narrative, isPenalty, function () { _showAmountAndEffects(true); });
         } else {
-          _showAmountAndEffects();
+          _showAmountAndEffects(false);
         }
       }, BRAKE_MS);
     }, ASCEND_MS);
@@ -7527,6 +8088,8 @@
       btn.classList.add('active');
       deployAmountEl.value = btn.dataset.val;
       updateDeployArmedState();
+      updatePreGameMissionLine();
+      refreshProtocolLeverageDisplay();
     });
   });
 
@@ -7534,6 +8097,8 @@
     if (uiPhase === UI_PHASE.PRE_GAME) {
       presetBtns.forEach(function (b) { b.classList.remove('active'); });
       updateDeployArmedState();
+      updatePreGameMissionLine();
+      refreshProtocolLeverageDisplay();
     }
   });
 
@@ -7598,29 +8163,61 @@
   var startScreenEl = document.getElementById('game-start-screen');
   var _audioUnlocked = false;
 
-  function unlockAudioAndStart() {
-    if (_audioUnlocked) return;
-    _audioUnlocked = true;
+  function showDeployPanelShortcut() {
+    if (!deployPanelEl || !deployAmountEl) return;
+    deployPanelEl.style.display = '';
+    deployPanelEl.style.animation = '';
+    deployPanelEl.style.opacity = '';
+    deployPanelEl.classList.remove('deploy-panel--pre-reveal');
+    screenEl.classList.add('pre-game');
+    deployAmountEl.value = '200';
+    presetBtns.forEach(function (b) { b.classList.toggle('active', b.dataset.val === '200'); });
+    if (deployStatusEl) {
+      deployStatusEl.textContent = '等待启动电梯或调整探测杠杆…';
+      deployStatusEl.classList.remove('active', 'deploy-panel__status--seal');
+    }
+    updateDeployArmedState();
+    updatePreGameMissionLine();
+    refreshProtocolLeverageDisplay();
+    setUIPhase(UI_PHASE.PRE_GAME);
+    syncUI();
+  }
 
-    try {
-      audioEngine.resumeIfNeeded();
-      if (typeof AudioContext !== 'undefined') {
-        var ctx = new AudioContext();
-        var buf = ctx.createBuffer(1, 1, 22050);
-        var src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(ctx.destination);
-        src.start(0);
-        setTimeout(function () { ctx.close(); }, 100);
+  if (btnDeclineProbe) {
+    btnDeclineProbe.addEventListener('click', function () {
+      if (uiPhase !== UI_PHASE.PRE_GAME) return;
+      deployPanelEl.style.display = 'none';
+      screenEl.classList.remove('pre-game');
+      if (startScreenEl) {
+        startScreenEl.classList.remove('hidden', 'gone');
       }
-    } catch (e) { void e; }
+    });
+  }
 
-    tryStartThemeBgm();
+  function unlockAudioAndStart() {
+    if (!_audioUnlocked) {
+      _audioUnlocked = true;
+      try {
+        audioEngine.resumeIfNeeded();
+        if (typeof AudioContext !== 'undefined') {
+          var ctx = new AudioContext();
+          var buf = ctx.createBuffer(1, 1, 22050);
+          var src = ctx.createBufferSource();
+          src.buffer = buf;
+          src.connect(ctx.destination);
+          src.start(0);
+          setTimeout(function () { ctx.close(); }, 100);
+        }
+      } catch (e) { void e; }
+      tryStartThemeBgm();
+    }
 
+    if (!startScreenEl) return;
     startScreenEl.classList.add('hidden');
     setTimeout(function () {
       startScreenEl.classList.add('gone');
-      runBootSequence();
+      if (bootCompleted) showDeployPanelShortcut();
+      else runBootSequence();
     }, 650);
   }
 
@@ -7696,7 +8293,7 @@
 
     cardHandEl.innerHTML = '';
     cardResultBarEl.textContent = '';
-    cardResultBarEl.classList.remove('active');
+    cardResultBarEl.className = 'card-result-bar';
 
     for (var i = 0; i < cards.length; i++) {
       (function (card, idx) {
@@ -7747,9 +8344,15 @@
             var r = result.result;
             var sign = r.creditsDelta >= 0 ? '+' : '';
             cardResultBarEl.textContent = r.card.event.name + ' · ' + sign + '¥' + Math.abs(r.creditsDelta) + ' · 当前资产 ¥' + r.creditsAfter;
+            cardResultBarEl.className = 'card-result-bar';
+            var cTier = r.creditsDelta > 0
+              ? computeGainVisualTier(r.creditsDelta, r.creditsAfter - r.creditsDelta, null)
+              : 0;
+            if (cTier >= 1) cardResultBarEl.classList.add('card-result-bar--reward-tier-' + cTier);
             cardResultBarEl.classList.add('active');
 
-            var resultMs = GameController.cfg('cardSelection.resultShowMs', 2000);
+            var baseCardMs = GameController.cfg('cardSelection.resultShowMs', 2400);
+            var resultMs = r.creditsDelta > 0 ? Math.round(baseCardMs * cardRewardHoldMult(cTier)) : baseCardMs;
             setTimeout(function () {
               hideCardSelection();
               handlePostCardReveal();
@@ -7788,6 +8391,7 @@
       screenEl.classList.add('liquidation-shock');
       triggerLiquidationShock({ full: true, hidePassengers: true });
       consecutiveWins = 0;
+      var liqPanelMs = pace('liquidationPanelDelayMs', 780);
       setTimeout(function () {
         screenEl.classList.remove('liquidation-shock');
         showResult('liquidation', { floor: liqFloor, corruption: liqCor, debt: liqDebt, quota: liqQuota }, function () {
@@ -7795,7 +8399,7 @@
           resetVisual();
           syncUI();
         });
-      }, 600);
+      }, liqPanelMs);
       return;
     }
 
@@ -7805,7 +8409,9 @@
     }
 
     if (fin.breach) {
-      showBreach(game._breachDeadline);
+      setTimeout(function () {
+        showBreach(game._breachDeadline);
+      }, pace('postCardToBreachMs', 240));
       return;
     }
 

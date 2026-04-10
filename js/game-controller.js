@@ -121,12 +121,112 @@
   var FLOORS_JUMPED_MAX = cfg('floorsJumped.max', 8);
 
   var QUOTA_CFG = {
-    target:            cfg('quota.target',             10000),
+    target:            cfg('quota.target',             1000),
     pressureMaxShift:  cfg('quota.pressureMaxShift',   0.065),
     pressureLinear:    cfg('quota.pressureLinearFactor', 0.075),
     nearRange:         cfg('quota.nearQuotaRange',     0.2),
     nearPeak:          cfg('quota.nearQuotaPeakShift', 0.038)
   };
+
+  var SPECULATOR_CFG = {
+    enabled: cfg('speculatorProtocol.enabled', true),
+    targetId: cfg('speculatorProtocol.targetIdentity', 'SCAMMER'),
+    durationFloors: cfg('speculatorProtocol.durationFloors', 3),
+    gainMult: cfg('speculatorProtocol.gainMult', 3),
+    corMult: cfg('speculatorProtocol.corruptionOutcomeMult', 2)
+  };
+
+  var ANGEL_CFG = {
+    enabled: cfg('angelInvestor.enabled', true),
+    targetId: cfg('angelInvestor.targetIdentity', 'VIP'),
+    durationFloors: cfg('angelInvestor.durationFloors', 2),
+    rateBonus: cfg('angelInvestor.positiveRateBonus', 0.04)
+  };
+
+  var REROLL_BAILOUT_CFG = {
+    enabled: cfg('rerollBailout.enabled', true),
+    payRatio: cfg('rerollBailout.assetPayRatio', 0.4),
+    fallbackMult: cfg('rerollBailout.fallbackCreditsMultiplier', 0.82)
+  };
+
+  var GOLDEN_POS_CFG = {
+    probability: cfg('goldenPositive.probability', 0.015),
+    creditsMultiplier: cfg('goldenPositive.creditsMultiplier', 10)
+  };
+
+  var CHAIN_LIGHTNING_CFG = {
+    probability: cfg('chainLightning.probability', 0.0008),
+    extraLossRatio: cfg('chainLightning.extraLossRatioOfSnapshot', 0.18),
+    storageKey: cfg('chainLightning.storageKey', 'fbc_chain_margin_call_v1')
+  };
+
+  var ASSET_FREEZE_CFG = {
+    probability: cfg('assetFreeze.probability', 0.035),
+    lockRatio: cfg('assetFreeze.lockRatio', 0.5),
+    floorsToUnlock: cfg('assetFreeze.floorsToUnlock', 3),
+    cashoutClawback: cfg('assetFreeze.cashoutClawbackRatio', 0.2)
+  };
+
+  var COMBO_BLIND_CFG = {
+    windowMs: cfg('comboBlindConfidence.windowMs', 1500),
+    gainMult: cfg('comboBlindConfidence.gainMult', 1.05),
+    hiddenQuotaShift: cfg('comboBlindConfidence.hiddenQuotaShiftBonus', 0.024)
+  };
+
+  var SUSPENSE_CFG = {
+    liquidationMs: cfg('suspense.liquidationBusyWaitMs', 0),
+    negativeLowRunwayMs: cfg('suspense.lowRunwayNegativeBusyWaitMs', 0),
+    lowRunwayRatio: cfg('suspense.lowRunwayCreditsToQuotaMax', 0.22)
+  };
+
+  function tpl(str, o) {
+    if (!str) return '';
+    var out = String(str), k;
+    o = o || {};
+    for (k in o) {
+      if (Object.prototype.hasOwnProperty.call(o, k)) {
+        out = out.split('${' + k + '}').join(String(o[k]));
+      }
+    }
+    return out;
+  }
+
+  function busyWaitSync(ms) {
+    if (!ms || ms <= 0) return;
+    var t = Date.now() + (ms | 0);
+    while (Date.now() < t) { /* 同步悬念：冻结主线程直至揭晓 */ }
+  }
+
+  function nativeConfirm(msg) {
+    try {
+      if (typeof global.confirm === 'function') return !!global.confirm(msg);
+    } catch (e) { void e; }
+    return false;
+  }
+
+  function chainDebtLoad() {
+    try {
+      if (typeof global.localStorage === 'undefined') return 0;
+      var v = parseInt(global.localStorage.getItem(CHAIN_LIGHTNING_CFG.storageKey), 10);
+      return isNaN(v) ? 0 : Math.max(0, v);
+    } catch (e) { return 0; }
+  }
+
+  function chainDebtAdd(amount) {
+    try {
+      if (typeof global.localStorage === 'undefined' || amount <= 0) return;
+      var cur = chainDebtLoad();
+      global.localStorage.setItem(CHAIN_LIGHTNING_CFG.storageKey, String(cur + Math.floor(amount)));
+    } catch (e) { void e; }
+  }
+
+  function chainDebtClear() {
+    try {
+      if (typeof global.localStorage !== 'undefined') {
+        global.localStorage.removeItem(CHAIN_LIGHTNING_CFG.storageKey);
+      }
+    } catch (e) { void e; }
+  }
 
   var BRAKE_RETAIN = cfg('item.floppyDisk.brakeRetainRatio', 0.30);
   var FLOPPY_INIT_COUNT = cfg('item.floppyDisk.initialCount', 3);
@@ -203,6 +303,10 @@
       { tag: '意外分红', text: '合规红利入账 · 可继续上行放大收益' },
       { tag: '特别津贴', text: '微额系统补贴已入账 · 继续上行可翻倍' }
     ],
+    GOLDEN_FLOOR: [
+      { tag: '黄金楼层', text: '委员会匿名通道放行 · 单笔估值跳升十倍级（肥尾红利）' },
+      { tag: '财富跃升', text: '收容物估值异常拉升 · 账面出现黄金带收益' }
+    ],
     NEGATIVE: [
       { tag: '恶意做空', text: '遭遇不明机构做空 · 账面强制收缩' },
       { tag: '违规罚款', text: '触犯联邦法案 §7.3 · 强制扣款执行' },
@@ -224,6 +328,8 @@
     var pool;
     if (outcome.kind === 'DOUBLE') {
       pool = OUTCOME_NARRATIVE_POOL.DOUBLE;
+    } else if (outcome.kind === 'POSITIVE' && outcome.goldenFloor) {
+      pool = OUTCOME_NARRATIVE_POOL.GOLDEN_FLOOR;
     } else if (outcome.kind === 'POSITIVE') {
       pool = (outcome.creditsMultiplier >= 1.16 || (outcome._effectiveMultiplier && outcome._effectiveMultiplier >= 1.16))
         ? OUTCOME_NARRATIVE_POOL.POSITIVE_HIGH
@@ -329,7 +435,7 @@
   ITEM_REGISTRY['floppy-disk'] = {
     id:   'floppy-disk',
     name: 'Bureau Module',
-    description: '审查：揭露乘客伪装。应急制动：下一次触发强制清算时保留约 30% 账面资产。',
+    description: '审查：揭露乘客伪装。应急制动：下一次触发强制清算时，按本层基准账面划回留存金（示例：基准 ¥200 时约 ¥60，实际随基准浮动）。',
     modes: {
       scan: {
         usableIn: [STATES.DECIDING, STATES.HISS_BREACH],
@@ -398,10 +504,12 @@
    * @param {string|null}  envEventId  当前环境事件
    * @param {number}       [quotaShift=0]
    * @param {number}       [floor=0]   当前楼层（养猪期保护透传）
+   * @param {function():number} [rngFn]  子掷骰（黄金楼层 / 连环标记）
    */
-  function rollEventFromR(r, corruption, passengers, envEventId, quotaShift, floor) {
+  function rollEventFromR(r, corruption, passengers, envEventId, quotaShift, floor, rngFn) {
     if (r < 0 || r >= 1) throw new Error('rollEventFromR: r must be in [0, 1)');
     corruption = corruption || 0;
+    var rnd = typeof rngFn === 'function' ? rngFn : Math.random;
     var T = computeEffectiveThresholds(corruption, passengers || [], envEventId || null, quotaShift || 0, floor || 0);
 
     if (r < T.liquidationMax) {
@@ -414,19 +522,31 @@
     if (r < T.negMax) {
       var tN = (r - T.liquidationMax) / (T.negMax - T.liquidationMax);
       var negRange = OUTCOME_BANDS.NEGATIVE_MULT_MAX - OUTCOME_BANDS.NEGATIVE_MULT_MIN;
-      return {
+      var negOut = {
         kind: 'NEGATIVE', raw: r,
         band: '[' + T.liquidationMax.toFixed(3) + ', ' + T.negMax.toFixed(3) + ')',
         creditsMultiplier: OUTCOME_BANDS.NEGATIVE_MULT_MIN + tN * negRange
       };
+      if (rnd() < CHAIN_LIGHTNING_CFG.probability) negOut.chainLightning = true;
+      return negOut;
     }
     if (r < T.posMax) {
       var tP = (r - T.negMax) / (T.posMax - T.negMax);
       var posRange = OUTCOME_BANDS.POSITIVE_MULT_MAX - OUTCOME_BANDS.POSITIVE_MULT_MIN;
+      var cm = OUTCOME_BANDS.POSITIVE_MULT_MIN + tP * posRange;
+      if (rnd() < GOLDEN_POS_CFG.probability) {
+        cm = GOLDEN_POS_CFG.creditsMultiplier;
+        return {
+          kind: 'POSITIVE', raw: r,
+          band: '[' + T.negMax.toFixed(3) + ', ' + T.posMax.toFixed(3) + ')',
+          creditsMultiplier: cm,
+          goldenFloor: true
+        };
+      }
       return {
         kind: 'POSITIVE', raw: r,
         band: '[' + T.negMax.toFixed(3) + ', ' + T.posMax.toFixed(3) + ')',
-        creditsMultiplier: OUTCOME_BANDS.POSITIVE_MULT_MIN + tP * posRange
+        creditsMultiplier: cm
       };
     }
     return {
@@ -563,13 +683,13 @@
 
   /**
    * @param {object}            options
-   * @param {number}            [options.initialBet=100]
+   * @param {number}            [options.initialBet=200]
    * @param {function():number} [options.random]     可注入确定性 RNG
    * @param {object}            [options.audio]      AudioEngine 实例
    */
   function GameController(options) {
     options = options || {};
-    this.initialBet  = typeof options.initialBet === 'number' ? options.initialBet : 100;
+    this.initialBet  = typeof options.initialBet === 'number' ? options.initialBet : 200;
     this._rng        = typeof options.random === 'function'   ? options.random : Math.random;
     this.audio       = options.audio || createAudioStub();
     this._listeners  = {
@@ -633,6 +753,17 @@
     this._safeNodeVisited    = {};    // { floor: true } 已访问的安全屋
     this._pendingCards       = null;  // 当前卡牌手牌
     this._cardSelectionDone  = false;
+    this._speculatorContract = null;  // { floorsRemaining, gainMult, corMult }
+    this._angelLift          = null;   // { floorsRemaining, rateBonus }
+    this._blindConfidenceActive = false;
+    this._lastDecidingAt     = 0;
+    this._frozenPrincipal    = 0;
+    this._frozenUnlockFloor  = 999999;
+    var chainDebt = chainDebtLoad();
+    if (chainDebt > 0) {
+      this.credits = Math.max(0, Math.floor(this.credits - chainDebt));
+      chainDebtClear();
+    }
     this._clearBreachTimer();
     this._emitState(STATES.IDLE, null);
   };
@@ -715,7 +846,8 @@
     for (var i = 0; i < this._listeners.outcome.length; i++) {
       try { this._listeners.outcome[i](outcome, this); } catch (e) { console.error(e); }
     }
-    this.audio.playOutcome(outcome.kind);
+    var ak = outcome.kind === 'POSITIVE' && outcome.goldenFloor ? 'POSITIVE' : outcome.kind;
+    this.audio.playOutcome(ak);
   };
 
   GameController.prototype._emitSurprise = function (s) {
@@ -786,6 +918,54 @@
     }
   };
 
+  GameController.prototype._stampDecidingEnter = function () {
+    this._lastDecidingAt = Date.now();
+  };
+
+  /**
+   * 激进投机者对赌（浏览器原生 confirm，不新增 DOM）。
+   * @param {boolean} fromScanReveal  是否为审查揭穿后的话术变体
+   */
+  GameController.prototype._tryOfferSpeculatorContract = function (fromScanReveal) {
+    if (!SPECULATOR_CFG.enabled) return;
+    if (this._speculatorContract && this._speculatorContract.floorsRemaining > 0) return;
+    var key = fromScanReveal ? 'copy.speculatorProtocolScan' : 'copy.speculatorProtocol';
+    var msg = tpl(cfg(key, ''), {
+      durationFloors: SPECULATOR_CFG.durationFloors,
+      gainMult: SPECULATOR_CFG.gainMult,
+      corruptionMult: SPECULATOR_CFG.corMult
+    });
+    if (!msg) return;
+    if (!nativeConfirm(msg)) return;
+    this._speculatorContract = {
+      floorsRemaining: SPECULATOR_CFG.durationFloors,
+      gainMult: SPECULATOR_CFG.gainMult,
+      corMult: SPECULATOR_CFG.corMult
+    };
+  };
+
+  GameController.prototype._tryAngelLiftOnBoard = function (p) {
+    if (!ANGEL_CFG.enabled || !p || p.isDisguised) return;
+    if (p.identity !== ANGEL_CFG.targetId) return;
+    this._angelLift = {
+      floorsRemaining: ANGEL_CFG.durationFloors,
+      rateBonus: ANGEL_CFG.rateBonus
+    };
+  };
+
+  /** 每层结算末尾：连击窗口标记、对赌/天使投资人回合衰减 */
+  GameController.prototype._tickFloorMetaBuffs = function () {
+    this._blindConfidenceActive = false;
+    if (this._speculatorContract && this._speculatorContract.floorsRemaining > 0) {
+      this._speculatorContract.floorsRemaining--;
+      if (this._speculatorContract.floorsRemaining <= 0) this._speculatorContract = null;
+    }
+    if (this._angelLift && this._angelLift.floorsRemaining > 0) {
+      this._angelLift.floorsRemaining--;
+      if (this._angelLift.floorsRemaining <= 0) this._angelLift = null;
+    }
+  };
+
   /* ---- 乘客生命周期 ---- */
 
   GameController.prototype._updatePassengers = function () {
@@ -806,6 +986,10 @@
         this.floor >= PASSENGER.MIN_FLOOR &&
         this._rng() < PASSENGER.BOARD_CHANCE) {
       p = createPassenger(this._rng);
+      if (p.identity === SPECULATOR_CFG.targetId && SPECULATOR_CFG.enabled && !p.isDisguised) {
+        this._tryOfferSpeculatorContract(false);
+      }
+      this._tryAngelLiftOnBoard(p);
       this.passengers.push(p);
       result.boarded = p;
       this._emitPassengerBoard(p);
@@ -831,6 +1015,10 @@
     var identity     = p.identity;
     p.isDisguised = false;
     this._emitPassengerReveal(p);
+
+    if (identity === SPECULATOR_CFG.targetId && SPECULATOR_CFG.enabled && wasDisguised) {
+      this._tryOfferSpeculatorContract(true);
+    }
 
     var fled = false;
     if (wasDisguised && identity === 'SCAMMER') {
@@ -879,10 +1067,13 @@
   GameController.prototype._applyCorruptionForOutcome = function (outcome) {
     var surgeMultiplier = cfg('envEvents.events.CORRUPTION_SURGE.corruptionMultiplier', 2);
     var em = this.activeEnvEvent === 'CORRUPTION_SURGE' ? surgeMultiplier : 1;
+    var scm = (this._speculatorContract && this._speculatorContract.floorsRemaining > 0)
+      ? SPECULATOR_CFG.corMult
+      : 1;
     this._addCorruption(CORRUPTION.PER_FLOOR * em);
-    if (outcome.kind === 'DOUBLE')   this._addCorruption(CORRUPTION.ON_DOUBLE * em);
-    if (outcome.kind === 'NEGATIVE') this._addCorruption(CORRUPTION.ON_NEGATIVE * em);
-    if (outcome.kind === 'POSITIVE') this._addCorruption(CORRUPTION.ON_POSITIVE * em);
+    if (outcome.kind === 'DOUBLE')   this._addCorruption(CORRUPTION.ON_DOUBLE * em * scm);
+    if (outcome.kind === 'NEGATIVE') this._addCorruption(CORRUPTION.ON_NEGATIVE * em * scm);
+    if (outcome.kind === 'POSITIVE') this._addCorruption(CORRUPTION.ON_POSITIVE * em * scm);
   };
 
   /* ---- Hiss Breach 计时器 ---- */
@@ -1005,6 +1196,10 @@
   GameController.prototype.startAscend = function () {
     if (!this.canGoUp()) return { ok: false, reason: 'invalid_state' };
     this.audio.resumeIfNeeded();
+    this._blindConfidenceActive = false;
+    if (this._lastDecidingAt && (Date.now() - this._lastDecidingAt) < COMBO_BLIND_CFG.windowMs) {
+      this._blindConfidenceActive = true;
+    }
     this._setState(STATES.ASCENDING);
     return { ok: true };
   };
@@ -1031,8 +1226,19 @@
     if (this.floor <= PIG_PERIOD.maxFloor) stake = Math.max(stake, this.initialBet);
     var lev  = floorLeverage(this.floor);
     var rate = outcome.creditsMultiplier - 1;
+    if (this._angelLift && this._angelLift.floorsRemaining > 0 &&
+        (outcome.kind === 'POSITIVE' || outcome.kind === 'DOUBLE')) {
+      rate += this._angelLift.rateBonus;
+    }
     if (this.floor <= PIG_PERIOD.maxFloor && rate < 0) rate = Math.max(rate, PIG_PERIOD.maxLossRate);
     var delta = Math.round(stake * rate * lev);
+    if (delta > 0 && this._speculatorContract && this._speculatorContract.floorsRemaining > 0 &&
+        (outcome.kind === 'POSITIVE' || outcome.kind === 'DOUBLE')) {
+      delta = Math.round(delta * SPECULATOR_CFG.gainMult);
+    }
+    if (delta > 0 && this._blindConfidenceActive) {
+      delta = Math.round(delta * COMBO_BLIND_CFG.gainMult);
+    }
     this.credits = Math.max(0, this.credits + delta);
     /* 把实际有效倍率写回 outcome，供叙事判断 */
     outcome._effectiveDelta      = delta;
@@ -1071,6 +1277,12 @@
       this._applyBaselineGrowth();
       if (fj > 0) this._addCorruption(CORRUPTION.PER_FLOOR);
     }
+    if (this._frozenPrincipal > 0 && this.floor >= this._frozenUnlockFloor) {
+      this.credits += this._frozenPrincipal;
+      this._frozenPrincipal = 0;
+      this._frozenUnlockFloor = 999999;
+      this._updatePeakCredits();
+    }
     this._floorCreditsBefore = this.credits;
 
     /* 乘客生命周期（到站后先下后上） */
@@ -1086,6 +1298,7 @@
       this._emitOutcome(safeOutcome);
       this._pendingBreach = false;
       this._setState(STATES.REVEALING);
+      this._tickFloorMetaBuffs();
       return {
         ok: true, outcome: safeOutcome, surprise: null, safeNode: true,
         floorsJumped: floorsJumped,
@@ -1115,10 +1328,22 @@
         quotaShift += QUOTA_CFG.nearPeak * near * near;
       }
     }
+    if (this._blindConfidenceActive) {
+      quotaShift += COMBO_BLIND_CFG.hiddenQuotaShift;
+    }
 
     /* 主事件（偏移指数 + 乘客叠加 + 环境 + 配额压力 + 楼层养猪期保护） */
     var r       = this._rng();
-    var outcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, quotaShift, this.floor);
+    var rngSub  = this._rng;
+    var outcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, quotaShift, this.floor, rngSub);
+
+    if (outcome.kind === 'LIQUIDATION' && SUSPENSE_CFG.liquidationMs > 0) {
+      busyWaitSync(SUSPENSE_CFG.liquidationMs);
+    }
+    if (outcome.kind === 'NEGATIVE' && SUSPENSE_CFG.negativeLowRunwayMs > 0 &&
+        this._floorCreditsBefore < this.quota * SUSPENSE_CFG.lowRunwayRatio) {
+      busyWaitSync(SUSPENSE_CFG.negativeLowRunwayMs);
+    }
 
     if (outcome.kind === 'LIQUIDATION') {
       this._liquidationDebtAmount = (this._floorCreditsBefore < this.quota)
@@ -1141,6 +1366,24 @@
       this.credits *= agg.creditsMult;
       if (agg.hasVolatile) {
         this.credits *= (this._rng() < VOLATILE_POS_CHANCE ? VOLATILE_POS_MULT : VOLATILE_NEG_MULT);
+      }
+    }
+
+    if (outcome.kind === 'NEGATIVE' && outcome.chainLightning) {
+      var chExtra = Math.round(this._floorCreditsBefore * CHAIN_LIGHTNING_CFG.extraLossRatio);
+      this.credits = Math.max(0, this.credits - chExtra);
+      chainDebtAdd(chExtra);
+      outcome._chainLightningLoss = chExtra;
+    }
+
+    if (outcome.kind !== 'LIQUIDATION' && this._rng() < ASSET_FREEZE_CFG.probability) {
+      var lockAmt = Math.round(this.credits * ASSET_FREEZE_CFG.lockRatio);
+      lockAmt = Math.min(Math.max(0, lockAmt), Math.floor(this.credits));
+      if (lockAmt > 0) {
+        this.credits -= lockAmt;
+        this._frozenPrincipal += lockAmt;
+        this._frozenUnlockFloor = this.floor + ASSET_FREEZE_CFG.floorsToUnlock;
+        outcome.assetFreezeLocked = lockAmt;
       }
     }
 
@@ -1192,6 +1435,8 @@
       this.lastSurprise   = null;
       this._pendingBreach = false;
     }
+
+    this._tickFloorMetaBuffs();
 
     /* 卡牌选取阶段：非清算时进入卡牌选择 */
     if (CARD_ENABLED && outcome.kind !== 'LIQUIDATION') {
@@ -1247,11 +1492,12 @@
 
     /* 正常 → DECIDING */
     this._setState(STATES.DECIDING);
+    this._stampDecidingEnter();
     return { ok: true, gameOver: false, breach: false };
   };
 
   /**
-   * 伪救赎安全屋：玩家选择净化（扣 20% 清零偏移指数）或跳过。
+   * 伪救赎安全屋：玩家选择净化（按净资产比例划扣一笔整数金额并清零偏移指数）或跳过。
    * @param {'purge'|'skip'} choice
    */
   GameController.prototype.resolveSafeNode = function (choice) {
@@ -1266,6 +1512,7 @@
       this._updatePeakCredits();
     }
     this._setState(STATES.DECIDING);
+    this._stampDecidingEnter();
     return { ok: true, choice: choice, cost: cost };
   };
 
@@ -1281,10 +1528,14 @@
     if (this.getNetAsset() < 0) {
       var creditsNow = Math.floor(this.credits);
       var debt       = Math.floor(this.getDebt());
+      var nudgeTpl   = cfg('copy.quotaNudge', '');
+      var warnText   = nudgeTpl
+        ? tpl(nudgeTpl, { credits: creditsNow, quota: this.quota, debt: debt })
+        : ('行政警告：指标未达成。\n当前收集额：¥' + creditsNow +
+          '，目标配额：¥' + this.quota +
+          '。\n若强行撤离，差额（¥' + debt + '）将按信托条款从关联额度中划扣。');
       this._emitUiWarning({
-        text: '行政警告：指标未达成。\n当前收集额：¥' + creditsNow +
-              '，目标配额：¥' + this.quota +
-              '。\n若强行撤离，差额（¥' + debt + '）将从您的物理器官中等价扣除。',
+        text: warnText,
         quota:   this.quota,
         credits: creditsNow,
         debt:    debt
@@ -1298,9 +1549,18 @@
    * 强行割肉撤离（配额未达成时玩家主动确认）。
    * 资产归零视为 GAME OVER，展示《资产清算通知书》。
    */
+  GameController.prototype._applyEarlyCashoutFreezePenalty = function () {
+    if (!(this._frozenPrincipal > 0 && this.floor < this._frozenUnlockFloor)) return;
+    var claw = Math.round(this.credits * ASSET_FREEZE_CFG.cashoutClawback);
+    this.credits = Math.max(0, this.credits - claw);
+    this._frozenPrincipal = 0;
+    this._frozenUnlockFloor = 999999;
+  };
+
   GameController.prototype.forceDebtCashOut = function () {
     if (!this.canCashOut()) return { ok: false, reason: 'invalid_state' };
     this._clearBreachTimer();
+    this._applyEarlyCashoutFreezePenalty();
     var payout = Math.floor(this.credits);
     var debt   = Math.floor(this.getDebt());
     this.lastPayout = payout;
@@ -1315,6 +1575,7 @@
   GameController.prototype.cashOut = function () {
     if (!this.canCashOut()) return { ok: false, reason: 'invalid_state' };
     this._clearBreachTimer();
+    this._applyEarlyCashoutFreezePenalty();
     var payout   = Math.floor(this.credits);
     this.lastPayout = payout;
     this._setState(STATES.CASHED_OUT);
@@ -1384,10 +1645,70 @@
     /* 偏移指数代价（先加，再用新偏移指数掷骰） */
     this._addCorruption(CORRUPTION.ON_REROLL);
 
-    /* 重掷（使用最新偏移指数，代价立即体现；楼层养猪期保护继续有效） */
     var r          = this._rng();
-    var newOutcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, 0, this.floor);
+    var rngSub     = this._rng;
+    var newOutcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, 0, this.floor, rngSub);
+
+    if (newOutcome.kind === 'LIQUIDATION' && REROLL_BAILOUT_CFG.enabled) {
+      var pay = Math.round(this.credits * REROLL_BAILOUT_CFG.payRatio);
+      var bailMsg = tpl(cfg('copy.rerollBailout', ''), {
+        pay: pay,
+        balance: Math.floor(this.credits)
+      });
+      if (bailMsg && nativeConfirm(bailMsg)) {
+        this.credits = Math.max(0, this.credits - pay);
+        r = this._rng();
+        newOutcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, 0, this.floor, rngSub);
+        if (newOutcome.kind === 'LIQUIDATION') {
+          newOutcome = {
+            kind: 'NEGATIVE',
+            raw: r,
+            band: 'REROLL_BAILOUT_FALLBACK',
+            creditsMultiplier: REROLL_BAILOUT_CFG.fallbackMult,
+            bailoutRewrite: true
+          };
+        }
+      }
+    }
+
+    if (newOutcome.kind === 'LIQUIDATION' && SUSPENSE_CFG.liquidationMs > 0) {
+      busyWaitSync(SUSPENSE_CFG.liquidationMs);
+    }
+    if (newOutcome.kind === 'NEGATIVE' && SUSPENSE_CFG.negativeLowRunwayMs > 0 &&
+        this._floorCreditsBefore < this.quota * SUSPENSE_CFG.lowRunwayRatio) {
+      busyWaitSync(SUSPENSE_CFG.negativeLowRunwayMs);
+    }
+
+    if (newOutcome.kind === 'LIQUIDATION') {
+      this._liquidationDebtAmount = (this._floorCreditsBefore < this.quota)
+        ? Math.max(0, Math.floor(this.quota - this._floorCreditsBefore))
+        : 0;
+    }
+
     this._applyOutcomeToCredits(newOutcome);
+
+    if (newOutcome.kind === 'LIQUIDATION' && this.brakeMitigationPending) {
+      this.credits = Math.max(0, Math.floor(this._floorCreditsBefore * BRAKE_RETAIN));
+      newOutcome.mitigated = true;
+      newOutcome.displayKind = 'MITIGATED';
+      this.brakeMitigationPending = false;
+    }
+
+    if (this.passengers.length && newOutcome.kind !== 'LIQUIDATION') {
+      var aggR = aggregatePassengerModifiers(this.passengers);
+      this.credits *= aggR.creditsMult;
+      if (aggR.hasVolatile) {
+        this.credits *= (this._rng() < VOLATILE_POS_CHANCE ? VOLATILE_POS_MULT : VOLATILE_NEG_MULT);
+      }
+    }
+
+    if (newOutcome.kind === 'NEGATIVE' && newOutcome.chainLightning) {
+      var chR = Math.round(this._floorCreditsBefore * CHAIN_LIGHTNING_CFG.extraLossRatio);
+      this.credits = Math.max(0, this.credits - chR);
+      chainDebtAdd(chR);
+      newOutcome._chainLightningLoss = chR;
+    }
+
     this._applyCorruptionForOutcome(newOutcome);
 
     this.rngLog.push({

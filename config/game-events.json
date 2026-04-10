@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "version": "0.02",
+    "version": "0.03",
     "description": "《零号电梯》事件概率与数值配置表。修改此文件即可调整游戏平衡，无需改动代码。",
     "lastUpdated": "2026-04-09"
   },
@@ -177,11 +177,78 @@
 
   "quota": {
     "_comment": "配额系统。玩家须积累资产超过此值才可正常撤离。",
-    "target": 10000,
+    "target": 1000,
     "pressureMaxShift": 0.065,
     "pressureLinearFactor": 0.075,
     "nearQuotaRange": 0.2,
     "nearQuotaPeakShift": 0.038
+  },
+
+  "speculatorProtocol": {
+    "_comment": "激进投机者(SC身份)对赌：确认后未来N层账面收益倍率放大，但结果带来的偏移增速按倍率放大。交互为浏览器原生 confirm（无新 HTML）。",
+    "enabled": true,
+    "targetIdentity": "SCAMMER",
+    "durationFloors": 3,
+    "gainMult": 3,
+    "corruptionOutcomeMult": 2
+  },
+
+  "angelInvestor": {
+    "_comment": "天使投资人(VIP)上车：若干层内小幅抬高正面收益率（话术见 copy）。",
+    "enabled": true,
+    "targetIdentity": "VIP",
+    "durationFloors": 2,
+    "positiveRateBonus": 0.04
+  },
+
+  "rerollBailout": {
+    "_comment": "软盘重掷掷中清算时，可支付当前账面一定比例买断并重掷；仍清算则降级为温和负面。",
+    "enabled": true,
+    "assetPayRatio": 0.4,
+    "fallbackCreditsMultiplier": 0.82,
+    "useNativeConfirm": true
+  },
+
+  "goldenPositive": {
+    "_comment": "肥尾：在落入正面带后，按概率升级为超高倍率（仍记为 POSITIVE，兼容现有 UI）。",
+    "probability": 0.015,
+    "creditsMultiplier": 10
+  },
+
+  "chainLightning": {
+    "_comment": "连环爆雷：极低概率在负面结算后追加折损，并写入 localStorage 供下一局开局扣除（跨局负债）。",
+    "probability": 0.0008,
+    "extraLossRatioOfSnapshot": 0.18,
+    "storageKey": "fbc_chain_margin_call_v1"
+  },
+
+  "assetFreeze": {
+    "_comment": "资产冻结：随机锁住部分流动性，再上行若干层归还；提前撤离则额外回吐账面。",
+    "probability": 0.035,
+    "lockRatio": 0.5,
+    "floorsToUnlock": 3,
+    "cashoutClawbackRatio": 0.2
+  },
+
+  "comboBlindConfidence": {
+    "_comment": "连击：进入决策后 windowMs 内上行，本层收益略增，隐性抬高清算带权重（quotaShift）。",
+    "windowMs": 1500,
+    "gainMult": 1.05,
+    "hiddenQuotaShiftBonus": 0.024
+  },
+
+  "suspense": {
+    "_comment": "清算结局前主线程阻塞等待（毫秒），拉长揭晓张力；0 关闭。低跑道负面可另配延迟。",
+    "liquidationBusyWaitMs": 1500,
+    "lowRunwayNegativeBusyWaitMs": 1500,
+    "lowRunwayCreditsToQuotaMax": 0.22
+  },
+
+  "copy": {
+    "quotaNudge": "委员会口径：资产活跃度极高，建议继续上行以对冲波动。\n当前收集额：¥${credits}，目标配额：¥${quota}。\n若坚持提前归档，差额（¥${debt}）将按信托条款从个人账户及关联额度中强制划扣。",
+    "speculatorProtocol": "【激进投机者 · 对赌协议】\n对方声称：「上层绝对稳，杠杆我帮你扛。」\n是否签署：未来 ${durationFloors} 层内，每次正面/翻倍结算的账面收益按 ×${gainMult} 放大，但本层结果带来的偏移指数增速 ×${corruptionMult}？\n（取消则按常规结算，无额外条款。）",
+    "speculatorProtocolScan": "【激进投机者 · 对赌协议】\n对方摊牌：「上层绝对稳。」\n是否在对方离场前签署同上对赌条款？",
+    "rerollBailout": "重掷结果为强制清算。\n是否支付 ¥${pay} 买断并重写结局？（当前账面 ¥${balance}，划扣额按规章已折算为上述整数）\n取消则维持清算。"
   },
 
   "item": {
@@ -198,6 +265,28 @@
     "triggerProbability": 0.30
   },
 
+  "uiPacing": {
+    "_comment": "开门后主流程节拍：避免叙事/金额/惊喜/弹窗在同一帧抢拍。单位 ms。",
+    "narrativeFlashMs": 680,
+    "deltaFlashMs": 1200,
+    "afterDeltaHoldMs": 420,
+    "safeNodeOverlayDelayMs": 960,
+    "surpriseAfterDeltaMs": 320,
+    "odometerDelayAfterOpenMs": 160,
+    "passengerResyncDelayMs": 560,
+    "liquidationPanelDelayMs": 780,
+    "postCardToBreachMs": 240,
+    "rerollSceneClearMs": 1080,
+    "gainFlashHoldMultTier1": 1.32,
+    "gainFlashHoldMultTier2": 1.58,
+    "gainFlashHoldMultTier3": 1.98,
+    "gainFlashHoldMultTier4": 2.45,
+    "cardRewardResultMultTier1": 1.22,
+    "cardRewardResultMultTier2": 1.45,
+    "cardRewardResultMultTier3": 1.72,
+    "cardRewardResultMultTier4": 2.02
+  },
+
   "biome": {
     "_comment": "场景Biome切换。按楼层范围自动换肤。",
     "ranges": [
@@ -211,10 +300,10 @@
     "_comment": "丧尸楼层卡牌选取系统。电梯开门后出现灵异人物，弹出3张身份卡牌供选择，翻牌揭示收益或爆仓事件。",
     "enabled": true,
     "cardsPerRound": 3,
-    "preShowDelayMs": 2500,
+    "preShowDelayMs": 3200,
     "figureAppearMs": 800,
     "cardFlipMs": 600,
-    "resultShowMs": 2000,
+    "resultShowMs": 2400,
 
     "ghostFigures": [
       { "id": "medic",   "src": "assets/subjects/Subject 02.png", "name": "亡灵医师", "weight": 50 },

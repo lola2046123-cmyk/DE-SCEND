@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=VT323&display=swap" rel="stylesheet">
-<title>零号电梯：运行记录 · 联邦控制局</title>
+<title>暴富电梯 · 联邦控制局</title>
 <style>
   /* =======================================================
    * 启动界面（解锁浏览器音频）
@@ -44,12 +44,26 @@
   }
   .start-screen__subtitle {
     font-family: 'Courier New', monospace;
-    font-size: clamp(.55rem, 2.5vw, .75rem);
+    font-size: clamp(.52rem, 2.2vw, .72rem);
     color: #6b7580;
-    letter-spacing: .35em;
-    text-transform: uppercase;
-    margin-top: .6rem;
+    letter-spacing: .12em;
+    text-transform: none;
+    margin-top: .55rem;
     position: relative; z-index: 1;
+    max-width: 92vw;
+    text-align: center;
+    line-height: 1.45;
+  }
+  .start-screen__slogan {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(.48rem, 1.9vw, .65rem);
+    color: #555c66;
+    letter-spacing: .06em;
+    margin-top: .85rem;
+    position: relative; z-index: 1;
+    max-width: 88vw;
+    text-align: center;
+    line-height: 1.55;
   }
   .start-screen__prompt {
     font-family: 'VT323', monospace;
@@ -1846,7 +1860,8 @@
   }
 
   /* =======================================================
-   * 债务警告弹窗（野兽派官僚主义）
+   * 债务警告弹窗 — 联邦控制局 · 配额偏差通知
+   * 视觉参考：Control (Remedy) — Oldest House 内部文件
    * ======================================================= */
   .debt-warning-overlay {
     position: fixed;
@@ -1856,11 +1871,13 @@
     align-items: center;
     justify-content: center;
     padding: clamp(1rem, 5vw, 2rem);
-    background: rgba(0, 0, 0, 0.82);
+    background: rgba(8, 6, 5, 0.88);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
-    transition: opacity 0.15s ease, visibility 0.15s;
+    transition: opacity 0.25s ease, visibility 0.25s;
   }
   .debt-warning-overlay.active {
     opacity: 1;
@@ -1868,119 +1885,129 @@
     visibility: visible;
   }
   .debt-warning__box {
-    width: min(420px, 96vw);
-    background: #0a0000;
-    border: 3px solid #cc1010;
+    width: min(380px, 92vw);
+    background: #0e0c0b;
+    border: 1px solid rgba(140, 65, 55, 0.35);
     box-shadow:
-      0 0 0 1px #000,
-      0 0 0 5px rgba(200, 10, 10, 0.45),
-      0 12px 48px rgba(0, 0, 0, 0.85);
+      0 0 0 1px rgba(0, 0, 0, 0.6),
+      0 16px 56px rgba(0, 0, 0, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
     padding: 0;
     position: relative;
   }
   .debt-warning__header {
-    background: #cc1010;
-    color: #000;
+    background: transparent;
+    border-bottom: 1px solid rgba(140, 65, 55, 0.3);
+    color: rgba(200, 140, 130, 0.9);
     font-family: "Courier New", monospace;
-    font-weight: 900;
-    font-size: clamp(0.72rem, 3.5vw, 0.9rem);
-    letter-spacing: 0.22em;
+    font-weight: 700;
+    font-size: clamp(0.48rem, 2.4vw, 0.58rem);
+    letter-spacing: 0.28em;
     text-transform: uppercase;
-    padding: 0.55rem 1rem;
-    border-bottom: 3px solid #000;
+    padding: 0.7rem 1.1rem;
+    position: relative;
+  }
+  .debt-warning__header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(160, 70, 55, 0.6) 20%, rgba(160, 70, 55, 0.6) 80%, transparent);
   }
   .debt-warning__body {
-    padding: 1rem 1rem 0.75rem;
+    padding: 1.1rem 1.1rem 0.6rem;
   }
   .debt-warning__stamp {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.36rem, 1.8vw, 0.46rem);
-    letter-spacing: 0.18em;
+    font-size: clamp(0.34rem, 1.6vw, 0.42rem);
+    letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(200, 50, 40, 0.55);
-    margin-bottom: 0.45rem;
+    color: rgba(160, 120, 110, 0.4);
+    margin-bottom: 0.35rem;
     display: block;
   }
   .debt-warning__text {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.58rem, 2.8vw, 0.72rem);
-    line-height: 1.65;
-    color: rgba(230, 225, 220, 0.92);
-    margin: 0 0 0.9rem;
+    font-size: clamp(0.56rem, 2.6vw, 0.68rem);
+    line-height: 1.7;
+    color: rgba(210, 205, 198, 0.88);
+    margin: 0 0 0.6rem;
     white-space: pre-line;
   }
   .debt-warning__text strong {
-    color: #ff4040;
+    color: rgba(220, 140, 125, 0.95);
+    font-weight: 700;
   }
   .debt-warning__actions {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
-    padding: 0 1rem 1rem;
+    gap: 0.5rem;
+    padding: 0.4rem 1.1rem 1.1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
   }
   .debt-warning__btn {
     width: 100%;
-    padding: clamp(0.6rem, 2vh, 0.85rem) 0.8rem;
-    border: 2px solid;
+    padding: clamp(0.6rem, 2vh, 0.82rem) 0.8rem;
+    border: 1px solid;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.52rem, 2.6vw, 0.64rem);
-    font-weight: 700;
-    letter-spacing: 0.16em;
+    font-size: clamp(0.5rem, 2.4vw, 0.6rem);
+    font-weight: 600;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     cursor: pointer;
     min-height: 44px;
-    transition: background 0.12s, color 0.12s;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
   .debt-warning__btn--continue {
     background: transparent;
-    border-color: rgba(200, 205, 215, 0.55);
-    color: rgba(220, 225, 235, 0.88);
+    border-color: rgba(180, 178, 172, 0.3);
+    color: rgba(200, 198, 192, 0.82);
   }
   .debt-warning__btn--continue:hover {
-    background: rgba(200, 208, 216, 0.1);
-    border-color: rgba(200, 208, 216, 0.85);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(200, 198, 192, 0.6);
+    color: rgba(230, 228, 222, 0.95);
   }
   .debt-warning__btn--force {
-    background: rgba(160, 10, 10, 0.6);
-    border-color: rgba(200, 10, 10, 0.75);
-    color: rgba(255, 200, 200, 0.9);
+    background: rgba(110, 35, 28, 0.25);
+    border-color: rgba(140, 60, 50, 0.5);
+    color: rgba(210, 155, 148, 0.88);
   }
   .debt-warning__btn--force:hover {
-    background: rgba(180, 15, 15, 0.8);
-    border-color: #cc2020;
-    color: #fff;
+    background: rgba(120, 40, 32, 0.4);
+    border-color: rgba(160, 75, 60, 0.7);
+    color: rgba(235, 195, 188, 0.95);
   }
 
   /* =======================================================
    * 结算画面扩展：《资产清算通知书》
    * ======================================================= */
   .result-overlay__box--liquidation {
-    background: #0a0000;
-    border: 2px solid rgba(180, 20, 15, 0.65);
+    background: #0c0908;
+    border: 1px solid rgba(120, 50, 42, 0.35);
     box-shadow:
       0 0 0 1px rgba(0, 0, 0, 0.6),
-      0 8px 40px rgba(140, 0, 0, 0.35),
-      inset 0 0 60px rgba(80, 0, 0, 0.2);
+      0 16px 48px rgba(0, 0, 0, 0.6);
   }
   .result-overlay__title--liquidation {
-    color: rgba(220, 55, 45, 0.95);
-    text-shadow:
-      0 0 12px rgba(200, 30, 20, 0.65),
-      0 0 35px rgba(160, 15, 10, 0.35);
+    color: rgba(200, 120, 105, 0.9);
+    text-shadow: none;
   }
   .result-overlay__liquidation-notice {
     font-family: "Courier New", monospace;
     font-size: clamp(0.42rem, 2vw, 0.54rem);
     letter-spacing: 0.1em;
     line-height: 1.8;
-    color: rgba(210, 200, 198, 0.72);
-    border: 1px solid rgba(160, 30, 25, 0.35);
+    color: rgba(200, 192, 185, 0.7);
+    border: 1px solid rgba(100, 50, 42, 0.25);
     padding: 0.65rem 0.75rem;
     margin-bottom: 0.5rem;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.25);
   }
   .result-overlay__liquidation-notice strong {
-    color: rgba(240, 90, 80, 0.95);
+    color: rgba(210, 130, 118, 0.9);
   }
   .result-overlay__liquidation-seal {
     display: block;
@@ -1989,7 +2016,7 @@
     font-size: clamp(0.36rem, 1.6vw, 0.44rem);
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(160, 30, 25, 0.5);
+    color: rgba(140, 70, 60, 0.4);
     margin-top: 0.35rem;
   }
 
@@ -2059,8 +2086,8 @@
 
   .boss-overlay__box {
     max-width: 360px; width: 90%; padding: 2rem 2rem 1.75rem;
-    border: 2px solid #2a2a2a; background: var(--concrete-deep);
-    box-shadow: 0 0 0 1px #000, 0 0 60px rgba(160,20,15,.45);
+    border: 1px solid rgba(80, 55, 48, 0.3); background: #0e0c0b;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 16px 56px rgba(0,0,0,0.7);
     position: relative;
     animation: boss-box-appear .3s cubic-bezier(0.2, 1.3, 0.5, 1);
   }
@@ -2073,9 +2100,9 @@
   .boss-overlay__classification {
     font-family: "Courier New", monospace; font-size: .5rem;
     letter-spacing: .45em; text-transform: uppercase;
-    color: var(--hiss-red-hot); border-bottom: 1px solid #2a2a2a;
+    color: rgba(200, 130, 115, 0.85); border-bottom: 1px solid rgba(80, 55, 48, 0.25);
     padding-bottom: .75rem; margin-bottom: 1.25rem; display: block;
-    text-shadow: 0 0 8px var(--hiss-red);
+    text-shadow: none;
     animation: overlay-text-flicker .5s ease-in-out infinite;
   }
 
@@ -2088,7 +2115,7 @@
   .boss-overlay__stats {
     font-family: "Courier New", monospace; font-size: .65rem;
     letter-spacing: .16em; color: var(--bureau-white-dim);
-    border-left: 2px solid var(--hiss-red-deep); padding-left: .75rem;
+    border-left: 2px solid rgba(140, 65, 55, 0.4); padding-left: .75rem;
     margin-bottom: 1.5rem; line-height: 1.8;
   }
 
@@ -2110,13 +2137,13 @@
   .boss-overlay__actions button:hover { transform: translateY(-1px); filter: brightness(1.15); }
 
   .boss-btn-ascend {
-    background: var(--hiss-red-deep); border: 2px solid var(--hiss-red-hot);
-    color: #fff; box-shadow: 0 0 12px rgba(180,20,15,.35);
+    background: rgba(90, 22, 18, 0.5); border: 1px solid rgba(150, 60, 48, 0.55);
+    color: rgba(240, 228, 218, 0.92); box-shadow: 0 0 14px rgba(100, 30, 22, 0.2);
   }
 
   .boss-btn-exit {
-    background: transparent; border: 2px solid var(--concrete-light);
-    color: var(--bureau-white);
+    background: transparent; border: 1px solid rgba(120, 110, 100, 0.3);
+    color: rgba(200, 195, 188, 0.82);
   }
 
   /* =======================================================
@@ -2145,13 +2172,13 @@
   }
 
   .result-overlay__box--liquidation-end {
-    border-color: #2a1818;
-    box-shadow: 0 0 0 1px #000, 0 0 48px rgba(90, 20, 18, 0.35);
+    border-color: rgba(80, 40, 35, 0.35);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 16px 48px rgba(0, 0, 0, 0.6);
   }
 
   .result-overlay__box--success {
-    border-color: #1a2a1a;
-    box-shadow: 0 0 0 1px #000, 0 0 40px rgba(30, 90, 40, 0.22);
+    border-color: rgba(50, 80, 55, 0.3);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 16px 48px rgba(0, 0, 0, 0.6);
   }
 
   .result-overlay__badge {
@@ -2230,30 +2257,30 @@
     border-radius: 1px;
   }
   .result-overlay__title-block--liquidation-end .result-overlay__title-rule {
-    background: linear-gradient(90deg, transparent, #6a1518 15%, #6a1518 85%, transparent);
+    background: linear-gradient(90deg, transparent, rgba(120, 55, 48, 0.4) 15%, rgba(120, 55, 48, 0.4) 85%, transparent);
   }
   .result-overlay__title-block--success .result-overlay__title-rule {
-    background: linear-gradient(90deg, transparent, #1e4d28 15%, #1e4d28 85%, transparent);
+    background: linear-gradient(90deg, transparent, rgba(55, 100, 65, 0.35) 15%, rgba(55, 100, 65, 0.35) 85%, transparent);
   }
 
   .result-overlay__title--liquidation-end {
-    background: linear-gradient(180deg, #ffffff 0%, #e8b8b4 100%);
+    background: linear-gradient(180deg, rgba(240, 235, 230, 0.95) 0%, rgba(200, 155, 145, 0.85) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
   @supports not (background-clip: text) {
-    .result-overlay__title--liquidation-end { color: #f0d0cc; }
+    .result-overlay__title--liquidation-end { color: rgba(220, 195, 185, 0.9); }
   }
 
   .result-overlay__title--success {
-    background: linear-gradient(180deg, #e8fff0 0%, #5cc85c 100%);
+    background: linear-gradient(180deg, rgba(225, 240, 230, 0.92) 0%, rgba(110, 175, 125, 0.85) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
   @supports not (background-clip: text) {
-    .result-overlay__title--success { color: #5cc85c; }
+    .result-overlay__title--success { color: rgba(130, 190, 145, 0.85); }
   }
 
   .result-overlay__body {
@@ -2274,16 +2301,15 @@
     color: rgba(175, 178, 186, 0.9);
   }
 
-  /* 数据区：左珊瑚条 + 行内两端对齐 */
   .result-overlay__stat-sheet {
-    background: #121212;
-    border-left: 4px solid #f0a098;
+    background: rgba(14, 12, 11, 0.8);
+    border-left: 2px solid rgba(180, 120, 105, 0.4);
     padding: 0.85rem 1rem 0.85rem 0.95rem;
     margin-bottom: 1.35rem;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
   }
   .result-overlay__stat-sheet--success {
-    border-left-color: #4caf6a;
+    border-left-color: rgba(90, 150, 105, 0.45);
   }
   .result-overlay__stat-row {
     display: flex;
@@ -2313,20 +2339,16 @@
     white-space: nowrap;
   }
   .result-overlay__stat-val--cor {
-    color: #f2ecec;
-    text-shadow:
-      0 0 6px rgba(248, 165, 155, 0.55),
-      0 0 18px rgba(248, 130, 120, 0.28);
+    color: rgba(230, 210, 200, 0.9);
+    text-shadow: none;
   }
   .result-overlay__stat-val--stable {
-    color: #5ce070;
-    text-shadow:
-      0 0 6px rgba(80, 220, 110, 0.45),
-      0 0 16px rgba(60, 180, 90, 0.22);
+    color: rgba(140, 200, 155, 0.88);
+    text-shadow: none;
   }
   .result-overlay__stat-val--success {
-    color: #e8f5e9;
-    text-shadow: 0 0 8px rgba(100, 200, 120, 0.35);
+    color: rgba(180, 220, 190, 0.9);
+    text-shadow: none;
   }
 
   .result-overlay__footer {
@@ -2493,8 +2515,8 @@
   .result-overlay__bad-debt {
     font-weight: 800;
     font-variant-numeric: tabular-nums;
-    color: rgba(255, 120, 100, 0.95);
-    text-shadow: 0 0 12px rgba(200, 40, 30, 0.35);
+    color: rgba(210, 130, 118, 0.9);
+    text-shadow: none;
   }
 
   /* =======================================================
@@ -2522,20 +2544,20 @@
     letter-spacing: -0.02em;
     line-height: 1;
     font-variant-numeric: tabular-nums;
-    background: linear-gradient(180deg, #ff6a5e 0%, #ff2800 60%, #8b0000 100%);
+    background: linear-gradient(180deg, rgba(220, 140, 125, 0.95) 0%, rgba(180, 80, 65, 0.9) 60%, rgba(100, 35, 28, 0.85) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     text-shadow: none;
-    filter: drop-shadow(0 0 22px rgba(255, 40, 0, 0.55));
-    animation: liq-hero-pulse 1.8s ease-in-out infinite alternate;
+    filter: drop-shadow(0 0 16px rgba(160, 60, 40, 0.3));
+    animation: liq-hero-pulse 2.5s ease-in-out infinite alternate;
   }
   @supports not (background-clip: text) {
-    .result-overlay__liq-hero-amount { color: #ff4040; filter: none; }
+    .result-overlay__liq-hero-amount { color: rgba(200, 120, 100, 0.9); filter: none; }
   }
   @keyframes liq-hero-pulse {
-    0%   { filter: drop-shadow(0 0 18px rgba(255, 40, 0, 0.5)); }
-    100% { filter: drop-shadow(0 0 38px rgba(255, 80, 0, 0.85)); }
+    0%   { filter: drop-shadow(0 0 12px rgba(160, 60, 40, 0.25)); }
+    100% { filter: drop-shadow(0 0 24px rgba(160, 70, 45, 0.45)); }
   }
   @media (prefers-reduced-motion: reduce) {
     .result-overlay__liq-hero-amount { animation: none; }
@@ -2565,13 +2587,13 @@
   .result-overlay__evaluation {
     margin: 0.6rem 0 0.85rem;
     padding: 0.65rem 0.85rem;
-    background: rgba(255, 20, 0, 0.04);
-    border-left: 3px solid #3a1010;
+    background: rgba(20, 14, 12, 0.5);
+    border-left: 2px solid rgba(120, 55, 48, 0.3);
     font-family: "Courier New", monospace;
     font-size: clamp(0.46rem, 2.1vw, 0.55rem);
     line-height: 1.85;
     letter-spacing: 0.04em;
-    color: rgba(200, 195, 190, 0.82);
+    color: rgba(195, 188, 182, 0.78);
     min-height: 2.4em;
     white-space: pre-wrap;
     word-break: break-all;
@@ -2580,7 +2602,7 @@
     display: inline-block;
     width: 0.45em;
     height: 1em;
-    background: rgba(200, 100, 90, 0.7);
+    background: rgba(180, 120, 105, 0.6);
     vertical-align: text-bottom;
     margin-left: 1px;
     animation: blink-cursor 0.7s step-end infinite;
@@ -2657,10 +2679,10 @@
     max-width: 340px;
     width: 88%;
     padding: 1.4rem 1.25rem 1.2rem;
-    background: #07100a;
-    border: 1px solid #1a3524;
-    box-shadow: 0 0 0 1px #000,
-                0 0 48px rgba(30, 140, 70, 0.18);
+    background: #0c0e0c;
+    border: 1px solid rgba(60, 90, 70, 0.25);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6),
+                0 16px 48px rgba(0, 0, 0, 0.6);
     animation: boss-box-appear .25s cubic-bezier(0.2, 1.3, 0.5, 1);
   }
   .safe-node__badge {
@@ -2669,11 +2691,11 @@
     font-size: clamp(0.4rem, 1.8vw, 0.5rem);
     letter-spacing: 0.28em;
     text-transform: uppercase;
-    color: rgba(80, 200, 120, 0.65);
+    color: rgba(100, 160, 120, 0.5);
     text-align: center;
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #132218;
+    border-bottom: 1px solid rgba(60, 90, 70, 0.18);
   }
   .safe-node__title {
     text-align: center;
@@ -2682,7 +2704,7 @@
     font-size: clamp(0.82rem, 3.6vw, 1rem);
     font-weight: 800;
     letter-spacing: 0.05em;
-    background: linear-gradient(180deg, #e8fff0 0%, #4cdf7a 100%);
+    background: linear-gradient(180deg, #e0f0e5 0%, #70b880 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -2692,18 +2714,24 @@
     font-family: "Courier New", monospace;
     font-size: clamp(0.42rem, 1.95vw, 0.54rem);
     letter-spacing: 0.08em;
-    color: rgba(160, 215, 175, 0.7);
+    color: rgba(140, 175, 150, 0.55);
     margin-bottom: 0.85rem;
   }
+  .safe-node__lead {
+    margin: 0 0 0.5rem;
+    font-size: clamp(0.48rem, 2.1vw, 0.58rem);
+    line-height: 1.45;
+    color: rgba(200, 210, 205, 0.85);
+  }
   .safe-node__offer {
-    background: #0e1c12;
-    border-left: 3px solid #2a6b3e;
+    background: rgba(12, 20, 15, 0.7);
+    border-left: 2px solid rgba(70, 130, 85, 0.35);
     padding: 0.7rem 0.85rem;
     margin-bottom: 0.9rem;
     font-family: Inter, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
     font-size: clamp(0.5rem, 2.3vw, 0.6rem);
     line-height: 1.75;
-    color: rgba(200, 215, 205, 0.85);
+    color: rgba(195, 205, 198, 0.82);
   }
   .safe-node__cost {
     display: block;
@@ -2711,14 +2739,14 @@
     font-family: "Courier New", monospace;
     font-size: clamp(0.6rem, 2.7vw, 0.75rem);
     font-weight: 800;
-    color: #ffd060;
-    text-shadow: 0 0 12px rgba(255, 210, 60, 0.35);
+    color: rgba(210, 190, 140, 0.88);
+    text-shadow: none;
   }
   .safe-node__trap-hint {
     font-family: "Courier New", monospace;
     font-size: clamp(0.38rem, 1.75vw, 0.46rem);
     letter-spacing: 0.06em;
-    color: rgba(120, 175, 140, 0.55);
+    color: rgba(110, 150, 125, 0.45);
     text-align: center;
     margin-bottom: 0.8rem;
     font-style: italic;
@@ -2736,41 +2764,41 @@
     letter-spacing: 0.1em;
     cursor: pointer;
     border: 1px solid;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   }
   .safe-node__btn--purge {
-    background: #112218;
-    border-color: #2a6b3e;
-    color: #6fdf8a;
+    background: rgba(18, 35, 25, 0.65);
+    border-color: rgba(70, 130, 85, 0.35);
+    color: rgba(130, 200, 150, 0.85);
   }
   .safe-node__btn--purge:hover {
-    background: #18302a;
-    border-color: #4aaf6e;
-    color: #9effa8;
+    background: rgba(25, 45, 32, 0.7);
+    border-color: rgba(90, 155, 105, 0.5);
+    color: rgba(160, 220, 175, 0.92);
   }
   .safe-node__btn--skip {
-    background: #131313;
-    border-color: #2e2e2e;
-    color: rgba(180, 185, 190, 0.8);
+    background: rgba(16, 16, 16, 0.7);
+    border-color: rgba(100, 95, 88, 0.22);
+    color: rgba(170, 168, 162, 0.72);
   }
   .safe-node__btn--skip:hover {
-    background: #1a1a1a;
-    border-color: #3e3e3e;
+    background: rgba(22, 22, 22, 0.75);
+    border-color: rgba(120, 115, 108, 0.35);
   }
 
   /* =======================================================
-   * 授权面板：强制配额协议条款样式
+   * 授权面板：协议条款 — Oldest House 行政文书调性
    * ======================================================= */
   .risk-auth-panel__terms-block {
-    background: rgba(10, 18, 14, 0.82);
-    border: 1px solid rgba(55, 110, 85, 0.35);
-    border-left: 3px solid rgba(74, 222, 128, 0.5);
+    background: rgba(14, 12, 11, 0.75);
+    border: 1px solid rgba(80, 55, 48, 0.25);
+    border-left: 2px solid rgba(180, 120, 100, 0.35);
     padding: 0.65rem 0.85rem;
     font-family: "Courier New", monospace;
     font-size: clamp(0.48rem, 2.1vw, 0.58rem);
     line-height: 1.75;
     letter-spacing: 0.03em;
-    color: rgba(210, 218, 212, 0.88);
+    color: rgba(200, 195, 188, 0.85);
   }
   .risk-auth-panel__terms-row {
     display: flex;
@@ -2778,23 +2806,23 @@
     align-items: baseline;
     gap: 0.5rem;
     padding: 0.2rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   }
   .risk-auth-panel__terms-row:last-child { border-bottom: none; }
   .risk-auth-panel__terms-key {
-    color: rgba(155, 150, 145, 0.75);
+    color: rgba(155, 148, 140, 0.65);
     flex-shrink: 0;
     font-size: clamp(0.42rem, 1.8vw, 0.5rem);
   }
   .risk-auth-panel__terms-val {
     font-weight: 700;
-    color: #ffd060;
-    text-shadow: 0 0 10px rgba(255, 200, 60, 0.3);
+    color: rgba(220, 195, 170, 0.92);
+    text-shadow: none;
     white-space: nowrap;
   }
   .risk-auth-panel__terms-val--danger {
-    color: rgba(255, 140, 120, 0.9);
-    text-shadow: 0 0 10px rgba(220, 60, 40, 0.25);
+    color: rgba(200, 130, 118, 0.85);
+    text-shadow: none;
     font-size: clamp(0.4rem, 1.75vw, 0.48rem);
     font-weight: 400;
     white-space: normal;
@@ -2802,9 +2830,9 @@
   }
   .risk-auth-panel__terms-val--opportunity {
     flex: 1;
-    font-weight: 700;
-    color: #5ce38a;
-    text-shadow: 0 0 12px rgba(80, 220, 130, 0.35);
+    font-weight: 600;
+    color: rgba(200, 195, 188, 0.9);
+    text-shadow: none;
     white-space: normal;
     text-align: right;
     line-height: 1.55;
@@ -2813,32 +2841,28 @@
     flex: 1;
     font-size: clamp(0.4rem, 1.75vw, 0.48rem);
     font-weight: 500;
-    color: rgba(95, 22, 22, 0.96);
-    text-shadow: 0 0 0 1px rgba(40, 0, 0, 0.35);
+    color: rgba(160, 80, 70, 0.85);
+    text-shadow: none;
     white-space: normal;
     text-align: right;
     line-height: 1.55;
-    animation: risk-clause-pulse-dark 2.8s ease-in-out infinite;
-  }
-  @keyframes risk-clause-pulse-dark {
-    0%, 100% { opacity: 1; filter: brightness(1); }
-    50%      { opacity: 0.88; filter: brightness(0.82); }
+    animation: none;
   }
   .risk-auth-panel__clause {
     margin-top: 0.4rem;
     font-size: clamp(0.38rem, 1.7vw, 0.45rem);
     letter-spacing: 0.04em;
-    color: rgba(55, 18, 18, 0.88);
+    color: rgba(140, 100, 90, 0.65);
     font-style: italic;
     line-height: 1.5;
-    animation: risk-clause-pulse-dark 3.2s ease-in-out infinite;
+    animation: none;
   }
   .risk-auth-panel__val-note {
     display: block;
     margin-top: 0.2em;
     font-weight: 400;
     font-size: 0.88em;
-    color: rgba(180, 200, 175, 0.72);
+    color: rgba(160, 150, 140, 0.6);
     text-shadow: none;
     white-space: normal;
     line-height: 1.45;
@@ -2847,6 +2871,120 @@
     white-space: normal;
     text-align: right;
     line-height: 1.45;
+  }
+
+  /* 许可条款：窄屏默认折叠 */
+  .risk-auth-panel__expand {
+    width: 100%;
+    border: 1px solid rgba(80, 55, 48, 0.2);
+    border-radius: 2px;
+    background: rgba(14, 12, 11, 0.5);
+    margin: 0.1rem 0 0;
+  }
+  .risk-auth-panel__expand > summary {
+    list-style: none;
+    cursor: pointer;
+    font-family: "Courier New", monospace;
+    font-size: clamp(0.48rem, 2.05vw, 0.58rem);
+    letter-spacing: 0.06em;
+    color: rgba(180, 155, 140, 0.75);
+    padding: 0.45rem 0.55rem;
+    line-height: 1.45;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s ease;
+  }
+  .risk-auth-panel__expand > summary:hover {
+    color: rgba(210, 185, 165, 0.9);
+  }
+  .risk-auth-panel__expand > summary::-webkit-details-marker { display: none; }
+  .risk-auth-panel__expand > summary::after {
+    content: " ▼";
+    font-size: 0.85em;
+    opacity: 0.5;
+  }
+  .risk-auth-panel__expand[open] > summary::after { content: " ▲"; }
+  .risk-auth-panel__expand-hint {
+    font-size: 0.88em;
+    font-weight: 600;
+    opacity: 0.6;
+    letter-spacing: 0.04em;
+  }
+  .risk-auth-panel__expand .risk-auth-panel__terms-block {
+    border: none;
+    margin: 0;
+    padding-top: 0;
+  }
+
+  .debt-warning__lead {
+    margin: 0 0 0.4rem;
+    font-size: clamp(0.6rem, 2.6vw, 0.74rem);
+    line-height: 1.55;
+    color: rgba(215, 210, 202, 0.92);
+  }
+  .debt-warning__details {
+    margin: 0.15rem 0 0;
+    font-size: clamp(0.48rem, 2.2vw, 0.58rem);
+    line-height: 1.55;
+    color: rgba(170, 165, 158, 0.78);
+  }
+  .debt-warning__details > summary {
+    cursor: pointer;
+    color: rgba(180, 155, 140, 0.7);
+    letter-spacing: 0.06em;
+    margin-bottom: 0.2rem;
+    font-size: clamp(0.44rem, 2vw, 0.52rem);
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s ease;
+  }
+  .debt-warning__details > summary:hover {
+    color: rgba(210, 180, 165, 0.9);
+  }
+  .debt-warning__detail-inner { padding: 0.2rem 0 0.1rem; }
+
+  .safe-node__details {
+    margin: 0.35rem 0 0;
+    font-size: clamp(0.52rem, 2.3vw, 0.64rem);
+    color: rgba(175, 178, 185, 0.88);
+  }
+  .safe-node__details > summary {
+    cursor: pointer;
+    color: rgba(170, 155, 135, 0.7);
+    letter-spacing: 0.06em;
+  }
+  .safe-node__details .safe-node__trap-hint {
+    margin: 0.35rem 0 0;
+    font-size: 1em;
+  }
+
+  .result-overlay__liq-details {
+    margin: 0.55rem 0 0;
+    font-size: clamp(0.52rem, 2.25vw, 0.62rem);
+    line-height: 1.55;
+    color: rgba(200, 198, 190, 0.9);
+  }
+  .result-overlay__liq-details > summary {
+    cursor: pointer;
+    color: rgba(180, 155, 140, 0.7);
+    letter-spacing: 0.06em;
+  }
+  .result-liq-lead,
+  .result-liq-line {
+    margin: 0.2rem 0;
+    line-height: 1.45;
+  }
+  .result-liq-detail-body {
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  @media (max-width: 520px) {
+    .card-back__desc {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
   }
 
   /* =======================================================
@@ -2998,47 +3136,47 @@
   }
 
   .risk-auth-panel__h2 {
-    margin: 0.15rem 0 0;
+    margin: 0.2rem 0 0;
     font-family: "Courier New", Courier, monospace;
-    font-size: clamp(1rem, 4.2vw, 1.2rem);
-    font-weight: 700;
+    font-size: clamp(0.88rem, 3.8vw, 1.08rem);
+    font-weight: 600;
     line-height: 1.45;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.12em;
     text-align: center;
-    color: rgba(230, 232, 238, 0.95);
+    color: rgba(215, 208, 198, 0.88);
   }
 
   .risk-auth-panel__protocol-note {
     margin: -0.1rem 0 0.1rem;
     font-family: "Courier New", Courier, monospace;
-    font-size: clamp(0.72rem, 3.2vw, 0.88rem);
+    font-size: clamp(0.62rem, 2.8vw, 0.78rem);
     line-height: 1.45;
     letter-spacing: 0.05em;
     text-align: center;
-    color: rgba(170, 175, 185, 0.75);
+    color: rgba(155, 145, 138, 0.65);
   }
 
   .deploy-panel__badge {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.52rem, 2.1vw, 0.68rem);
-    letter-spacing: 0.28em;
+    font-size: clamp(0.48rem, 2vw, 0.6rem);
+    letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: rgba(200, 220, 200, 0.72);
+    color: rgba(170, 155, 145, 0.6);
     display: block;
     text-align: center;
-    text-shadow: 0 0 12px rgba(120, 200, 140, 0.12);
+    text-shadow: none;
   }
   .deploy-panel__divider {
-    width: 100%; border: none; border-top: 1px solid #232323; margin: 0;
+    width: 100%; border: none; border-top: 1px solid rgba(80, 55, 48, 0.2); margin: 0;
   }
   .deploy-panel__title {
     font-family: "Courier New", monospace;
     font-size: clamp(.72rem, 3.2vw, 0.95rem); font-weight: 900;
     letter-spacing: .12em; text-transform: none;
-    color: #fff8e8;
+    color: rgba(230, 218, 208, 0.92);
     text-align: center; display: block;
     padding-bottom: .1rem; width: 100%;
-    text-shadow: 0 0 18px rgba(255, 210, 100, 0.22);
+    text-shadow: none;
   }
   .deploy-panel__input-wrap {
     display: flex;
@@ -3046,17 +3184,16 @@
     justify-content: center;
     gap: 0.4rem;
     width: 100%;
-    border: 2px solid #2a2a2a;
-    background: rgba(11, 11, 11, 0.88);
-    padding: clamp(0.52rem, 2.2vh, 0.75rem) clamp(0.75rem, 3vw, 1.1rem);
+    border: 1px solid rgba(80, 55, 48, 0.3);
+    background: rgba(8, 6, 5, 0.85);
+    padding: clamp(0.75rem, 2.8vh, 1.1rem) clamp(0.75rem, 3vw, 1.1rem);
     border-radius: 2px;
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
+    box-shadow: inset 0 0 40px rgba(180, 100, 80, 0.04);
   }
   .deploy-panel__currency {
     font-family: "Courier New", monospace;
     font-size: clamp(1.15rem, 4.2vw, 1.45rem);
-    color: #d4a84b;
+    color: rgba(210, 165, 145, 0.8);
     flex-shrink: 0;
   }
   #deploy-amount {
@@ -3066,12 +3203,13 @@
     font-family: "Courier New", monospace;
     font-size: clamp(1.2rem, 5.5vw, 1.75rem);
     font-weight: bold;
-    color: var(--bureau-white-hot);
+    color: rgba(240, 200, 185, 0.95);
     letter-spacing: 0.06em;
     width: 100%;
     min-height: 2.75rem;
     text-align: center;
     -moz-appearance: textfield;
+    text-shadow: 0 0 24px rgba(200, 120, 90, 0.2);
   }
   #deploy-amount::-webkit-inner-spin-button,
   #deploy-amount::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -3085,29 +3223,51 @@
   .preset-btn {
     min-height: 48px;
     box-sizing: border-box;
-    background: #0f0f0f;
-    border: 1px solid #353535;
-    color: var(--bureau-white-dim);
+    background: rgba(14, 12, 11, 0.8);
+    border: 1px solid rgba(100, 80, 70, 0.25);
+    color: rgba(180, 175, 168, 0.78);
     font-family: "Courier New", monospace;
     font-size: clamp(0.82rem, 3.2vw, 1.05rem);
     font-weight: 700;
     letter-spacing: 0.06em;
-    padding: clamp(0.42rem, 1.6vh, 0.58rem) 0.15rem;
+    padding: clamp(0.55rem, 1.8vh, 0.72rem) 0.15rem;
     cursor: pointer;
-    transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.1s ease;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     text-align: center;
     border-radius: 2px;
     -webkit-tap-highlight-color: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.12rem;
   }
-  .preset-btn:hover, .preset-btn.active {
-    background: rgba(22, 80, 55, 0.88);
-    border-color: rgba(74, 222, 128, 0.55);
-    color: #ecfdf5;
+  .preset-btn__lv {
+    display: block;
+    font-size: clamp(0.36rem, 1.5vw, 0.44rem);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: rgba(150, 135, 125, 0.55);
+    text-transform: uppercase;
+  }
+  .preset-btn:hover {
+    background: rgba(50, 30, 25, 0.55);
+    border-color: rgba(180, 120, 100, 0.45);
+    color: rgba(230, 218, 208, 0.92);
+  }
+  .preset-btn.active {
+    background: rgba(50, 28, 22, 0.6);
+    border-color: rgba(200, 140, 115, 0.6);
+    color: rgba(240, 220, 208, 0.95);
+    box-shadow: 0 0 12px rgba(180, 100, 75, 0.12);
+  }
+  .preset-btn.active .preset-btn__lv {
+    color: rgba(200, 155, 135, 0.75);
   }
   .deploy-panel__status {
     font-family: "Courier New", monospace;
     font-size: .52rem; letter-spacing: .28em; text-transform: uppercase;
-    color: rgba(245, 213, 71, 0.75); min-height: 1em; text-align: center;
+    color: rgba(180, 155, 140, 0.65); min-height: 1em; text-align: center;
     opacity: 0; transition: opacity .15s ease;
   }
   .deploy-panel__status.active {
@@ -3129,49 +3289,55 @@
     padding: clamp(0.58rem, 2vh, 0.82rem) 0.75rem;
     cursor: pointer;
     background: transparent;
-    border: 2px solid var(--concrete-light);
-    color: var(--bureau-white);
+    border: 1px solid rgba(100, 80, 70, 0.3);
+    color: rgba(200, 195, 188, 0.85);
     font-family: "Courier New", monospace;
     font-size: clamp(0.62rem, 2.6vw, 0.78rem);
-    letter-spacing: 0.2em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     font-weight: bold;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
     border-radius: 2px;
   }
   .deploy-panel__btn em {
-    font-style: normal; color: var(--hiss-red-hot);
-    text-shadow: 0 0 10px var(--hiss-red);
+    font-style: normal; color: rgba(200, 120, 100, 0.9);
+    text-shadow: none;
+  }
+  .deploy-panel__btn-icon {
+    font-style: normal;
+    margin-right: 0.25em;
   }
   .deploy-panel__btn:hover:not(:disabled) {
-    background: #1a0505; border-color: var(--hiss-red-hot); color: #fff;
+    background: rgba(60, 20, 15, 0.4);
+    border-color: rgba(160, 80, 65, 0.5);
+    color: rgba(240, 230, 222, 0.95);
   }
 
   .deploy-panel__btn.deploy-panel__btn--armed:not(:disabled) {
     opacity: 1;
     filter: none;
-    border-color: var(--hiss-red-hot);
-    color: #fff;
-    background: rgba(40, 6, 6, 0.45);
-    animation: deploy-btn-breathe 1.85s ease-in-out infinite;
-    box-shadow: 0 0 14px rgba(160, 30, 30, 0.5);
+    border-color: rgba(140, 50, 40, 0.6);
+    color: rgba(245, 235, 228, 0.95);
+    background: rgba(90, 22, 18, 0.55);
+    animation: deploy-btn-breathe 2.5s ease-in-out infinite;
+    box-shadow: 0 0 18px rgba(120, 35, 25, 0.3);
   }
   @keyframes deploy-btn-breathe {
     0%, 100% {
-      box-shadow: 0 0 10px rgba(140, 25, 25, 0.4);
-      border-color: #8a2020;
+      box-shadow: 0 0 12px rgba(100, 30, 22, 0.25);
+      border-color: rgba(120, 45, 35, 0.5);
     }
     50% {
-      box-shadow: 0 0 26px rgba(255, 45, 45, 0.85), inset 0 0 16px rgba(60, 0, 0, 0.35);
-      border-color: var(--hiss-red-hot);
+      box-shadow: 0 0 22px rgba(140, 45, 30, 0.4), inset 0 0 12px rgba(80, 15, 10, 0.2);
+      border-color: rgba(170, 70, 55, 0.65);
     }
   }
   .deploy-panel__btn:disabled {
     cursor: not-allowed;
   }
   .deploy-panel__btn:disabled:not(.deploy-panel__btn--armed) {
-    opacity: 0.38;
-    filter: grayscale(1);
+    opacity: 0.35;
+    filter: grayscale(0.8);
     box-shadow: none;
     animation: none;
   }
@@ -3183,72 +3349,67 @@
     gap: 0.55rem;
     width: 100%;
   }
+  /* 首登：仅主按钮，视觉焦点更集中 */
+  .deploy-panel--onboarding .deploy-panel__btn--decline {
+    display: none !important;
+  }
+  .risk-auth-panel__onboarding-lead {
+    display: none;
+    margin: 0 0 0.45rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 2px;
+    border: 1px solid rgba(120, 80, 65, 0.2);
+    background: rgba(20, 14, 12, 0.55);
+    font-family: Inter, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: clamp(0.62rem, 2.6vw, 0.78rem);
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    color: rgba(210, 200, 192, 0.85);
+    text-align: center;
+  }
+  .deploy-panel--onboarding .risk-auth-panel__onboarding-lead {
+    display: block;
+  }
+  .deploy-panel--onboarding .risk-auth-panel__terms-row--risk-legal,
+  .deploy-panel--onboarding .risk-auth-panel__clause {
+    display: none !important;
+  }
   .deploy-panel__btn--launch {
     text-transform: none;
     letter-spacing: 0.08em;
     line-height: 1.35;
-    border-width: 2px;
-    background: linear-gradient(180deg, rgba(32, 120, 72, 0.92), rgba(18, 78, 48, 0.98));
-    border-color: rgba(255, 210, 100, 0.75);
-    color: #f4fff8;
-    text-shadow: 0 0 12px rgba(120, 255, 180, 0.25);
-  }
-  .deploy-panel__btn--launch:hover:not(:disabled) {
-    background: linear-gradient(180deg, rgba(42, 145, 88, 0.95), rgba(24, 95, 58, 1));
-    border-color: #ffe080;
-    color: #ffffff;
-  }
-  .deploy-panel__btn--launch.deploy-panel__btn--armed:not(:disabled) {
-    background: linear-gradient(180deg, rgba(38, 140, 82, 0.98), rgba(22, 98, 58, 1));
-    border-color: #ffd45c;
-    color: #ffffff;
-    animation: deploy-launch-gold-pulse 2.1s ease-in-out infinite;
-    box-shadow:
-      0 0 22px rgba(255, 200, 80, 0.45),
-      0 0 40px rgba(80, 200, 120, 0.2);
-    filter: none;
-    opacity: 1;
-  }
-  @keyframes deploy-launch-gold-pulse {
-    0%, 100% {
-      box-shadow: 0 0 18px rgba(255, 200, 80, 0.38), 0 0 36px rgba(60, 180, 100, 0.18);
-      border-color: rgba(255, 210, 100, 0.85);
-    }
-    50% {
-      box-shadow: 0 0 32px rgba(255, 230, 140, 0.65), 0 0 56px rgba(100, 220, 160, 0.28);
-      border-color: #fff0a0;
-    }
+    background: rgba(90, 22, 18, 0.45);
+    border-color: rgba(140, 50, 40, 0.45);
+    color: rgba(240, 228, 218, 0.92);
   }
   .deploy-panel__btn--launch .deploy-panel__btn-line-sub {
     display: block;
-    font-size: 0.78em;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    margin-top: 0.2em;
-    opacity: 0.92;
+    font-size: 0.72em;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    margin-top: 0.25em;
+    color: rgba(160, 145, 135, 0.7);
+    text-transform: uppercase;
+  }
+  .deploy-panel__btn--launch.deploy-panel__btn--armed:not(:disabled) .deploy-panel__btn-line-sub {
+    color: rgba(210, 195, 185, 0.8);
   }
   .deploy-panel__btn--decline {
     min-height: auto;
-    padding: 0.42rem 0.5rem;
-    font-size: clamp(0.48rem, 2vw, 0.58rem);
+    padding: 0.52rem 0.5rem;
+    font-size: clamp(0.46rem, 1.9vw, 0.55rem);
     letter-spacing: 0.1em;
     text-transform: none;
-    color: rgba(120, 125, 132, 0.88);
-    border: 1px solid rgba(60, 62, 68, 0.85);
-    background: rgba(18, 18, 20, 0.65);
+    color: rgba(130, 120, 115, 0.7);
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    background: transparent;
     font-weight: 500;
   }
   .deploy-panel__btn--decline:hover:not(:disabled) {
-    color: rgba(160, 165, 172, 0.95);
-    border-color: rgba(90, 94, 102, 0.9);
-    background: rgba(28, 28, 32, 0.75);
+    color: rgba(180, 165, 155, 0.9);
+    background: transparent;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .deploy-panel__btn--launch.deploy-panel__btn--armed:not(:disabled) {
-      animation: none;
-    }
-  }
-
   /* 窄手机：四档额度 2×2，避免单格过挤 */
   @media (max-width: 480px) {
     .deploy-panel__presets {
@@ -5036,7 +5197,7 @@
 
 <!--
   全局主要操作入口（与首次访问说明、无障碍标签对应）：
-  PRE_GAME     #deploy-amount · 四档 .preset-btn（100/200/500/1000）· #btn-deploy
+  PRE_GAME     #deploy-amount · 四档 .preset-btn（100/200/500/1000）· #btn-deploy · 首次开局后 #btn-decline-probe
   PLAYING      #core-btn-deploy 上行 · #core-btn-withdraw 风险撤离
   PLAYING      #manual-brace 应急制动拉杆（偏移越过警戒刻度时显示，与软盘制动同源）
   PLAYING      Space → #radial-ascend / #radial-cash / #radial-scan / #radial-brace / #radial-close
@@ -5049,17 +5210,18 @@
 <!-- ===== 游戏启动界面（解锁浏览器音频限制） ===== -->
 <div id="game-start-screen">
   <div class="start-screen__vignette" aria-hidden="true"></div>
-  <div class="start-screen__title">零号电梯<br>运行记录</div>
-  <div class="start-screen__subtitle">联邦控制局 · 垂直探测组</div>
+  <div class="start-screen__title">暴富电梯</div>
+  <div class="start-screen__subtitle">关门再涨价 · 联邦控制局计价规程</div>
+  <div class="start-screen__slogan">再上一层，离暴富更近——也可能更近破产。</div>
   <div class="start-screen__line" aria-hidden="true"></div>
-  <div class="start-screen__prompt">[ 点击进入 · 启动电梯 ]</div>
-  <div class="start-screen__hint">CLICK TO INITIALIZE ELEVATOR PROTOCOL</div>
+  <div class="start-screen__prompt">点按进入 · 开始首趟</div>
+  <div class="start-screen__hint">TAP TO BEGIN</div>
 </div>
 
 <!-- ===== 卡牌选取界面 ===== -->
 <div id="card-selection-overlay" aria-hidden="true">
   <div class="card-figure card-figure--placeholder" id="card-figure" aria-label="灵异人物"></div>
-  <div class="card-prompt">// 选择一张身份卡 · 揭示你的命运</div>
+  <div class="card-prompt">选一张身份卡</div>
   <div class="card-hand" id="card-hand"></div>
   <div class="card-result-bar" id="card-result-bar"></div>
 </div>
@@ -5067,8 +5229,8 @@
 <!-- ===== BOSS 质询弹窗 ===== -->
 <div id="boss-overlay" class="boss-overlay" role="dialog" aria-modal="true" aria-label="委员会质询">
   <div class="boss-overlay__box">
-    <span class="boss-overlay__classification">// 委员会 · 内部质询通知 · 机密</span>
-    <p class="boss-overlay__question">局长，您的格局就到此为止了吗？</p>
+    <span class="boss-overlay__classification">委员会 · 质询</span>
+    <p class="boss-overlay__question">撤，还是再上？</p>
     <div class="boss-overlay__stats" id="boss-stats"></div>
     <div class="boss-overlay__actions">
       <button class="boss-btn-ascend" id="boss-btn-ascend">继续上行</button>
@@ -5080,7 +5242,7 @@
 <!-- ===== 结果面板 ===== -->
 <div id="result-overlay" class="result-overlay" role="dialog" aria-modal="true">
   <div class="result-overlay__box" id="result-box">
-    <span class="result-overlay__badge" id="result-badge">// 联邦控制局 · 事件档案</span>
+    <span class="result-overlay__badge" id="result-badge">FBC · 事件档案</span>
     <div id="result-icon" class="result-overlay__warn-icon" role="img" aria-label="警告"></div>
     <div class="result-overlay__title-block" id="result-title-block">
       <p class="result-overlay__title" id="result-title">破产清算通知</p>
@@ -5093,8 +5255,8 @@
     </div>
     <!-- Layer 3：资产状态行 -->
     <div class="result-overlay__liq-status" id="result-liq-status" hidden>
-      资产清零 · 降级为底层劳役
-      <span class="result-overlay__liq-status-en">ASSETS LIQUIDATED · REASSIGNED TO LABOR UNIT B4</span>
+      资产清零 · 记录归档
+      <span class="result-overlay__liq-status-en">LIQUIDATED</span>
     </div>
     <div class="result-overlay__body" id="result-body"></div>
     <!-- Layer 4：打字机嘲讽评估（动态注入） -->
@@ -5107,20 +5269,23 @@
 <!-- ===== 安全屋弹窗（第 5 / 10 层伪救赎节点） ===== -->
 <div id="safe-node-overlay" class="safe-node-overlay" role="dialog" aria-modal="true" aria-labelledby="safe-node-title">
   <div class="safe-node__box">
-    <span class="safe-node__badge">// 联邦控制局 · 补给站 · 仅此一次</span>
-    <p class="safe-node__title" id="safe-node-title">发现补给站</p>
-    <p class="safe-node__subtitle">第 <span id="safe-node-floor">5</span> 层 · 特殊节点</p>
+    <span class="safe-node__badge">FBC · 补给站</span>
+    <p class="safe-node__title" id="safe-node-title">补给站</p>
+    <p class="safe-node__subtitle">F<span id="safe-node-floor">5</span> · 节点</p>
     <div class="safe-node__offer">
-      支付一笔划扣（具体金额见下方「支付额」），可清零全部偏移指数（Corruption），恢复基准概率曲线。<br>
-      <span class="safe-node__cost" id="safe-node-cost">支付额：¥ 0</span>
+      <p class="safe-node__lead">支付下方金额，<strong>清零偏移</strong>并复位概率曲线。</p>
+      <span class="safe-node__cost" id="safe-node-cost">¥ 0</span>
+      <details class="safe-node__details">
+        <summary>说明</summary>
+        <p class="safe-node__trap-hint">净化会拖慢配额；后续负债自负。</p>
+      </details>
     </div>
-    <p class="safe-node__trap-hint">注意：净化会拖慢配额达成速度 · 局方不为因此产生的负债负责</p>
     <div class="safe-node__actions">
       <button type="button" class="safe-node__btn safe-node__btn--purge" id="safe-node-purge">
-        支付净化 · 清零偏移
+        支付净化
       </button>
       <button type="button" class="safe-node__btn safe-node__btn--skip" id="safe-node-skip">
-        跳过 · 继续上行
+        跳过
       </button>
     </div>
   </div>
@@ -5131,8 +5296,8 @@
   <div class="concrete-tex-overlay" aria-hidden="true"></div>
 
   <header class="stage__header">
-    <h1 class="stage__title">零号电梯：运行记录</h1>
-    <p class="stage__subtitle">[ 绝密 ] 联邦控制局 · 垂直探测组 · 运行规程 A-092</p>
+    <h1 class="stage__title">暴富电梯</h1>
+    <p class="stage__subtitle">关门再涨价 · 联邦控制局计价规程</p>
   </header>
 
   <div class="hud hud--terminal" id="hud" aria-label="状态">
@@ -5148,7 +5313,7 @@
         <div class="hud__readout-col hud__readout-col--asset hud__asset-counter" id="asset-counter" aria-label="资产与配额">
           <span class="hud__readout-label" id="hud-asset-label">许可概要</span>
           <div class="hud__mission-wrap" id="hud-pre-mission">
-            <p class="hud__mission-line" id="hud-mission-line">[ 离场目标：¥1,000（离场配额） // 探测杠杆 ¥200 ]</p>
+            <p class="hud__mission-line" id="hud-mission-line">目标 ¥1,000 · 杠杆 ¥200</p>
           </div>
           <div class="hud__readout-main hud__readout-main--asset hud__asset-play-row hud__asset-play-row--hidden" id="hud-asset-play-row">
             <span class="hud__readout-currency" aria-hidden="true">¥</span>
@@ -5180,7 +5345,7 @@
     </div>
     <div class="status-dock__chip status-dock__chip--hidden status-dock__chip--alert" id="dock-brake">
       <span class="status-dock__glyph" aria-hidden="true">⛔</span>
-      <span class="status-dock__float">应急制动待命<br>清算时划回留存金（例：基准¥200≈¥60）</span>
+      <span class="status-dock__float">制动待命<br>清算时按基准留存（例¥200→≈¥60）</span>
     </div>
     <div class="status-dock__chip status-dock__chip--hidden" id="dock-stack">
       <span class="status-dock__glyph" aria-hidden="true">⊕</span>
@@ -5197,54 +5362,60 @@
       <!-- ▼ 风险资产授权面板 —— 游戏开始前覆盖电梯厢 -->
       <div class="deploy-panel risk-auth-panel deploy-panel--pre-reveal" id="deploy-panel">
         <div class="risk-auth-panel__inner">
-          <span class="deploy-panel__badge">联邦控制局 // 资产增益许可处 // ASCENT 0</span>
+          <span class="deploy-panel__badge" id="deploy-panel-badge">FBC · 计价规程 · ASCENT 0</span>
           <hr class="deploy-panel__divider">
-          <span class="deploy-panel__title">《联邦资产探测增益许可 [A-092 档案]》</span>
+          <span class="deploy-panel__title" id="deploy-panel-title">联邦资产上行计价许可 [A-092]</span>
+          <p class="risk-auth-panel__onboarding-lead" id="deploy-onboarding-lead" aria-hidden="true">
+            先到配额线，再选撤离或上行。金额可随时改。
+          </p>
 
-          <div class="risk-auth-panel__terms-block">
-            <div class="risk-auth-panel__terms-row">
-              <span class="risk-auth-panel__terms-key">【资产注资】</span>
-              <span class="risk-auth-panel__terms-val risk-auth-panel__terms-val--leverage">
-                ¥ <span id="protocol-leverage-val">200</span>
-                <span class="risk-auth-panel__val-note">（由局方垫付本金，作为您的初始探测杠杆）</span>
-              </span>
+          <details class="risk-auth-panel__expand" id="deploy-protocol-details" open>
+            <summary class="risk-auth-panel__expand-sum" id="deploy-protocol-summary">规程要点（垫付 · 目标 · 风险） <span class="risk-auth-panel__expand-hint">点展全文</span></summary>
+            <div class="risk-auth-panel__terms-block">
+              <div class="risk-auth-panel__terms-row">
+                <span class="risk-auth-panel__terms-key">注资</span>
+                <span class="risk-auth-panel__terms-val risk-auth-panel__terms-val--leverage">
+                  ¥ <span id="protocol-leverage-val">200</span>
+                  <span class="risk-auth-panel__val-note" id="deploy-leverage-note">局方垫付作杠杆</span>
+                </span>
+              </div>
+              <div class="risk-auth-panel__terms-row">
+                <span class="risk-auth-panel__terms-key">目标</span>
+                <span class="risk-auth-panel__terms-val" style="white-space:normal;text-align:right;">
+                  总资产 ≥ ¥ <span id="protocol-quota-val">1,000</span>
+                </span>
+              </div>
+              <div class="risk-auth-panel__terms-row">
+                <span class="risk-auth-panel__terms-key">增益</span>
+                <span class="risk-auth-panel__terms-val--opportunity" id="deploy-term-gain">过配额后，<strong>100%</strong> 超额净利归您。</span>
+              </div>
+              <div class="risk-auth-panel__terms-row risk-auth-panel__terms-row--risk-legal">
+                <span class="risk-auth-panel__terms-key">风险</span>
+                <span class="risk-auth-panel__terms-val--risk-dark">中止或破产清算时，差额按《失信协议》扣<strong>等级分与局内特权</strong>。</span>
+              </div>
+              <p class="risk-auth-panel__clause">＊ 确认即接受风险；未偿债务可触发信用折偿顺位（局内规则）。</p>
             </div>
-            <div class="risk-auth-panel__terms-row">
-              <span class="risk-auth-panel__terms-key">【探测目标】</span>
-              <span class="risk-auth-panel__terms-val" style="white-space:normal;text-align:right;">
-                收集总资产 ≥ ¥ <span id="protocol-quota-val">1,000</span> 的局方配额。
-              </span>
-            </div>
-            <div class="risk-auth-panel__terms-row">
-              <span class="risk-auth-panel__terms-key">【增益逻辑】</span>
-              <span class="risk-auth-panel__terms-val--opportunity">一旦资产越过配额临界点，<strong>100%</strong> 的超额净利润将全部归您所有。</span>
-            </div>
-            <div class="risk-auth-panel__terms-row">
-              <span class="risk-auth-panel__terms-key">【风险告知】</span>
-              <span class="risk-auth-panel__terms-val--risk-dark">若探测中止或资不抵债（触发破产清算），本金及差额将通过《失信协议》等价扣除您的<strong>个人等级分及所有局内特权</strong>。</span>
-            </div>
-            <p class="risk-auth-panel__clause">＊ 按下确认键，即视为您接受上述风险，并自愿让渡<strong>底层器官优先折偿顺位</strong>以折抵未偿债务（不涉及生命权让渡，适用局内信用折抵规则）。</p>
-          </div>
+          </details>
 
-          <h2 class="risk-auth-panel__h2">探测杠杆额度</h2>
-          <p class="risk-auth-panel__protocol-note">局方垫付本金 · 可调升以放大上行收益（亦放大波动）</p>
+          <h2 class="risk-auth-panel__h2" id="deploy-lever-heading">探测杠杆</h2>
+          <p class="risk-auth-panel__protocol-note" id="deploy-lever-hint">可调高杠杆 · 收益与波动同步放大</p>
           <div class="deploy-panel__input-wrap">
             <span class="deploy-panel__currency">¥</span>
             <input type="number" id="deploy-amount" value="200" min="10" max="99999" placeholder="200" inputmode="numeric" autocomplete="off">
           </div>
           <div class="deploy-panel__presets">
-            <button type="button" class="preset-btn" data-val="100">100</button>
-            <button type="button" class="preset-btn" data-val="200">200</button>
-            <button type="button" class="preset-btn" data-val="500">500</button>
-            <button type="button" class="preset-btn" data-val="1000">1000</button>
+            <button type="button" class="preset-btn" data-val="100"><span class="preset-btn__lv">LV.01</span>100</button>
+            <button type="button" class="preset-btn" data-val="200"><span class="preset-btn__lv">LV.02</span>200</button>
+            <button type="button" class="preset-btn" data-val="500"><span class="preset-btn__lv">LV.05</span>500</button>
+            <button type="button" class="preset-btn" data-val="1000"><span class="preset-btn__lv">MAX</span>1000</button>
           </div>
-          <div class="deploy-panel__status" id="deploy-status">等待启动电梯或调整探测杠杆…</div>
+          <div class="deploy-panel__status" id="deploy-status">调杠杆后点启动</div>
           <div class="deploy-panel__cta-stack">
             <button type="button" class="deploy-panel__btn deploy-panel__btn--launch" id="btn-deploy">
-              [ 启动电梯 ]<span class="deploy-panel__btn-line-sub">申请阶层跃升</span>
+              <span class="deploy-panel__btn-icon" aria-hidden="true">⚡</span> 启动电梯<span class="deploy-panel__btn-line-sub" id="btn-deploy-subline">CONFIRM VALUATION DOSSIER</span>
             </button>
             <button type="button" class="deploy-panel__btn deploy-panel__btn--decline" id="btn-decline-probe">
-              [ 维持现状 ] — 放弃本次探测许可
+              × 放弃许可 / RENOUNCE
             </button>
           </div>
         </div>
@@ -5299,7 +5470,7 @@
         </div>
       </div>
 
-      <button type="button" class="car__manual-brace" id="manual-brace" aria-label="应急制动" title="应急制动（武装后若触发强制清算，按基准划回留存金；例：基准¥200时约¥60）"></button>
+      <button type="button" class="car__manual-brace" id="manual-brace" aria-label="应急制动" title="应急制动：清算时按基准留存（例¥200→≈¥60）"></button>
 
       <div class="car__light-sweep"      aria-hidden="true"></div>
       <div class="car__shaft-blur"       aria-hidden="true"></div>
@@ -5313,7 +5484,7 @@
         <div class="breach-overlay__bar-track">
           <div class="breach-overlay__bar-fill" id="breach-fill"></div>
         </div>
-        <div class="breach-overlay__hint">步出电梯或立即撤离 · Space / ⌘R</div>
+        <div class="breach-overlay__hint">撤离 · Space / ⌘R</div>
       </div>
 
       <div class="core-trigger core-trigger--withdraw core-trigger--hidden" id="core-trigger-withdraw" aria-hidden="true">
@@ -5345,23 +5516,22 @@
   </div>
 
   <div class="committee-console-warning" id="committee-console-warning" aria-hidden="true" role="alertdialog" aria-modal="true" aria-labelledby="committee-console-warning-text">
-    <p class="committee-console-warning__text" id="committee-console-warning-text">警告：委员会已接管控制台，请立即步出。</p>
+    <p class="committee-console-warning__text" id="committee-console-warning-text">委员会接管控制台 · 请步出</p>
   </div>
 
-  <!-- 配额未达成 · 债务警告弹窗 -->
+  <!-- 配额偏差通知 -->
   <div class="debt-warning-overlay" id="debt-warning-overlay" aria-hidden="true" role="alertdialog" aria-modal="true" aria-labelledby="debt-warning-title">
     <div class="debt-warning__box">
-      <div class="debt-warning__header" id="debt-warning-title">⚠ 行政警告 — 配额未达成</div>
+      <div class="debt-warning__header" id="debt-warning-title">配额偏差</div>
       <div class="debt-warning__body">
-        <span class="debt-warning__stamp">FBC-ADM-492 · 强制执行条款 §7.3</span>
-        <p class="debt-warning__text" id="debt-warning-text"></p>
+        <div class="debt-warning__text" id="debt-warning-text"></div>
       </div>
       <div class="debt-warning__actions">
         <button type="button" class="debt-warning__btn debt-warning__btn--continue" id="debt-warning-continue">
-          继续上行（推荐）
+          继续上行
         </button>
         <button type="button" class="debt-warning__btn debt-warning__btn--force" id="debt-warning-force">
-          强行割肉撤离 — 终止运行记录
+          强制撤离
         </button>
       </div>
     </div>
@@ -5416,44 +5586,44 @@
    * 委员会低语语料库
    * =========================================================== */
   var WHISPERS = [
-    '检测到环境偏移指数上升。委员会建议：保持克制，或彻底疯狂。',
-    '当前倍率增长符合预期，但轿厢内氧气正在减少。',
-    '局长，你的每一次加码都在垂直档案中留痕。',
-    '忍了太久……与彻底失控，仅差一次上行。',
-    '缆绳在颤。委员会在听。',
-    '继续，或是步出——都是态度报告的一部分。',
-    '委员会正在同步你的贪婪曲线与偏移指数。',
-    '电梯井深处，有人在翻阅你的决策副本。',
-    '理智是耗材。配额才是硬通货。',
-    '垂直即权力；每一次开门都是质询。'
+    '偏移上升：克制或加码。',
+    '倍率符合预期，氧气在变薄。',
+    '每次加码，计价档案留痕。',
+    '再上一层：更近峰值，也更近清算。',
+    '缆绳在颤，委员会在听。',
+    '上行或步出，都是态度。',
+    '贪婪曲线与偏移同步登记。',
+    '井底有人读你的决策副本。',
+    '理智是耗材，配额是硬通货。',
+    '开门即质询。'
   ];
 
   var COMMITTEE_EDGE_LINES = [
-    '检测到环境偏移指数上升。委员会建议：保持克制，或彻底疯狂。',
-    '当前倍率增长符合预期，但轿厢内氧气正在减少。',
-    '局长，你每一次加码都在垂直档案中留痕。',
-    '缆绳在颤。委员会在听。',
-    '继续，或是步出——都是态度报告的一部分。'
+    '偏移上升：克制或加码。',
+    '倍率符合预期，氧气变薄。',
+    '加码留痕。',
+    '缆绳在颤。',
+    '上行或步出，都是态度。'
   ];
 
   /** 开场幕布：总时长 BOOT_TOTAL_MS（与背景视频一致 8s），文案均分节拍换行 */
   var BOOT_TOTAL_MS = 8000;
   var BOOT_INTRO_LINES = [
-    '井底有光，数你呼吸。',
-    '门未开，脚步已被听见。',
-    '深呼吸。你那一层在上行。'
+    '关门后，本层报价重算。',
+    '配额线在前，数字在后。',
+    '上行即认价；撤离即归档。'
   ];
   var _bootLineTimer = null;
   var _bootSafetyTimer = null;
   var _bootFinishOnce = false;
   var DEPLOY_SEAL_MESSAGE =
-    '增益许可已归档。探测杠杆已武装，零号电梯运行记录同步至垂直档案。';
+    '许可生效。计价档案已同步。';
   var EVACUATION_DIRECTIVE =
-    '见好就收是一种平庸的美德，局长。请带走你的配额。';
+    '带走已到手的账面。';
   var PASSENGER_COMMITTEE = {
-    VIP:     '外部审计正在进行，请加速决策流程。',
-    SCAMMER: '观测者已入场。利用他手中不稳定的异能读数。',
-    DANGER:  '警告：检测到致命共振。不要直视它，除非你想要那贪婪的加成。'
+    VIP:     '审计在场：决策加快。',
+    SCAMMER: '观测员入场：读数不稳。',
+    DANGER:  '共振偏高：谨慎直视。'
   };
 
   var _motionReduce = typeof window.matchMedia === 'function' &&
@@ -5617,9 +5787,9 @@
 
   /** 环境事件：大图标 + 短标签（与 GameController 事件 id 对齐） */
   var ENV_EVENT_DOCK = {
-    LIGHTS_OUT:       { glyph: '🔕', label: '灯光熄灭\n本层倍率封蔽' },
-    CORRUPTION_SURGE: { glyph: '🧪', label: '偏移涨潮\n偏移增速 ×2' },
-    BAND_DRIFT:       { glyph: '≈', label: '阈值漂移\n危险带扩张' }
+    LIGHTS_OUT:       { glyph: '🔕', label: '熄灯\n倍率封蔽' },
+    CORRUPTION_SURGE: { glyph: '🧪', label: '偏移×2\n涨潮' },
+    BAND_DRIFT:       { glyph: '≈', label: '阈值漂移\n危险带扩' }
   };
 
   var passengerSubjectEl  = document.getElementById('passenger-subject');
@@ -5690,8 +5860,7 @@
     radialBraceBtn.disabled = boot || !(game.corruptionRatio > 0.2) || !game.canUseItem('floppy-disk', 'brake');
     radialScanBtn.style.visibility = (game.passengers && game.passengers.length) ? 'visible' : 'hidden';
     if (radialMetaEl) {
-      radialMetaEl.textContent = '次要指令  ·  F' + game.floor + '  ·  ¥' + Math.floor(game.credits) +
-        '  ·  ⌘R 撤离';
+      radialMetaEl.textContent = 'F' + game.floor + ' · ¥' + Math.floor(game.credits) + ' · ⌘R撤';
     }
   }
 
@@ -5704,15 +5873,15 @@
     radialOverlayEl.setAttribute('aria-hidden', 'false');
     if (radialMetaEl) radialMetaEl.setAttribute('aria-hidden', 'false');
     hideInspectionMenu();
-    enqueueFirstVisitHint(radialAscendBtn, '上行（与右侧主钮相同）', 'radial-ascend');
-    enqueueFirstVisitHint(radialCashBtn, '风险撤离（与左侧主钮相同）', 'radial-cash');
+    enqueueFirstVisitHint(radialAscendBtn, '上行（同右侧钮）', 'radial-ascend');
+    enqueueFirstVisitHint(radialCashBtn, '撤离（同左侧钮）', 'radial-cash');
     if (radialScanBtn && radialScanBtn.style.visibility !== 'hidden') {
-      enqueueFirstVisitHint(radialScanBtn, '审查乘客，消耗软盘模块次数', 'radial-scan');
+      enqueueFirstVisitHint(radialScanBtn, '审查：耗软盘次数', 'radial-scan');
     }
     if (radialBraceBtn && !radialBraceBtn.disabled) {
-      enqueueFirstVisitHint(radialBraceBtn, '应急制动：若发生强制清算，按基准划回留存金（例：基准¥200≈¥60）', 'radial-brake');
+      enqueueFirstVisitHint(radialBraceBtn, '制动：清算时按基准留存', 'radial-brake');
     }
-    enqueueFirstVisitHint(radialCloseBtn, '关闭指令圆盘', 'radial-close');
+    enqueueFirstVisitHint(radialCloseBtn, '关闭圆盘', 'radial-close');
   }
 
   function toggleRadialCommand() {
@@ -5745,7 +5914,7 @@
     y = Math.max(8, Math.min(y, window.innerHeight - h - 8));
     inspectionMenuEl.style.left = x + 'px';
     inspectionMenuEl.style.top = y + 'px';
-    enqueueFirstVisitHint(inspectionMenuScanBtn, '执行审查以揭露乘客伪装', 'inspection-scan');
+    enqueueFirstVisitHint(inspectionMenuScanBtn, '审查揭露伪装', 'inspection-scan');
   }
 
   function updatePassengerLayerInteract() {
@@ -5804,9 +5973,9 @@
       triggerPassengerScan(result.identity, result.wasDisguised, result.fled, result.index);
     }
     if (result.auditRelief) {
-      flashCommitteePassengerDirective('审计背书：局部偏移指数记录已核销。');
+      flashCommitteePassengerDirective('审计：偏移记录已核销。');
     } else if (result.hissUnveil) {
-      flashCommitteePassengerDirective('希斯伪装瓦解 — 现实膜正在撕裂。');
+      flashCommitteePassengerDirective('希斯伪装瓦解。');
     }
     syncUI();
   }
@@ -5820,7 +5989,7 @@
       manualBraceEl.classList.add('car__manual-brace--pull');
       setTimeout(function () { manualBraceEl.classList.remove('car__manual-brace--pull'); }, 420);
     }
-      flashCommitteePassengerDirective('应急制动已武装。若触发强制清算，将按规程划回留存金（例：基准¥200≈¥60）。');
+    flashCommitteePassengerDirective('制动已武装：清算按基准留存。');
     syncUI();
   }
 
@@ -5830,6 +5999,69 @@
   var deployStatusEl = document.getElementById('deploy-status');
   var btnDeploy      = document.getElementById('btn-deploy');
   var btnDeclineProbe = document.getElementById('btn-decline-probe');
+
+  /** 首次成功开局后记档；此前隐藏「放弃许可」并采用积极引导文案 */
+  var FIRST_DEPLOY_DONE_KEY = 'elevatorRush_firstDeployDone_v1';
+  function hasCompletedFirstDeploy() {
+    try { return localStorage.getItem(FIRST_DEPLOY_DONE_KEY) === '1'; } catch (e) { return false; }
+  }
+  function markFirstDeployCompleted() {
+    try { localStorage.setItem(FIRST_DEPLOY_DONE_KEY, '1'); } catch (e) {}
+    applyDeployPanelOnboardingChrome();
+  }
+
+  function applyDeployPanelOnboardingChrome() {
+    if (!deployPanelEl) return;
+    var onboard = !hasCompletedFirstDeploy();
+    deployPanelEl.classList.toggle('deploy-panel--onboarding', onboard);
+    if (btnDeclineProbe) {
+      if (onboard) {
+        btnDeclineProbe.setAttribute('hidden', '');
+        btnDeclineProbe.setAttribute('aria-hidden', 'true');
+      } else {
+        btnDeclineProbe.removeAttribute('hidden');
+        btnDeclineProbe.removeAttribute('aria-hidden');
+      }
+    }
+    var badge = document.getElementById('deploy-panel-badge');
+    var title = document.getElementById('deploy-panel-title');
+    var gain = document.getElementById('deploy-term-gain');
+    var levNote = document.getElementById('deploy-leverage-note');
+    var h2 = document.getElementById('deploy-lever-heading');
+    var levHint = document.getElementById('deploy-lever-hint');
+    var sum = document.getElementById('deploy-protocol-summary');
+    var sub = document.getElementById('btn-deploy-subline');
+    var lead = document.getElementById('deploy-onboarding-lead');
+    if (onboard) {
+      if (badge) badge.textContent = '首登 · 计价席位';
+      if (title) title.textContent = '欢迎登梯 · 规程摘要';
+      if (gain) gain.innerHTML = '先到<strong>配额线</strong>；超额净利按规程归您。';
+      if (levNote) levNote.textContent = '本局起步本金';
+      if (h2) h2.textContent = '选一笔起步资金';
+      if (levHint) levHint.textContent = '四档或自填；杠杆抬高则收益与波动同步放大。';
+      if (sum) sum.innerHTML = '首趟：本金 · 目标 · 风险 <span class="risk-auth-panel__expand-hint">点展全文</span>';
+      if (sub) sub.textContent = '登记并上行';
+      if (lead) lead.setAttribute('aria-hidden', 'false');
+      if (deployStatusEl && uiPhase === UI_PHASE.PRE_GAME &&
+          !deployStatusEl.classList.contains('deploy-panel__status--seal')) {
+        deployStatusEl.textContent = '选好金额，按下方启动';
+      }
+    } else {
+      if (badge) badge.textContent = 'FBC · 计价规程 · ASCENT 0';
+      if (title) title.textContent = '联邦资产上行计价许可 [A-092]';
+      if (gain) gain.innerHTML = '过配额后，<strong>100%</strong> 超额净利归您。';
+      if (levNote) levNote.textContent = '局方垫付作杠杆';
+      if (h2) h2.textContent = '探测杠杆';
+      if (levHint) levHint.textContent = '可调高杠杆 · 收益与波动同步放大';
+      if (sum) sum.innerHTML = '规程要点（垫付 · 目标 · 风险） <span class="risk-auth-panel__expand-hint">点展全文</span>';
+      if (sub) sub.textContent = '确认计价档案';
+      if (lead) lead.setAttribute('aria-hidden', 'true');
+      if (deployStatusEl && uiPhase === UI_PHASE.PRE_GAME &&
+          !deployStatusEl.classList.contains('deploy-panel__status--seal')) {
+        deployStatusEl.textContent = '调杠杆后点启动';
+      }
+    }
+  }
   var hudPreMissionEl = document.getElementById('hud-pre-mission');
   var hudMissionLineEl = document.getElementById('hud-mission-line');
   var hudAssetPlayRowEl = document.getElementById('hud-asset-play-row');
@@ -5860,7 +6092,7 @@
     }
     var lev = getDeployAmountDraft();
     hudMissionLineEl.textContent =
-      '[ 离场目标：¥' + formatYuanComma(q) + '（离场配额） // 探测杠杆 ¥' + formatYuanComma(lev) + ' ]';
+      '目标 ¥' + formatYuanComma(q) + ' · 杠杆 ¥' + formatYuanComma(lev);
   }
 
   function refreshProtocolLeverageDisplay() {
@@ -5887,6 +6119,20 @@
     if (hudAssetLabelEl) {
       hudAssetLabelEl.textContent = pre ? '许可概要' : '回收进度';
     }
+  }
+
+  /** 窄屏默认折叠许可全文，减少首屏阅读负担（不改变游戏逻辑） */
+  function wireDeployProtocolDetailsCollapse() {
+    var det = document.getElementById('deploy-protocol-details');
+    if (!det || typeof window.matchMedia !== 'function') return;
+    var mq = window.matchMedia('(max-width: 639px)');
+    function apply() {
+      if (mq.matches) det.removeAttribute('open');
+      else det.setAttribute('open', '');
+    }
+    apply();
+    if (typeof mq.addEventListener === 'function') mq.addEventListener('change', apply);
+    else if (typeof mq.addListener === 'function') mq.addListener(apply);
   }
 
   function tryStartThemeBgm() {
@@ -6108,6 +6354,7 @@
       updateDeployArmedState();
       updatePreGameMissionLine();
       refreshProtocolLeverageDisplay();
+      applyDeployPanelOnboardingChrome();
       bootCompleted = true;
     }
 
@@ -6487,9 +6734,9 @@
       if (id === 'SCAMMER') hasS = true;
       if (id === 'DANGER') hasD = true;
     }
-    if (hasV && hasD) return '审计 × 希斯\n对峙 · 撤离窗口收窄';
-    if (hasV && hasS) return '审计+研究\n叠乘 · 收益↑';
-    if (list.length >= 2) return '双人同场\n效果叠加';
+    if (hasV && hasD) return '审计×希斯\n窗口收窄';
+    if (hasV && hasS) return '审计+研究\n收益↑';
+    if (list.length >= 2) return '双人\n叠加';
     return '';
   }
 
@@ -6633,20 +6880,20 @@
     gainTier = gainTier == null ? 0 : gainTier;
     var tag, sub, penal = false;
     if (outcome.kind === 'DOUBLE') {
-      tag = '资产裂变';
-      sub = '财富跃升 · 翻倍红利（视同意外分红入账）';
+      tag = '翻倍';
+      sub = '大额增值入账';
     } else if (outcome.kind === 'POSITIVE') {
       if (outcome.creditsMultiplier >= 1.16) {
-        tag = '财富跃升';
-        sub = '大额账面增值 · 流动性注入';
+        tag = '增值';
+        sub = '流动性注入';
       } else {
-        tag = '意外分红';
-        sub = '合规红利入账 · 可继续上行放大收益';
+        tag = '红利';
+        sub = '小额入账';
       }
     } else if (outcome.kind === 'NEGATIVE') {
       penal = true;
-      tag = '违规罚款';
-      sub = '恶意做空扰动 · 通货膨胀挤压购买力';
+      tag = '扣减';
+      sub = '账面收缩';
     } else {
       return '';
     }
@@ -6793,7 +7040,7 @@
     if (!safeNodeOverlayEl) return;
     if (safeNodeFloorEl) safeNodeFloorEl.textContent = game.floor;
     var cost = outcome && outcome.purgePrice != null ? outcome.purgePrice : Math.round(game.credits * 0.20);
-    if (safeNodeCostEl) safeNodeCostEl.textContent = '支付额：¥ ' + cost;
+    if (safeNodeCostEl) safeNodeCostEl.textContent = '付 ¥' + cost;
     safeNodeOverlayEl.classList.add('active');
   }
 
@@ -6835,18 +7082,16 @@
     var payoutDisplay = Math.floor(payout);
     return (
       '<div class="result-overlay__liquidation-notice">' +
-        '<strong>[ 联邦控制局 · 资产清算通知书 ]</strong><br><br>' +
-        '本部门遗憾地通知您：<br>' +
-        '探测员编号 [REDACTED] 未能完成本局回收配额。<br><br>' +
-        '目标配额：¥' + quota + '<br>' +
-        '实际收集：¥' + payoutDisplay + '<br>' +
-        '剩余债务：<strong>¥' + debtDisplay + '</strong><br><br>' +
-        '依据 FBC 强制执行条款 §7.3，上述债务已移交至<br>' +
-        '其直系亲属或等效生物资产进行等价扣除。<br><br>' +
-        '感谢您为联邦的垂直探测事业做出的贡献。' +
+        '<p class="result-liq-lead"><strong>债务撤离</strong> · 未达配额 <strong>¥' + quota + '</strong></p>' +
+        '<p class="result-liq-line">实收 ¥' + payoutDisplay + ' · 差额 <strong>¥' + debtDisplay + '</strong></p>' +
+        '<details class="result-overlay__liq-details">' +
+        '<summary>通知书全文</summary>' +
+        '<div class="result-liq-detail-body">' +
+        '依据 FBC §7.3，未达配额之差额将按信托与失信条款从关联额度划扣。感谢参与本次计价档案。' +
+        '</div></details>' +
       '</div>' +
       '<span class="result-overlay__liquidation-seal">' +
-        '章：联邦控制局 · 债务清算委员会 · F' + floor +
+        'FBC · 债务清算 · F' + floor +
       '</span>'
     );
   }
@@ -6885,7 +7130,7 @@
       resultTitleEl.className = 'result-overlay__title result-overlay__title--liquidation-end';
       resultTitleEl.textContent = '破产清算通知';
       resultBadgeEl.textContent =
-        '[ 联邦资产管理委员会 // 破产清算通知 // 止步于 ' + data.floor + ' 层 ]';
+        '清算 · F' + data.floor;
 
       /* Layer 2：巨型坏账金额 */
       if (resultLiqHeroEl && resultLiqHeroAmountEl) {
@@ -6904,11 +7149,11 @@
       resultBodyEl.innerHTML =
         '<div class="result-overlay__stat-sheet result-overlay__stat-sheet--liquidation-end">' +
           '<div class="result-overlay__stat-row">' +
-            '<span class="result-overlay__stat-key">记录层</span>' +
+            '<span class="result-overlay__stat-key">层</span>' +
             '<span class="result-overlay__stat-val result-overlay__stat-val--cor">F' + data.floor + '</span>' +
           '</div>' +
           '<div class="result-overlay__stat-row">' +
-            '<span class="result-overlay__stat-key">风险偏移</span>' +
+            '<span class="result-overlay__stat-key">偏移</span>' +
             '<span class="' + corLiqClass + '">' + corLiq + '</span>' +
           '</div>' +
         '</div>';
@@ -6917,15 +7162,11 @@
       if (resultEvaluationEl) {
         resultEvaluationEl.hidden = false;
         var evalText =
-          '评估结论：未能达成 ¥' + (data.quota || 1000) + ' 局方配额。\n' +
-          (peakFig > 0
-            ? '该员工此前最高曾掌握 ¥' + peakFig + ' 的财富。\n'
-            : '') +
-          '鉴于其彻底破产，现已吊销门禁卡，\n' +
-          '发配至地下 B4 层清洗收容物，\n' +
-          '直至偿清欠款 ¥' + badDebtFig + '。';
+          '未达配额 ¥' + (data.quota || 1000) + '。\n' +
+          (peakFig > 0 ? '峰值 ¥' + peakFig + '。\n' : '') +
+          '破产归档，欠款 ¥' + badDebtFig + '。';
         setTimeout(function () {
-          typewriterEffect(resultEvaluationEl, evalText, 26);
+          typewriterEffect(resultEvaluationEl, evalText, 22);
         }, 280);
       }
 
@@ -6951,7 +7192,7 @@
       resultTitleEl.textContent = type === 'debtcashout'
         ? '债务撤离 · 移交执行'
         : '破产清算通知';
-      resultBadgeEl.textContent = '// 联邦控制局 · 资产清算委员会';
+      resultBadgeEl.textContent = 'FBC · 清算';
       resultBodyEl.innerHTML = _liquidationNoticeHTML(debtQuota, debtAmount, debtFloor, debtPayout);
       resultFooterEl.hidden = false;
       resultFooterEl.innerHTML =
@@ -6967,20 +7208,20 @@
       resultTitleBlockEl.className = 'result-overlay__title-block result-overlay__title-block--success';
       resultTitleEl.className = 'result-overlay__title result-overlay__title--success';
       resultTitleEl.textContent = '成功撤离 · 档案封存';
-      resultBadgeEl.textContent = '// 委员会 · 行政归档';
+      resultBadgeEl.textContent = '// 委员会 · 计价归档';
       resultBodyEl.innerHTML =
-        '<p class="result-overlay__directive">「本次运行记录已存档。行政权限点数已下发，请为下一次上行做好准备。」</p>' +
+        '<p class="result-overlay__directive">账面已封存；下一趟自许可界面起算。</p>' +
         '<div class="result-overlay__stat-sheet result-overlay__stat-sheet--success">' +
           '<div class="result-overlay__stat-row">' +
-            '<span class="result-overlay__stat-key">撤离高度</span>' +
+            '<span class="result-overlay__stat-key">层</span>' +
             '<span class="result-overlay__stat-val result-overlay__stat-val--success">F' + data.floor + '</span>' +
           '</div>' +
           '<div class="result-overlay__stat-row">' +
-            '<span class="result-overlay__stat-key">回收净值</span>' +
+            '<span class="result-overlay__stat-key">净值</span>' +
             '<span class="result-overlay__stat-val result-overlay__stat-val--success">\u00a5' + data.payout + '</span>' +
           '</div>' +
           '<div class="result-overlay__stat-row">' +
-            '<span class="result-overlay__stat-key">连胜记录</span>' +
+            '<span class="result-overlay__stat-key">连胜</span>' +
             '<span class="result-overlay__stat-val result-overlay__stat-val--success">' + data.wins + ' \u5c40</span>' +
           '</div>' +
         '</div>';
@@ -6988,12 +7229,12 @@
       resultFooterEl.innerHTML = '';
     }
     if (type === 'liquidation' || type === 'debtcashout') {
-      resultConfirmEl.textContent = '[ 申请破产重组 (再借一笔，我要翻本) ]';
-      enqueueFirstVisitHint(resultConfirmEl, '关闭清算通知后返回授权，可再次申请额度', 'result-confirm');
+      resultConfirmEl.textContent = '返回许可 · 再开局';
+      enqueueFirstVisitHint(resultConfirmEl, '关闭后回到许可界面', 'result-confirm');
       document.body.classList.add('hiss-breach-active');
     } else {
       resultConfirmEl.textContent = '确认并归档';
-      enqueueFirstVisitHint(resultConfirmEl, '确认并关闭档案，返回授权界面', 'result-confirm');
+      enqueueFirstVisitHint(resultConfirmEl, '关闭后返回许可', 'result-confirm');
       document.body.classList.remove('hiss-breach-active');
     }
     resultOverlayEl.classList.add('active');
@@ -7010,13 +7251,13 @@
    * =========================================================== */
   function showBossChallenge() {
     bossStatsEl.innerHTML =
-      '当前高度：<b>F' + game.floor + '</b><br>' +
-      '资本净值：<b>¥' + Math.floor(game.credits) + '</b><br>' +
-      '连胜记录：<b>' + consecutiveWins + ' 局</b><br>' +
-      '偏移指数：<b>' + Math.round(game.corruptionRatio * 100) + '%</b>';
+      '层 <b>F' + game.floor + '</b><br>' +
+      '¥ <b>' + Math.floor(game.credits) + '</b><br>' +
+      '连胜 <b>' + consecutiveWins + '</b><br>' +
+      '偏移 <b>' + Math.round(game.corruptionRatio * 100) + '%</b>';
     bossOverlayEl.classList.add('active');
-    enqueueFirstVisitHint(bossBtnAscend, '继续上行：关闭质询并回到决策', 'boss-ascend');
-    enqueueFirstVisitHint(bossBtnExit, '步出电梯：按撤离规则结算本局', 'boss-exit');
+    enqueueFirstVisitHint(bossBtnAscend, '继续：关质询', 'boss-ascend');
+    enqueueFirstVisitHint(bossBtnExit, '步出：按撤离结算', 'boss-exit');
   }
 
   function hideBossChallenge() {
@@ -7037,10 +7278,21 @@
    * =========================================================== */
   function showDebtWarning(data) {
     if (!debtWarningOverlayEl || !debtWarningTextEl) return;
-    var text = '当前收集额：¥' + data.credits +
-               '\n目标配额：¥' + data.quota +
-               '\n\n若强行撤离，差额 <strong>¥' + data.debt + '</strong> 将从您的物理器官中等价扣除。';
-    debtWarningTextEl.innerHTML = text;
+    var c = data.credits != null ? data.credits : 0;
+    var q = data.quota != null ? data.quota : 0;
+    var d = data.debt != null ? data.debt : 0;
+    var lead = '当前 <strong>¥' + c + '</strong> · 配额 <strong>¥' + q + '</strong>';
+    var clause = (data.text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+    if (!clause) {
+      clause = '强制撤离将划扣差额 <strong>¥' + d + '</strong>，归档为债务撤离。';
+    }
+    debtWarningTextEl.innerHTML =
+      '<p class="debt-warning__lead">' + lead + '</p>' +
+      '<details class="debt-warning__details"><summary>展开条款</summary><div class="debt-warning__detail-inner">' + clause + '</div></details>';
     document.body.classList.add('hiss-breach-active');
     debtWarningOverlayEl.classList.add('active');
     debtWarningOverlayEl.setAttribute('aria-hidden', 'false');
@@ -7263,15 +7515,15 @@
     if (uiPhase === UI_PHASE.PRE_GAME && btnDeploy && deployPanelEl) {
       var d = window.getComputedStyle(deployPanelEl).display;
       if (d !== 'none') {
-        enqueueFirstVisitHint(btnDeploy, '确认探测杠杆后点此启动电梯', 'btn-deploy');
+        enqueueFirstVisitHint(btnDeploy, hasCompletedFirstDeploy() ? '调好杠杆后点此启动' : '首趟：选好金额后点这里启动', 'btn-deploy');
         if (deployAmountEl) {
-          enqueueFirstVisitHint(deployAmountEl, '手动调整局方垫付探测杠杆，范围 10～99999', 'deploy-amount');
+          enqueueFirstVisitHint(deployAmountEl, '杠杆 10～99999', 'deploy-amount');
         }
         presetBtns.forEach(function (pb) {
           var v = pb && pb.dataset && pb.dataset.val;
           if (!v) return;
           var label = v === '1000' ? '1K' : v === '5000' ? '5K' : '¥' + v;
-          enqueueFirstVisitHint(pb, '快捷填入探测杠杆 ' + label, 'preset-' + v);
+          enqueueFirstVisitHint(pb, '快捷 ' + label, 'preset-' + v);
         });
       }
     }
@@ -7279,11 +7531,11 @@
       /* 主钮：用外层 core-trigger 锚定，且优先插队 + 清掉未播完的授权队列，确保一定能轮到 */
       if (coreTriggerDeployEl && !coreTriggerDeployEl.classList.contains('core-trigger--hidden')) {
         prunePreGameFirstHintsFromQueue();
-        enqueueFirstVisitHintPrepended(coreTriggerWithdrawEl, '风险撤离：带走当前资产并结束本局', 'core-withdraw');
-        enqueueFirstVisitHintPrepended(coreTriggerDeployEl, '上行：关门升层，按局内规则结算资产', 'core-deploy');
+        enqueueFirstVisitHintPrepended(coreTriggerWithdrawEl, '撤离：结算并结束', 'core-withdraw');
+        enqueueFirstVisitHintPrepended(coreTriggerDeployEl, '上行：关门升层', 'core-deploy');
       }
       if (manualBraceEl && manualBraceEl.classList.contains('car__manual-brace--visible')) {
-        enqueueFirstVisitHint(manualBraceEl, '应急制动：武装后，若发生强制清算按基准划回留存金（例：基准¥200≈¥60）', 'manual-brace');
+        enqueueFirstVisitHint(manualBraceEl, '制动：清算按基准留存', 'manual-brace');
       }
     }
   }
@@ -7315,6 +7567,7 @@
     if (uiPhase === UI_PHASE.BOOTING || uiPhase === UI_PHASE.PRE_GAME) {
       updatePreGameMissionLine();
       refreshProtocolLeverageDisplay();
+      if (uiPhase === UI_PHASE.PRE_GAME) applyDeployPanelOnboardingChrome();
     }
   }
 
@@ -7454,7 +7707,6 @@
     updatePreGameMissionLine();
     refreshProtocolLeverageDisplay();
     deployStatusEl.classList.remove('active', 'deploy-panel__status--seal');
-    deployStatusEl.textContent = '等待启动电梯或调整探测杠杆…';
   }
 
   /* ===========================================================
@@ -7920,9 +8172,15 @@
               spawnElevatorGhost(ghost);
               var cardDelayMs = GameController.cfg('cardSelection.preShowDelayMs', 3200);
               setTimeout(function () {
-                if (_pendingCardHand && game.state === GameController.STATES.CARD_SELECTION) {
+                if (_pendingCardHand && _pendingCardHand.length && game.state === GameController.STATES.CARD_SELECTION) {
                   showCardSelection(_pendingCardHand);
                   _pendingCardHand = null;
+                } else if (game.state === GameController.STATES.CARD_SELECTION) {
+                  _pendingCardHand = null;
+                  if (game.skipEmptyCardSelection && game.skipEmptyCardSelection().ok) {
+                    hideCardSelection();
+                    handlePostCardReveal();
+                  }
                 }
               }, cardDelayMs);
               return;
@@ -8102,7 +8360,7 @@
     }
   });
 
-  /* 初始化运行记录 */
+  /* 初始化计价档案 / 开局 */
   btnDeploy.addEventListener('click', function () {
     if (uiPhase !== UI_PHASE.PRE_GAME) return;
     var amount = parseInt(deployAmountEl.value, 10);
@@ -8112,7 +8370,7 @@
     btnDeploy.disabled = true;
     btnDeploy.classList.remove('deploy-panel__btn--armed');
 
-    deployStatusEl.textContent = DEPLOY_SEAL_MESSAGE;
+    deployStatusEl.textContent = hasCompletedFirstDeploy() ? DEPLOY_SEAL_MESSAGE : '上行通道已登记 · 首趟计价开始。';
     deployStatusEl.classList.add('active', 'deploy-panel__status--seal');
     playCommitteePulseSafe();
 
@@ -8152,6 +8410,7 @@
       sceneContentEl.innerHTML = '';
 
       setUIPhase(UI_PHASE.PLAYING);
+      markFirstDeployCompleted();
 
       syncUI();
     }, 820);
@@ -8173,7 +8432,6 @@
     deployAmountEl.value = '200';
     presetBtns.forEach(function (b) { b.classList.toggle('active', b.dataset.val === '200'); });
     if (deployStatusEl) {
-      deployStatusEl.textContent = '等待启动电梯或调整探测杠杆…';
       deployStatusEl.classList.remove('active', 'deploy-panel__status--seal');
     }
     updateDeployArmedState();
@@ -8287,7 +8545,14 @@
   }
 
   function showCardSelection(cards) {
-    if (!cardOverlayEl || !cardHandEl || !cards || !cards.length) return;
+    if (!cardOverlayEl || !cardHandEl) return;
+    if (!cards || !cards.length) {
+      if (game.skipEmptyCardSelection && game.skipEmptyCardSelection().ok) {
+        hideCardSelection();
+        handlePostCardReveal();
+      }
+      return;
+    }
 
     applyGhostToOverlay(_currentGhostFigure);
 
@@ -8343,7 +8608,7 @@
           if (result.ok) {
             var r = result.result;
             var sign = r.creditsDelta >= 0 ? '+' : '';
-            cardResultBarEl.textContent = r.card.event.name + ' · ' + sign + '¥' + Math.abs(r.creditsDelta) + ' · 当前资产 ¥' + r.creditsAfter;
+            cardResultBarEl.textContent = r.card.event.name + ' ' + sign + '¥' + Math.abs(r.creditsDelta) + ' · 余¥' + r.creditsAfter;
             cardResultBarEl.className = 'card-result-bar';
             var cTier = r.creditsDelta > 0
               ? computeGainVisualTier(r.creditsDelta, r.creditsAfter - r.creditsDelta, null)
@@ -8431,6 +8696,7 @@
     window.showInspectionMenu = showInspectionMenu;
   } catch (err) { void err; }
 
+  wireDeployProtocolDetailsCollapse();
   syncUI();
 })();
 </script>

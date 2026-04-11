@@ -1,7 +1,7 @@
 {
   "_meta": {
     "version": "0.03",
-    "description": "《零号电梯》事件概率与数值配置表。修改此文件即可调整游戏平衡，无需改动代码。",
+    "description": "《暴富电梯》事件概率与数值配置表（局内计价规程）。修改此文件即可调整游戏平衡，无需改动代码。",
     "lastUpdated": "2026-04-09"
   },
 
@@ -154,15 +154,15 @@
     "minFloor": 5,
     "events": {
       "LIGHTS_OUT": {
-        "description": "灯光熄灭 / 本层倍率封蔽",
+        "description": "熄灯 · 本层倍率隐藏",
         "mechanicEffect": "display_only"
       },
       "CORRUPTION_SURGE": {
-        "description": "偏移涨潮 / 偏移增速×2",
+        "description": "偏移涨潮 · 增速×2",
         "corruptionMultiplier": 2
       },
       "BAND_DRIFT": {
-        "description": "阈值漂移 / 危险带扩张",
+        "description": "阈值漂移 · 危险带扩",
         "liquidationShiftBonus": 0.028
       }
     }
@@ -245,10 +245,10 @@
   },
 
   "copy": {
-    "quotaNudge": "委员会口径：资产活跃度极高，建议继续上行以对冲波动。\n当前收集额：¥${credits}，目标配额：¥${quota}。\n若坚持提前归档，差额（¥${debt}）将按信托条款从个人账户及关联额度中强制划扣。",
-    "speculatorProtocol": "【激进投机者 · 对赌协议】\n对方声称：「上层绝对稳，杠杆我帮你扛。」\n是否签署：未来 ${durationFloors} 层内，每次正面/翻倍结算的账面收益按 ×${gainMult} 放大，但本层结果带来的偏移指数增速 ×${corruptionMult}？\n（取消则按常规结算，无额外条款。）",
-    "speculatorProtocolScan": "【激进投机者 · 对赌协议】\n对方摊牌：「上层绝对稳。」\n是否在对方离场前签署同上对赌条款？",
-    "rerollBailout": "重掷结果为强制清算。\n是否支付 ¥${pay} 买断并重写结局？（当前账面 ¥${balance}，划扣额按规章已折算为上述整数）\n取消则维持清算。"
+    "quotaNudge": "未达配额 ¥${quota}；委员会建议继续上行。\n当前 ¥${credits}；强行撤离将划扣差额 ¥${debt}。",
+    "speculatorProtocol": "【对赌】未来 ${durationFloors} 层：正面/翻倍收益×${gainMult}，偏移增速×${corruptionMult}。\n签？取消则照常。",
+    "speculatorProtocolScan": "【对赌·揭穿后】同上条款，对方即将下车。\n签？",
+    "rerollBailout": "重掷=清算。付 ¥${pay} 重写？（账面 ¥${balance}）\n取消维持清算。"
   },
 
   "item": {
@@ -320,21 +320,21 @@
     ],
 
     "rewardEvents": [
-      { "id": "windfall",         "name": "意外横财",   "description": "在墙缝中发现一笔遗忘的应急基金",         "creditsBonusRatio": 0.30, "corruptionDelta": 0,     "weight": 25 },
-      { "id": "energy_crystal",   "name": "能量晶体",   "description": "捡到高纯度能量晶体，价值不菲",           "creditsBonusRatio": 0.20, "corruptionDelta": 0.05,  "weight": 30 },
-      { "id": "audit_pass",       "name": "审计通过",   "description": "本层审计结果良好，配额压力暂时缓解",     "creditsBonusRatio": 0.10, "corruptionDelta": -0.15, "weight": 20 },
-      { "id": "ghost_tip",        "name": "幽灵线报",   "description": "一个声音在耳边低语了下一层的安全路径",   "creditsBonusRatio": 0.05, "corruptionDelta": -0.10, "weight": 15 },
-      { "id": "time_rift",        "name": "时间裂缝",   "description": "短暂的时空扭曲让你的资产翻了个跟斗",     "creditsBonusRatio": 0.50, "corruptionDelta": 0.20,  "weight": 8  },
-      { "id": "blessed",          "name": "祝福之光",   "description": "一道暖光笼罩电梯，偏移指数大幅回退",     "creditsBonusRatio": 0.08, "corruptionDelta": -0.30, "weight": 7  }
+      { "id": "windfall",         "name": "意外横财",   "description": "墙缝应急金",         "creditsBonusRatio": 0.30, "corruptionDelta": 0,     "weight": 25 },
+      { "id": "energy_crystal",   "name": "能量晶体",   "description": "高纯晶体出手",           "creditsBonusRatio": 0.20, "corruptionDelta": 0.05,  "weight": 30 },
+      { "id": "audit_pass",       "name": "审计通过",   "description": "审计过关 · 压力缓",     "creditsBonusRatio": 0.10, "corruptionDelta": -0.15, "weight": 20 },
+      { "id": "ghost_tip",        "name": "幽灵线报",   "description": "耳边指路",   "creditsBonusRatio": 0.05, "corruptionDelta": -0.10, "weight": 15 },
+      { "id": "time_rift",        "name": "时间裂缝",   "description": "时空扭曲 · 资产跳",     "creditsBonusRatio": 0.50, "corruptionDelta": 0.20,  "weight": 8  },
+      { "id": "blessed",          "name": "祝福之光",   "description": "暖光罩梯 · 偏移退",     "creditsBonusRatio": 0.08, "corruptionDelta": -0.30, "weight": 7  }
     ],
 
     "bustEvents": [
-      { "id": "ghost_tax",        "name": "亡灵税",     "description": "这一层的幽灵向你征收了通行税",           "creditsLossRatio": 0.25, "corruptionDelta": 0.10,  "weight": 25 },
-      { "id": "curse",            "name": "楼层诅咒",   "description": "踏入了被诅咒的区域，资产被侵蚀",         "creditsLossRatio": 0.35, "corruptionDelta": 0.15,  "weight": 20 },
-      { "id": "trap_floor",       "name": "陷阱楼层",   "description": "地板突然塌陷，紧急制动消耗了大量资源",   "creditsLossRatio": 0.20, "corruptionDelta": 0.08,  "weight": 22 },
-      { "id": "hiss_whisper",     "name": "希斯低语",   "description": "希斯的低语侵入意识，偏移指数急剧飙升",   "creditsLossRatio": 0.10, "corruptionDelta": 0.35,  "weight": 18 },
-      { "id": "reality_collapse", "name": "现实崩塌",   "description": "楼层空间折叠，资产被压缩至极限",         "creditsLossRatio": 0.50, "corruptionDelta": 0.25,  "weight": 10 },
-      { "id": "soul_drain",       "name": "灵魂汲取",   "description": "某种存在吸走了你的生命能量和资产",       "creditsLossRatio": 0.40, "corruptionDelta": 0.20,  "weight": 10 }
+      { "id": "ghost_tax",        "name": "亡灵税",     "description": "本层收通行税",           "creditsLossRatio": 0.25, "corruptionDelta": 0.10,  "weight": 25 },
+      { "id": "curse",            "name": "楼层诅咒",   "description": "诅咒区 · 资产蚀",         "creditsLossRatio": 0.35, "corruptionDelta": 0.15,  "weight": 20 },
+      { "id": "trap_floor",       "name": "陷阱楼层",   "description": "塌陷 · 制动耗资源",   "creditsLossRatio": 0.20, "corruptionDelta": 0.08,  "weight": 22 },
+      { "id": "hiss_whisper",     "name": "希斯低语",   "description": "低语入脑 · 偏移飙",   "creditsLossRatio": 0.10, "corruptionDelta": 0.35,  "weight": 18 },
+      { "id": "reality_collapse", "name": "现实崩塌",   "description": "空间折 · 资产压",         "creditsLossRatio": 0.50, "corruptionDelta": 0.25,  "weight": 10 },
+      { "id": "soul_drain",       "name": "灵魂汲取",   "description": "被抽走生命与账面",       "creditsLossRatio": 0.40, "corruptionDelta": 0.20,  "weight": 10 }
     ],
 
     "rewardTotalWeight": 0.55,

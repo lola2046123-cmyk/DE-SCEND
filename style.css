@@ -19,12 +19,11 @@ body::after {
   mix-blend-mode: overlay;
 }
 
-/* 2. 触发故障时的状态 (配合 Hiss Red) */
+/* 2. 触发故障时的状态 (配合 Hiss Red — 降低饱和度) */
 body.hiss-breach-active::after {
-  opacity: 0.8; /* 噪点显现 */
-  /* 给噪点染上压抑的暗红色，并让它闪烁抖动 */
-  background-color: rgba(180, 0, 0, 0.4);
-  animation: glitch-jitter 0.2s infinite;
+  opacity: 0.5;
+  background-color: rgba(120, 20, 10, 0.3);
+  animation: glitch-jitter 0.25s infinite;
 }
 
 @keyframes glitch-jitter {

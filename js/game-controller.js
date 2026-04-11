@@ -290,30 +290,30 @@
 
   var OUTCOME_NARRATIVE_POOL = {
     DOUBLE: [
-      { tag: '资产裂变', text: '触发高维金融漏洞，账面暴增 · 视同意外分红入账' },
-      { tag: '意外分红', text: '系统发放特别超额津贴 · 高阶收容物估值暴增' },
-      { tag: '财富跃升', text: '跨维度套利窗口开放 · 杠杆已自动拉满' }
+      { tag: '资产裂变', text: '高维漏洞 · 账面暴增' },
+      { tag: '意外分红', text: '超额津贴 · 估值跳' },
+      { tag: '财富跃升', text: '套利窗开 · 杠杆满' }
     ],
     POSITIVE_HIGH: [
-      { tag: '财富跃升', text: '大额账面增值 · 流动性注入' },
-      { tag: '盲盒大奖', text: '截获高价值能量晶体 · 收益自动结算' },
-      { tag: '资产裂变', text: '高频套利成功执行 · 本金倍率激活' }
+      { tag: '财富跃升', text: '大额增值 · 流动性入' },
+      { tag: '盲盒大奖', text: '高纯晶体 · 已结算' },
+      { tag: '资产裂变', text: '套利成 · 倍率活' }
     ],
     POSITIVE_LOW: [
-      { tag: '意外分红', text: '合规红利入账 · 可继续上行放大收益' },
-      { tag: '特别津贴', text: '微额系统补贴已入账 · 继续上行可翻倍' }
+      { tag: '意外分红', text: '合规红利入账' },
+      { tag: '特别津贴', text: '微补入账 · 可上行翻倍' }
     ],
     GOLDEN_FLOOR: [
-      { tag: '黄金楼层', text: '委员会匿名通道放行 · 单笔估值跳升十倍级（肥尾红利）' },
-      { tag: '财富跃升', text: '收容物估值异常拉升 · 账面出现黄金带收益' }
+      { tag: '黄金楼层', text: '匿名放行 · 单笔十倍肥尾' },
+      { tag: '财富跃升', text: '估值异常 · 黄金带收益' }
     ],
     NEGATIVE: [
-      { tag: '恶意做空', text: '遭遇不明机构做空 · 账面强制收缩' },
-      { tag: '违规罚款', text: '触犯联邦法案 §7.3 · 强制扣款执行' },
-      { tag: '通货膨胀', text: '跨维度购买力蒸发 · 资产被迫缩水' }
+      { tag: '恶意做空', text: '不明机构做空 · 账面缩' },
+      { tag: '违规罚款', text: '触犯法案第7.3条 · 扣款' },
+      { tag: '通货膨胀', text: '购买力蒸发 · 资产缩' }
     ],
     LIQUIDATION: [
-      { tag: '强制清算', text: '联邦控制局启动破产程序 · 账面核销' }
+      { tag: '强制清算', text: 'FBC 破产程序 · 账面核销' }
     ]
   };
 
@@ -435,7 +435,7 @@
   ITEM_REGISTRY['floppy-disk'] = {
     id:   'floppy-disk',
     name: 'Bureau Module',
-    description: '审查：揭露乘客伪装。应急制动：下一次触发强制清算时，按本层基准账面划回留存金（示例：基准 ¥200 时约 ¥60，实际随基准浮动）。',
+    description: '审查：揭伪装。制动：下次清算时按基准账面划留存（例基准¥200≈¥60，随层浮动）。',
     modes: {
       scan: {
         usableIn: [STATES.DECIDING, STATES.HISS_BREACH],
@@ -627,12 +627,14 @@
   function generateCardHand(game) {
     var identities = _pickUniqueIdentities(CARDS_PER_ROUND, game._rng);
     var cards = [];
+    var hasReward = CARD_REWARD_EVENTS.length > 0;
+    var hasBust = CARD_BUST_EVENTS.length > 0;
     for (var i = 0; i < identities.length; i++) {
       var ident = identities[i];
       var bias = ident.luckBias || 0;
-      var isReward = game._rng() < (CARD_REWARD_WEIGHT + bias);
+      var wantReward = game._rng() < (CARD_REWARD_WEIGHT + bias);
       var evt;
-      if (isReward && CARD_REWARD_EVENTS.length) {
+      if (wantReward && hasReward) {
         evt = _weightedPick(CARD_REWARD_EVENTS, game._rng);
         cards.push({
           identity: ident,
@@ -643,7 +645,7 @@
             corruptionDelta: evt.corruptionDelta || 0
           }
         });
-      } else if (CARD_BUST_EVENTS.length) {
+      } else if (hasBust) {
         evt = _weightedPick(CARD_BUST_EVENTS, game._rng);
         cards.push({
           identity: ident,
@@ -651,6 +653,17 @@
           event: {
             id: evt.id, name: evt.name, description: evt.description,
             creditsLossRatio: evt.creditsLossRatio || 0,
+            corruptionDelta: evt.corruptionDelta || 0
+          }
+        });
+      } else if (hasReward) {
+        evt = _weightedPick(CARD_REWARD_EVENTS, game._rng);
+        cards.push({
+          identity: ident,
+          type: 'reward',
+          event: {
+            id: evt.id, name: evt.name, description: evt.description,
+            creditsBonusRatio: evt.creditsBonusRatio || 0,
             corruptionDelta: evt.corruptionDelta || 0
           }
         });
@@ -1191,6 +1204,19 @@
     return { ok: true, result: result };
   };
 
+  /**
+   * 卡牌 UI 无法展开时的逃生阀（例如历史版本发出空牌组仍进入 CARD_SELECTION）。
+   * 将状态切回 REVEALING 以便 UI 继续 finishReveal 流程。
+   */
+  GameController.prototype.skipEmptyCardSelection = function () {
+    if (this.state !== STATES.CARD_SELECTION) return { ok: false };
+    if (this._pendingCards && this._pendingCards.length > 0) return { ok: false };
+    this._pendingCards = null;
+    this._cardSelectionDone = true;
+    this._setState(STATES.REVEALING);
+    return { ok: true };
+  };
+
   /* ---- 主流程 ---- */
 
   GameController.prototype.startAscend = function () {
@@ -1438,18 +1464,21 @@
 
     this._tickFloorMetaBuffs();
 
-    /* 卡牌选取阶段：非清算时进入卡牌选择 */
+    /* 卡牌选取阶段：非清算时进入卡牌选择（无牌可发时不得卡死在 CARD_SELECTION） */
     if (CARD_ENABLED && outcome.kind !== 'LIQUIDATION') {
       this._cardSelectionDone = false;
       this._pendingCards = generateCardHand(this);
-      this._setState(STATES.CARD_SELECTION);
-      this._emitCardHand(this._pendingCards);
-      return {
-        ok: true, outcome: outcome, surprise: surprise,
-        floorsJumped: floorsJumped, cardSelection: true,
-        passengerBoarded: pEvents.boarded, passengerDeparted: pEvents.departed,
-        envEvent: envRoll, envActive: this.activeEnvEvent
-      };
+      if (this._pendingCards && this._pendingCards.length > 0) {
+        this._setState(STATES.CARD_SELECTION);
+        this._emitCardHand(this._pendingCards);
+        return {
+          ok: true, outcome: outcome, surprise: surprise,
+          floorsJumped: floorsJumped, cardSelection: true,
+          passengerBoarded: pEvents.boarded, passengerDeparted: pEvents.departed,
+          envEvent: envRoll, envActive: this.activeEnvEvent
+        };
+      }
+      this._pendingCards = null;
     }
 
     this._setState(STATES.REVEALING);
@@ -1531,9 +1560,8 @@
       var nudgeTpl   = cfg('copy.quotaNudge', '');
       var warnText   = nudgeTpl
         ? tpl(nudgeTpl, { credits: creditsNow, quota: this.quota, debt: debt })
-        : ('行政警告：指标未达成。\n当前收集额：¥' + creditsNow +
-          '，目标配额：¥' + this.quota +
-          '。\n若强行撤离，差额（¥' + debt + '）将按信托条款从关联额度中划扣。');
+        : ('未达配额 ¥' + this.quota + '，当前 ¥' + creditsNow +
+          '。\n强行撤离划扣差额 ¥' + debt + '。');
       this._emitUiWarning({
         text: warnText,
         quota:   this.quota,

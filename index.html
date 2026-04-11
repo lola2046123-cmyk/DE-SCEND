@@ -575,12 +575,57 @@
 
   .stage__subtitle {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.38rem, 1.8vw, 0.48rem);
+    font-size: clamp(0.42rem, 1.9vw, 0.54rem);
     letter-spacing: 0.12em;
     text-transform: none;
-    color: var(--bureau-white-dim); text-align: right; flex-shrink: 1;
+    color: var(--bureau-white-dim); text-align: right;
     line-height: 1.45; margin: 0;
-    max-width: 55%;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  /* 顶部栏右侧分组：副标题 + BGM 开关并排，不遮盖不重叠 */
+  .stage__header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  /* BGM 降维开关 ---------------------------------------------- */
+  .bgm-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #c4aea6;
+    opacity: 0.5;
+    transition: opacity 0.16s ease;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+  }
+  .bgm-toggle:hover,
+  .bgm-toggle:focus-visible {
+    opacity: 0.9;
+  }
+  .bgm-toggle svg {
+    display: block;
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    overflow: visible;
+    shape-rendering: geometricPrecision;
   }
 
   /* =======================================================
@@ -3156,6 +3201,31 @@
     color: rgba(155, 145, 138, 0.65);
   }
 
+  /* 局长生涯档案 — 面板顶部极细统计行 */
+  .fbc-career-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    width: 100%;
+    padding: 0 0.1rem 0.55rem;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+  }
+  .fbc-career-stats.visible { opacity: 1; }
+  .fbc-career-stats__line {
+    font-family: "Courier New", monospace;
+    font-size: clamp(0.38rem, 1.6vw, 0.48rem);
+    letter-spacing: 0.1em;
+    color: rgba(220, 215, 210, 0.32);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .fbc-career-stats__eval {
+    margin-top: 0.1rem;
+    color: rgba(200, 170, 155, 0.28);
+  }
+
   .deploy-panel__badge {
     font-family: "Courier New", monospace;
     font-size: clamp(0.48rem, 2vw, 0.6rem);
@@ -4853,7 +4923,7 @@
       letter-spacing: 0.15em;
     }
     .stage__subtitle {
-      font-size: clamp(0.34rem, 2vw, 0.44rem);
+      font-size: clamp(0.36rem, 2.1vw, 0.46rem);
     }
 
     /* ── 井道占满竖向空间 ── */
@@ -5185,6 +5255,286 @@
       --car-core-btn-size: 57px;
     }
   }
+
+  /* =======================================================
+   * 三位一体结果展示框 (door-result-frame)
+   * 开门瞬间同步呈现：行政名目 | 金额变动 | 档案入口
+   * ======================================================= */
+  .door-result-frame {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .door-result-frame.active { opacity: 1; }
+
+  .door-result-frame__row {
+    display: flex;
+    align-items: center;
+    background: rgba(8, 6, 5, 0.52);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    border: 1px solid rgba(140, 65, 55, 0.18);
+    padding: 0.6rem 1.25rem;
+    animation: drf-in 0.4s ease-out forwards;
+  }
+  @keyframes drf-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .door-result-frame__tag {
+    font-family: "Courier New", monospace;
+    font-size: clamp(0.58rem, 2.5vw, 0.72rem);
+    letter-spacing: 0.18em;
+    color: rgba(200, 140, 130, 0.88);
+    flex-shrink: 0;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .door-result-frame__sep {
+    width: 1px;
+    height: 1.1em;
+    background: rgba(140, 65, 55, 0.22);
+    margin: 0 0.9rem;
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .door-result-frame__brief {
+    font-family: "Inter", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: clamp(1.05rem, 4.4vw, 1.38rem);
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: rgba(225, 210, 200, 0.92);
+  }
+  .door-result-frame__brief--gain {
+    color: rgba(148, 208, 168, 0.92);
+  }
+  .door-result-frame__brief--loss {
+    color: rgba(218, 135, 120, 0.92);
+  }
+
+  .door-result-frame__link {
+    pointer-events: auto;
+    margin-top: 40px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: "Courier New", monospace;
+    font-size: clamp(0.44rem, 1.9vw, 0.54rem);
+    color: rgba(152, 108, 98, 0.5);
+    letter-spacing: 0.14em;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+    animation: drf-link-in 0.28s 0.06s ease-out both;
+  }
+  @keyframes drf-link-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .door-result-frame__link:hover {
+    color: rgba(205, 140, 125, 0.85);
+  }
+  .door-result-frame__link[hidden] { display: none; }
+
+  /* =======================================================
+   * 资产异动档案 · 次级入口触发按钮
+   * ======================================================= */
+  .receipt-trigger-btn {
+    position: absolute;
+    bottom: calc(var(--car-core-btn-size) + clamp(22px, 5vh, 38px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 22;
+    background: transparent;
+    border: none;
+    padding: 4px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    font-family: 'Courier New', monospace;
+    font-size: 0.56rem;
+    color: rgba(175, 105, 95, 0.6);
+    letter-spacing: 0.14em;
+    transition: color 0.2s ease;
+  }
+  .receipt-trigger-btn[hidden] { display: none; }
+  .receipt-trigger-btn:hover  { color: rgba(220, 140, 125, 0.9); }
+  .receipt-trigger-btn__blink {
+    display: inline-block;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(200, 100, 85, 0.7);
+    flex-shrink: 0;
+    animation: rcpt-blink 2s step-end infinite;
+  }
+  @keyframes rcpt-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+
+  /* =======================================================
+   * 资产异动档案模态框（Transaction Receipt Modal）
+   * FBC 克制美学：暗底·虚化遮罩·锈线·无圆角·无色块
+   * ======================================================= */
+  .trm {
+    position: fixed;
+    inset: 0;
+    z-index: 650;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+  }
+  .trm.trm--active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .trm__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(3, 3, 5, 0.68);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    cursor: default;
+  }
+  .trm__panel {
+    position: relative;
+    z-index: 1;
+    width: clamp(290px, 88vw, 390px);
+    background: rgba(7, 7, 9, 0.97);
+    border: 1px solid rgba(140, 65, 55, 0.35);
+    font-family: 'Courier New', monospace;
+  }
+  /* 顶部渐变锈线锚点（替代色块标题栏） */
+  .trm__panel::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 12%;
+    right: 12%;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(155, 75, 62, 0.65) 35%,
+      rgba(140, 60, 50, 0.45) 65%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+  .trm__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 18px 22px 14px;
+  }
+  .trm__header-label {
+    font-size: 0.6rem;
+    color: rgba(200, 140, 130, 0.9);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+  .trm__ref {
+    font-size: 0.5rem;
+    color: rgba(110, 80, 78, 0.52);
+    letter-spacing: 0.1em;
+  }
+  .trm__divider {
+    height: 1px;
+    margin: 0 22px;
+    background: rgba(140, 65, 55, 0.3);
+  }
+  .trm__body { padding: 20px 22px 16px; }
+  .trm__amount-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .trm__amount-label {
+    font-size: 0.5rem;
+    color: rgba(135, 95, 90, 0.56);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .trm__amount-value {
+    font-size: 1.08rem;
+    color: rgba(220, 140, 125, 0.95);
+    letter-spacing: 0.04em;
+  }
+  .trm__amount-value--gain    { color: rgba(130, 195, 158, 0.88); }
+  .trm__amount-value--neutral { color: rgba(155, 125, 118, 0.7);  }
+  .trm__tag-row { margin-bottom: 18px; }
+  .trm__tag {
+    font-size: 0.52rem;
+    color: rgba(160, 95, 85, 0.62);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .trm__lore-divider {
+    height: 1px;
+    background: rgba(140, 65, 55, 0.18);
+    margin-bottom: 18px;
+  }
+  .trm__lore {
+    font-size: 0.62rem;
+    line-height: 1.82;
+    color: rgba(188, 162, 157, 0.82);
+    letter-spacing: 0.03em;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .trm__footer-divider {
+    height: 1px;
+    margin: 0 22px;
+    background: rgba(140, 65, 55, 0.3);
+  }
+  .trm__footer {
+    padding: 14px 22px 18px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .trm__close-btn {
+    background: transparent;
+    border: 1px solid rgba(140, 65, 55, 0.38);
+    color: rgba(185, 125, 115, 0.82);
+    font-family: 'Courier New', monospace;
+    font-size: 0.56rem;
+    letter-spacing: 0.2em;
+    padding: 7px 18px;
+    cursor: pointer;
+    border-radius: 1px;
+    text-transform: uppercase;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .trm__close-btn:hover {
+    background: rgba(110, 35, 28, 0.25);
+    color: rgba(220, 140, 125, 0.95);
+    border-color: rgba(160, 75, 65, 0.5);
+  }
+  .trm__close-btn:focus-visible {
+    outline: 1px solid rgba(160, 80, 70, 0.5);
+    outline-offset: 2px;
+  }
 </style>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -5216,6 +5566,33 @@
   <div class="start-screen__line" aria-hidden="true"></div>
   <div class="start-screen__prompt">点按进入 · 开始首趟</div>
   <div class="start-screen__hint">TAP TO BEGIN</div>
+</div>
+
+<!-- ===== 资产异动档案模态框 ===== -->
+<div id="transaction-receipt-modal" class="trm" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="trm-title">
+  <div class="trm__backdrop" id="trm-backdrop"></div>
+  <div class="trm__panel">
+    <div class="trm__header">
+      <span class="trm__header-label" id="trm-title">资产异动档案</span>
+      <span class="trm__ref" id="trm-ref"></span>
+    </div>
+    <div class="trm__divider" aria-hidden="true"></div>
+    <div class="trm__body">
+      <div class="trm__amount-row">
+        <span class="trm__amount-label">本层账面变动</span>
+        <span class="trm__amount-value" id="trm-amount">—</span>
+      </div>
+      <div class="trm__tag-row">
+        <span class="trm__tag" id="trm-tag"></span>
+      </div>
+      <div class="trm__lore-divider" aria-hidden="true"></div>
+      <p class="trm__lore" id="trm-lore"></p>
+    </div>
+    <div class="trm__footer-divider" aria-hidden="true"></div>
+    <div class="trm__footer">
+      <button type="button" class="trm__close-btn" id="trm-close-btn">确认并关闭</button>
+    </div>
+  </div>
 </div>
 
 <!-- ===== 卡牌选取界面 ===== -->
@@ -5297,7 +5674,10 @@
 
   <header class="stage__header">
     <h1 class="stage__title">暴富电梯</h1>
-    <p class="stage__subtitle">关门再涨价 · 联邦控制局计价规程</p>
+    <div class="stage__header-right">
+      <p class="stage__subtitle">关门再涨价 · 联邦控制局计价规程</p>
+      <button id="bgm-toggle-btn" class="bgm-toggle" aria-label="BGM 降维开关" aria-pressed="false" title="BGM 降维"></button>
+    </div>
   </header>
 
   <div class="hud hud--terminal" id="hud" aria-label="状态">
@@ -5362,6 +5742,12 @@
       <!-- ▼ 风险资产授权面板 —— 游戏开始前覆盖电梯厢 -->
       <div class="deploy-panel risk-auth-panel deploy-panel--pre-reveal" id="deploy-panel">
         <div class="risk-auth-panel__inner">
+          <!-- 局长生涯档案统计行 -->
+          <div class="fbc-career-stats" id="fbc-career-stats" aria-hidden="true">
+            <span class="fbc-career-stats__line" id="fbc-stat-credits">// 累计已核销资产: ¥0</span>
+            <span class="fbc-career-stats__line" id="fbc-stat-floor">// 历史最高深度: B0</span>
+            <span class="fbc-career-stats__line fbc-career-stats__eval" id="fbc-stat-eval" hidden></span>
+          </div>
           <span class="deploy-panel__badge" id="deploy-panel-badge">FBC · 计价规程 · ASCENT 0</span>
           <hr class="deploy-panel__divider">
           <span class="deploy-panel__title" id="deploy-panel-title">联邦资产上行计价许可 [A-092]</span>
@@ -5428,6 +5814,18 @@
         <span class="narrative-flash__text" id="narrative-flash-text"></span>
       </div>
 
+      <!-- 三位一体结果展示框：tag | brief | 档案入口（开门时同步淡入） -->
+      <div id="door-result-frame" class="door-result-frame" aria-hidden="true" aria-live="polite">
+        <div class="door-result-frame__row">
+          <span class="door-result-frame__tag" id="drf-tag"></span>
+          <span class="door-result-frame__sep" aria-hidden="true"></span>
+          <span class="door-result-frame__brief" id="drf-brief"></span>
+        </div>
+        <button type="button" class="door-result-frame__link" id="drf-archive-btn" hidden>
+          📄 查阅异动档案
+        </button>
+      </div>
+
       <div class="scene biome--admin" id="scene"></div>
       <div class="scene-content" id="scene-content" aria-live="polite"></div>
 
@@ -5486,6 +5884,12 @@
         </div>
         <div class="breach-overlay__hint">撤离 · Space / ⌘R</div>
       </div>
+
+      <!-- 本层资产异动档案次级入口（DECIDING 状态下显示） -->
+      <button type="button" id="receipt-trigger-btn" class="receipt-trigger-btn" aria-label="查阅本层资产异动档案" hidden>
+        <span class="receipt-trigger-btn__blink" aria-hidden="true"></span>
+        <span>查阅异动档案</span>
+      </button>
 
       <div class="core-trigger core-trigger--withdraw core-trigger--hidden" id="core-trigger-withdraw" aria-hidden="true">
         <div class="core-trigger__glass metal-btn-housing">
@@ -5744,6 +6148,21 @@
   var narrativeFlashOverlayEl = document.getElementById('narrative-flash-overlay');
   var narrativeFlashTagEl     = document.getElementById('narrative-flash-tag');
   var narrativeFlashTextEl    = document.getElementById('narrative-flash-text');
+  /* 三位一体结果展示框 */
+  var drfEl        = document.getElementById('door-result-frame');
+  var drfTagEl     = document.getElementById('drf-tag');
+  var drfBriefEl   = document.getElementById('drf-brief');
+  var drfArchiveEl = document.getElementById('drf-archive-btn');
+  var _drfHideTimer = null;
+  /* 资产异动档案系统 */
+  var receiptTriggerBtn  = document.getElementById('receipt-trigger-btn');
+  var trmModalEl         = document.getElementById('transaction-receipt-modal');
+  var trmBackdropEl      = document.getElementById('trm-backdrop');
+  var trmRefEl           = document.getElementById('trm-ref');
+  var trmAmountEl        = document.getElementById('trm-amount');
+  var trmTagEl           = document.getElementById('trm-tag');
+  var trmLoreEl          = document.getElementById('trm-lore');
+  var trmCloseBtnEl      = document.getElementById('trm-close-btn');
   var safeNodeOverlayEl  = document.getElementById('safe-node-overlay');
   var safeNodeFloorEl    = document.getElementById('safe-node-floor');
   var safeNodeCostEl     = document.getElementById('safe-node-cost');
@@ -5997,6 +6416,47 @@
   var deployPanelEl  = document.getElementById('deploy-panel');
   var deployAmountEl = document.getElementById('deploy-amount');
   var deployStatusEl = document.getElementById('deploy-status');
+
+  /* —— 局长生涯档案 DOM & 更新逻辑 —— */
+  var fbcCareerStatsEl = document.getElementById('fbc-career-stats');
+  var fbcStatCreditsEl = document.getElementById('fbc-stat-credits');
+  var fbcStatFloorEl   = document.getElementById('fbc-stat-floor');
+  var fbcStatEvalEl    = document.getElementById('fbc-stat-eval');
+
+  function updateCareerStats() {
+    if (!fbcCareerStatsEl) return;
+    var career = GameController.careerLoad ? GameController.careerLoad() : null;
+    if (!career) return;
+
+    var hasAny = career.total_credits_collected > 0 ||
+                 career.total_floors_climbed    > 0 ||
+                 career.total_liquidations      > 0;
+    if (!hasAny) return;
+
+    if (fbcStatCreditsEl)
+      fbcStatCreditsEl.textContent = '// 累计已核销资产: ¥' +
+        career.total_credits_collected.toLocaleString('zh-Hans-CN');
+    if (fbcStatFloorEl)
+      fbcStatFloorEl.textContent = '// 历史最高深度: B' + career.max_floor_reached;
+
+    /* 动态评价（FBC 官僚文风） */
+    var evalText = '';
+    if (career.total_liquidations >= 3)
+      evalText = '// 委员会对您的稳定性表示担忧。';
+    else if (career.total_credits_collected >= 5000)
+      evalText = '// 您正在重塑局内的财务结构。';
+    if (fbcStatEvalEl) {
+      if (evalText) {
+        fbcStatEvalEl.textContent = evalText;
+        fbcStatEvalEl.removeAttribute('hidden');
+      } else {
+        fbcStatEvalEl.setAttribute('hidden', '');
+      }
+    }
+
+    fbcCareerStatsEl.classList.add('visible');
+    fbcCareerStatsEl.removeAttribute('aria-hidden');
+  }
   var btnDeploy      = document.getElementById('btn-deploy');
   var btnDeclineProbe = document.getElementById('btn-decline-probe');
 
@@ -6355,6 +6815,7 @@
       updatePreGameMissionLine();
       refreshProtocolLeverageDisplay();
       applyDeployPanelOnboardingChrome();
+      updateCareerStats();
       bootCompleted = true;
     }
 
@@ -7033,6 +7494,139 @@
   }
 
   /* ===========================================================
+   * 资产异动档案系统（两级叙事 · 次级入口 + 深度阅读模态框）
+   * =========================================================== */
+
+  var _pendingReceiptData = null; /* { tag, lore, delta, floor } */
+
+  /** 生成 8 位十六进制流水号，每局唯一 */
+  function _genReceiptRef() {
+    var hex = '0123456789ABCDEF';
+    var s = 'FBC-';
+    for (var i = 0; i < 8; i++) s += hex[Math.floor(Math.random() * 16)];
+    return s;
+  }
+
+  /* ===========================================================
+   * 三位一体结果展示框：show / hide
+   * =========================================================== */
+
+  /**
+   * 开门时同步显示：行政名目 tag + 金额变动 delta + 档案入口（若有 lore）
+   * 2s 后自动消隐；玩家点击上行/撤离时 hideReceiptSystem 立即清除
+   */
+  function showDoorResultFrame(tag, delta, hasLore) {
+    if (!drfEl) return;
+    clearTimeout(_drfHideTimer);
+
+    /* 填充 tag */
+    if (drfTagEl) drfTagEl.textContent = tag ? '[ ' + tag + ' ]' : '';
+
+    /* 填充 brief（金额） */
+    var d = Math.floor(delta);
+    var sign = d > 0 ? '+' : '';
+    if (drfBriefEl) {
+      drfBriefEl.textContent = sign + '\u00a5' + Math.abs(d);
+      drfBriefEl.className = 'door-result-frame__brief' +
+        (d > 0 ? ' door-result-frame__brief--gain' : d < 0 ? ' door-result-frame__brief--loss' : '');
+    }
+
+    /* 档案入口：有 lore 才显示 */
+    if (drfArchiveEl) {
+      if (hasLore) drfArchiveEl.removeAttribute('hidden');
+      else drfArchiveEl.setAttribute('hidden', '');
+    }
+
+    drfEl.setAttribute('aria-hidden', 'false');
+    drfEl.classList.add('active');
+
+    /* 4s 后自动消隐；玩家点击上行/撤离可提前中断 */
+    _drfHideTimer = setTimeout(hideDoorResultFrame, 4000);
+  }
+
+  /** 立即消隐展示框（上行/撤离/重置时调用，保证博弈爽感） */
+  function hideDoorResultFrame() {
+    clearTimeout(_drfHideTimer);
+    _drfHideTimer = null;
+    if (!drfEl) return;
+    drfEl.classList.remove('active');
+    drfEl.setAttribute('aria-hidden', 'true');
+  }
+
+  /** 进入 DECIDING 后呈现次级入口按钮（仅在有 lore 时） */
+  function showReceiptTrigger() {
+    if (!receiptTriggerBtn || !_pendingReceiptData || !_pendingReceiptData.lore) return;
+    receiptTriggerBtn.removeAttribute('hidden');
+  }
+
+  /** 隐藏次级入口并关闭模态框（上行 / 撤离 / 重置时调用） */
+  function hideReceiptSystem() {
+    _pendingReceiptData = null;
+    if (receiptTriggerBtn) receiptTriggerBtn.setAttribute('hidden', '');
+    closeReceiptModal();
+    hideDoorResultFrame(); /* 玩家决策 → 立即清除展示框 */
+  }
+
+  /** 打开档案模态框并填充 lore */
+  function openReceiptModal() {
+    if (!trmModalEl || !_pendingReceiptData) return;
+    var d = _pendingReceiptData;
+    var delta = Math.floor(d.delta || 0);
+    /* 流水号 */
+    if (trmRefEl) trmRefEl.textContent = _genReceiptRef();
+    /* 金额颜色 */
+    if (trmAmountEl) {
+      var sign = delta > 0 ? '+' : '';
+      trmAmountEl.textContent = sign + '\u00a5' + Math.abs(delta);
+      trmAmountEl.className = 'trm__amount-value' +
+        (delta > 0 ? ' trm__amount-value--gain' : delta === 0 ? ' trm__amount-value--neutral' : '');
+    }
+    /* 事件标签 */
+    if (trmTagEl) trmTagEl.textContent = d.tag ? '[ ' + d.tag + ' ]' : '';
+    /* 深度叙事 */
+    if (trmLoreEl) trmLoreEl.textContent = d.lore || '';
+    trmModalEl.classList.add('trm--active');
+    trmModalEl.setAttribute('aria-hidden', 'false');
+    if (trmCloseBtnEl) trmCloseBtnEl.focus();
+  }
+
+  /** 关闭档案模态框（不清空 _pendingReceiptData，允许重复开启） */
+  function closeReceiptModal() {
+    if (!trmModalEl) return;
+    trmModalEl.classList.remove('trm--active');
+    trmModalEl.setAttribute('aria-hidden', 'true');
+  }
+
+  /* 事件绑定 */
+  if (drfArchiveEl) {
+    drfArchiveEl.addEventListener('click', function () {
+      openReceiptModal();
+    });
+  }
+  if (receiptTriggerBtn) {
+    receiptTriggerBtn.addEventListener('click', function () {
+      openReceiptModal();
+    });
+  }
+  if (trmCloseBtnEl) {
+    trmCloseBtnEl.addEventListener('click', function () {
+      closeReceiptModal();
+    });
+  }
+  /* 点击遮罩关闭 */
+  if (trmBackdropEl) {
+    trmBackdropEl.addEventListener('click', function () {
+      closeReceiptModal();
+    });
+  }
+  /* ESC 关闭 */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && trmModalEl && trmModalEl.classList.contains('trm--active')) {
+      closeReceiptModal();
+    }
+  }, true);
+
+  /* ===========================================================
    * 安全屋弹窗
    * =========================================================== */
 
@@ -7645,6 +8239,8 @@
     sceneEl.className = 'scene biome--admin';
     sceneContentEl.innerHTML = '';
     sceneContentEl.classList.remove('scene-content--delta-only');
+    /* 档案系统重置 */
+    hideReceiptSystem();
     removeElevatorGhost();
     _currentGhostFigure = null;
     screenEl.classList.remove(
@@ -7707,6 +8303,7 @@
     updatePreGameMissionLine();
     refreshProtocolLeverageDisplay();
     deployStatusEl.classList.remove('active', 'deploy-panel__status--seal');
+    updateCareerStats();
   }
 
   /* ===========================================================
@@ -8111,14 +8708,33 @@
           ? GameController.getOutcomeNarrative(o) : null;
         var isPenalty = (o.kind === 'NEGATIVE' || o.kind === 'LIQUIDATION');
 
-        function _showAmountAndEffects(skipDupNarrative) {
-          var holdMs = flashCreditsDeltaInScene(deltaMoney, o, {
-            skipInSceneNarrative: !!skipDupNarrative,
-            basisCredits: moneyBefore
-          });
-          var revealSettleMs = holdMs + pace('afterDeltaHoldMs', 420);
+        function _showAmountAndEffects() {
+          /* 保存本层 lore，供档案模态框使用 */
+          _pendingReceiptData = (narrative && narrative.lore && o.kind !== 'LIQUIDATION') ? {
+            tag:   narrative.tag,
+            lore:  narrative.lore,
+            delta: deltaMoney,
+            floor: game.floor
+          } : null;
+
           var gainTier = deltaMoney > 0 ? computeGainVisualTier(Math.floor(deltaMoney), moneyBefore, o) : 0;
-          var vizTier = Math.max(gainTier, surprise ? 2 : 0);
+          var vizTier  = Math.max(gainTier, surprise ? 2 : 0);
+          var holdMs, revealSettleMs;
+
+          if (o.kind !== 'LIQUIDATION') {
+            /* ── 三位一体展示框：tag + brief + 档案入口，同步淡入 ── */
+            var frameTag = (narrative && narrative.tag) ? narrative.tag : '';
+            showDoorResultFrame(frameTag, deltaMoney, !!_pendingReceiptData);
+            holdMs = 0;
+            revealSettleMs = pace('doorRevealSettleMs', 900);
+          } else {
+            /* 清算：保留原有大字金额闪现（随后进入清算弹窗） */
+            holdMs = flashCreditsDeltaInScene(deltaMoney, o, {
+              skipInSceneNarrative: true,
+              basisCredits: moneyBefore
+            });
+            revealSettleMs = holdMs + pace('afterDeltaHoldMs', 420);
+          }
 
           syncUI();
 
@@ -8162,7 +8778,7 @@
             setTimeout(function () {
               applySurpriseVisual(surprise, vizTier);
               syncUI();
-            }, holdMs + pace('surpriseAfterDeltaMs', 300));
+            }, pace('surpriseAfterDeltaMs', 300));
           }
 
           setTimeout(function () {
@@ -8206,14 +8822,13 @@
             if (fr.safeNode) return;
             if (fr.breach) showBreach(game._breachDeadline);
             syncUI();
+            /* 进入 DECIDING 且无入侵：持久档案入口（2s 展示框消隐后的备用通道） */
+            if (!fr.breach) showReceiptTrigger();
           }, revealSettleMs);
         }
 
-        if (narrative && o.kind !== 'LIQUIDATION') {
-          showNarrativeFlash(narrative, isPenalty, function () { _showAmountAndEffects(true); });
-        } else {
-          _showAmountAndEffects(false);
-        }
+        /* 三位一体：无需前置叙事预闪，直接同步展示 */
+        _showAmountAndEffects();
       }, BRAKE_MS);
     }, ASCEND_MS);
   }
@@ -8228,12 +8843,16 @@
     }
     var started = game.startAscend();
     if (!started.ok) return false;
+    /* 上行开始：收起档案入口与模态框 */
+    hideReceiptSystem();
     runAscendSequence();
     return true;
   }
 
   function handleRiskEvacuate() {
     if (!game.canCashOut()) return;
+    /* 撤离开始：收起档案入口与模态框 */
+    hideReceiptSystem();
     if (isResultOverlayActive()) return;
     if (bossOverlayEl && bossOverlayEl.classList.contains('active')) return;
 
@@ -8616,12 +9235,11 @@
             if (cTier >= 1) cardResultBarEl.classList.add('card-result-bar--reward-tier-' + cTier);
             cardResultBarEl.classList.add('active');
 
-            var baseCardMs = GameController.cfg('cardSelection.resultShowMs', 2400);
-            var resultMs = r.creditsDelta > 0 ? Math.round(baseCardMs * cardRewardHoldMult(cTier)) : baseCardMs;
+            /* 300ms 内触发结算并与翻牌动画并行；玩家意志优先，禁止序列化等待 */
             setTimeout(function () {
               hideCardSelection();
               handlePostCardReveal();
-            }, resultMs);
+            }, 300);
           }
         });
 
@@ -8681,6 +9299,8 @@
     }
 
     syncUI();
+    /* 卡牌结算后同样进入 DECIDING：显示次级档案入口 */
+    showReceiptTrigger();
   }
 
   var _pendingCardHand = null;
@@ -8688,6 +9308,49 @@
   game.onCardHand(function (cards) {
     _pendingCardHand = cards;
   });
+
+  /* ===========================================================
+   * BGM 降维开关
+   * =========================================================== */
+  (function () {
+    var STORAGE_KEY = 'fbc_bgm_dimmed_v1';
+
+    /* 常规：双声波弧线（全频喇叭） */
+    var SVG_NORMAL = [
+      '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">',
+        '<path d="M1 5.5h3l4-3.5v12l-4-3.5H1z"/>',
+        '<path d="M11.5 5.5c1.2 0.9 1.8 2.2 1.8 2.5s-0.6 1.6-1.8 2.5"/>',
+        '<path d="M13.5 3.5c2 1.6 2.8 3.2 2.8 4.5s-0.8 2.9-2.8 4.5"/>',
+      '</svg>'
+    ].join('');
+
+    /* 降维：单弧低频波 + 虚线遮断高频 */
+    var SVG_DIMMED = [
+      '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">',
+        '<path d="M1 5.5h3l4-3.5v12l-4-3.5H1z"/>',
+        '<path d="M11 8.5q2-3 4 0" stroke-width="1.8"/>',
+        '<line x1="11.2" y1="5.5" x2="14.8" y2="5.5" stroke-width="1.2" stroke-dasharray="1 1.2"/>',
+      '</svg>'
+    ].join('');
+
+    var btn = document.getElementById('bgm-toggle-btn');
+    if (!btn) return;
+
+    var dimmed = localStorage.getItem(STORAGE_KEY) === '1';
+
+    function applyDimmed(d) {
+      dimmed = d;
+      localStorage.setItem(STORAGE_KEY, dimmed ? '1' : '0');
+      btn.innerHTML = dimmed ? SVG_DIMMED : SVG_NORMAL;
+      btn.setAttribute('aria-pressed', dimmed ? 'true' : 'false');
+      if (typeof audioEngine !== 'undefined' && typeof audioEngine.setBgmDimmed === 'function') {
+        audioEngine.setBgmDimmed(dimmed);
+      }
+    }
+
+    btn.addEventListener('click', function () { applyDimmed(!dimmed); });
+    applyDimmed(dimmed);
+  }());
 
   /* ===========================================================
    * 初始化

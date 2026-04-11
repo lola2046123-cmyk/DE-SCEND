@@ -66,16 +66,25 @@
     SKIP_FLOOR: 'SKIP_FLOOR'
   };
 
+  /**
+   * BGM 专属插槽：这些插槽经由低通滤波器总线输出；
+   * 其余 SFX 插槽直连 master，完全绕过滤波器。
+   */
+  var BGM_SLOTS = ['IDLE', 'ASCENDING'];
+
   /* =====================================================================
    * AudioEngine
    * ===================================================================== */
 
   function AudioEngine() {
-    this._ctx    = null;
-    this._master = null;
-    this._slots  = {};
-    this._ready  = false;
-    this._log    = [];
+    this._ctx       = null;
+    this._master    = null;
+    this._bgmFilter = null;   /* BiquadFilterNode (lowpass)，仅 BGM 总线使用 */
+    this._bgmBus    = null;   /* GainNode，BGM 总线音量 */
+    this._bgmDimmed = false;
+    this._slots     = {};
+    this._ready     = false;
+    this._log       = [];
   }
 
   AudioEngine.SLOTS               = SLOTS;
@@ -116,12 +125,34 @@
       this._master.gain.value = 0.85;
       this._master.connect(limiter);
 
-      /* 为每个插槽建立独立 GainNode，初始静音 */
+      /*
+       * BGM 总线：BGM 插槽 → bgmFilter (lowpass) → bgmBus → master
+       * SFX 插槽直连 master，完全绕过滤波器，保持清脆穿透力。
+       */
+      this._bgmFilter = this._ctx.createBiquadFilter();
+      this._bgmFilter.type = 'lowpass';
+      this._bgmFilter.frequency.value = 20000; /* 初始极高截止 ≈ 全频旁通 */
+      this._bgmFilter.Q.value = 0.7;
+
+      this._bgmBus = this._ctx.createGain();
+      this._bgmBus.gain.value = 1.0;
+
+      this._bgmFilter.connect(this._bgmBus);
+      this._bgmBus.connect(this._master);
+
+      /* 若在 Context 就绪前已设置降维状态，立即应用 */
+      if (this._bgmDimmed) {
+        this._bgmFilter.frequency.value = 400;
+        this._bgmBus.gain.value = 0.3;
+      }
+
+      /* 为每个插槽建立独立 GainNode，初始静音；BGM 插槽走 bgmFilter 总线 */
       for (var i = 0; i < SLOTS.length; i++) {
         var slotName = SLOTS[i];
         var g = this._ctx.createGain();
-        g.gain.value = 0;   // 静音，等待 loadSlot 激活
-        g.connect(this._master);
+        g.gain.value = 0;
+        var isBgmSlot = BGM_SLOTS.indexOf(slotName) >= 0;
+        g.connect(isBgmSlot ? this._bgmFilter : this._master);
         this._slots[slotName] = { gainNode: g, buffer: null };
       }
 
@@ -474,6 +505,42 @@
     } catch (e) {
       console.warn('[AudioEngine] playQuotaReached:', e);
     }
+  };
+
+  /**
+   * BGM 降维/沉浸状态切换。
+   *
+   * 仅操纵 BGM 总线（bgmFilter 截止频率 + bgmBus 音量），
+   * SFX 插槽与所有程序音效直连 master，完全不受影响，保持清脆穿透力。
+   *
+   * 使用 cancelScheduledValues + setValueAtTime + linearRampToValueAtTime
+   * 三步确保任意状态下切换都平滑无爆音（Safari 兼容）。
+   *
+   * @param {boolean} dimmed  true = 降维（低通 400 Hz，音量 30%）
+   */
+  AudioEngine.prototype.setBgmDimmed = function (dimmed) {
+    this._bgmDimmed = !!dimmed;
+    if (!this._ctx || !this._bgmFilter || !this._bgmBus) return;
+    var t0      = this._ctx.currentTime;
+    var rampEnd = t0 + 0.55;
+
+    this._bgmFilter.frequency.cancelScheduledValues(t0);
+    this._bgmFilter.frequency.setValueAtTime(this._bgmFilter.frequency.value, t0);
+    this._bgmBus.gain.cancelScheduledValues(t0);
+    this._bgmBus.gain.setValueAtTime(this._bgmBus.gain.value, t0);
+
+    if (dimmed) {
+      this._bgmFilter.frequency.linearRampToValueAtTime(400,   rampEnd);
+      this._bgmBus.gain.linearRampToValueAtTime(0.3, rampEnd);
+    } else {
+      this._bgmFilter.frequency.linearRampToValueAtTime(20000, rampEnd);
+      this._bgmBus.gain.linearRampToValueAtTime(1.0, rampEnd);
+    }
+  };
+
+  /** @returns {boolean} */
+  AudioEngine.prototype.isBgmDimmed = function () {
+    return this._bgmDimmed;
   };
 
   global.AudioEngine = AudioEngine;

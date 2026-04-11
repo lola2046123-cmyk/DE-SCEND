@@ -41,6 +41,55 @@
   }
 
   /* =====================================================================
+   * 局长生涯档案 — FBC 绩效核查中枢 (LocalStorage 持久化)
+   * ===================================================================== */
+  var _FBC_CAREER_KEY = 'fbc_career_archive_v1';
+
+  function _careerBlank() {
+    return {
+      total_credits_collected: 0,
+      total_floors_climbed:    0,
+      max_floor_reached:       0,
+      total_liquidations:      0
+    };
+  }
+
+  function careerLoad() {
+    try {
+      var raw = (typeof localStorage !== 'undefined')
+        ? localStorage.getItem(_FBC_CAREER_KEY) : null;
+      if (raw) {
+        var d = JSON.parse(raw);
+        var b = _careerBlank();
+        return {
+          total_credits_collected: (d.total_credits_collected || 0) + b.total_credits_collected,
+          total_floors_climbed:    (d.total_floors_climbed    || 0) + b.total_floors_climbed,
+          max_floor_reached:       Math.max(d.max_floor_reached    || 0, b.max_floor_reached),
+          total_liquidations:      (d.total_liquidations      || 0) + b.total_liquidations
+        };
+      }
+    } catch (e) {}
+    return _careerBlank();
+  }
+
+  function _careerSave(data) {
+    try {
+      if (typeof localStorage !== 'undefined')
+        localStorage.setItem(_FBC_CAREER_KEY, JSON.stringify(data));
+    } catch (e) {}
+  }
+
+  function careerMerge(delta) {
+    var a = careerLoad();
+    if (delta.creditsCollected) a.total_credits_collected += Math.floor(delta.creditsCollected);
+    if (delta.floorsClimbed)    a.total_floors_climbed    += delta.floorsClimbed;
+    if (delta.floorReached)     a.max_floor_reached        = Math.max(a.max_floor_reached, delta.floorReached);
+    if (delta.liquidation)      a.total_liquidations      += 1;
+    _careerSave(a);
+    return a;
+  }
+
+  /* =====================================================================
    * 常量（从配置读取，带内置默认值回退）
    * ===================================================================== */
 
@@ -290,30 +339,72 @@
 
   var OUTCOME_NARRATIVE_POOL = {
     DOUBLE: [
-      { tag: '资产裂变', text: '高维漏洞 · 账面暴增' },
-      { tag: '意外分红', text: '超额津贴 · 估值跳' },
-      { tag: '财富跃升', text: '套利窗开 · 杠杆满' }
+      {
+        tag: '资产裂变', text: '高维漏洞 · 账面暴增',
+        lore: '异动来源：本层轿厢短暂穿越了一处价值折叠区间（参照：FBC档案3-7-R）。账面拷贝已自动归入探测员信托账户。\n\n注意：请勿对此次收益来源进行非授权报告。委员会已在相关记录中标注〔REDACTED〕。'
+      },
+      {
+        tag: '意外分红', text: '超额津贴 · 估值跳',
+        lore: '账单备注：某匿名高级研究员于本层提交了估值修正申请，申请内容为机密，本次入账为系统自动响应，无需审批流程。\n\n该研究员的后续行踪目前列为管控信息，请勿询问。'
+      },
+      {
+        tag: '财富跃升', text: '套利窗开 · 杠杆满',
+        lore: '套利事件摘要：轿厢传感器检测到本层存在短暂的高维套利窗口。依协议，探测员持有的全部杠杆头寸已完成自动镜像增值。\n\n此类事件每发生一次，垂直探测序列的预期寿命即缩短约七小时。此为例行备注。'
+      }
     ],
     POSITIVE_HIGH: [
-      { tag: '财富跃升', text: '大额增值 · 流动性入' },
-      { tag: '盲盒大奖', text: '高纯晶体 · 已结算' },
-      { tag: '资产裂变', text: '套利成 · 倍率活' }
+      {
+        tag: '财富跃升', text: '大额增值 · 流动性入',
+        lore: '高净值事件登记：本层杠杆结算触发了委员会内部的HNW-C清算协议。该协议的激活条件至今为机密。\n\n入账金额已扣除噪声矫正费（0.000%，精确至小数点后十七位后归零）。连续触发此类事件可能导致后续楼层产生补偿性罚款。'
+      },
+      {
+        tag: '盲盒大奖', text: '高纯晶体 · 已结算',
+        lore: '异常事件摘要：探测传感器于本层读取到超规格流动性信号，经委员会核查，该信号已确认为真实可信。\n\n后果：账面大幅增值。原因：无法公开。建议：不要询问。'
+      },
+      {
+        tag: '资产裂变', text: '套利成 · 倍率活',
+        lore: '套利成功报告：本层发生了一起受控的资产结构重组事件，全部超额收益依规归入探测员账户。\n\n委员会提示：接连触发高净值事件将提升下一层的偏移基准。您的贪婪曲线已被实时记录在案。'
+      }
     ],
     POSITIVE_LOW: [
-      { tag: '意外分红', text: '合规红利入账' },
-      { tag: '特别津贴', text: '微补入账 · 可上行翻倍' }
+      {
+        tag: '意外分红', text: '合规红利入账',
+        lore: '例行入账说明：本层完成了一次低强度合规红利分配。触发条件：平凡。金额：尚可。\n\n风险提示：委员会将连续三次入账列为"行为模式异常"并可能启动额外审查。本条提示系自动生成，与您的具体行为无关。'
+      },
+      {
+        tag: '特别津贴', text: '微补入账 · 可上行翻倍',
+        lore: '内部备忘：本次微量入账系因轿厢于本层触发了一项已遗忘的补贴条款，该条款的原始签署人已于七年前以"行政失联"为由注销档案。\n\n建议：收下，不要追溯来源。'
+      }
     ],
     GOLDEN_FLOOR: [
-      { tag: '黄金楼层', text: '匿名放行 · 单笔十倍肥尾' },
-      { tag: '财富跃升', text: '估值异常 · 黄金带收益' }
+      {
+        tag: '黄金楼层', text: '匿名放行 · 单笔十倍肥尾',
+        lore: '异常收益档案：本层为本次探测序列中的匿名放行节点。放行条件：概率性的，不可预测的，委员会拒绝给出任何解释。\n\n警示：当您下次在电梯中看到相同的楼层数字时，不要按它。'
+      },
+      {
+        tag: '财富跃升', text: '估值异常 · 黄金带收益',
+        lore: '肥尾收益备注：本次结算的倍率已超出正常预期范围。委员会内部将此类事件记为"奇点收益"。\n\n警告：重复触发奇点收益的探测员，其后续偏移基准将被永久上调。这不是威胁，这是数据。'
+      }
     ],
     NEGATIVE: [
-      { tag: '恶意做空', text: '不明机构做空 · 账面缩' },
-      { tag: '违规罚款', text: '触犯法案第7.3条 · 扣款' },
-      { tag: '通货膨胀', text: '购买力蒸发 · 资产缩' }
+      {
+        tag: '恶意做空', text: '不明机构做空 · 账面缩',
+        lore: '异动来源：某匿名机构于本层针对您的探测账户实施了精准做空操作。做空者身份：〔REDACTED〕。做空理由：〔REDACTED〕。\n\n委员会内部估计，上述标注信息的公开披露将引起至少两名委员会成员的个人不适，故维持现状。'
+      },
+      {
+        tag: '违规罚款', text: '触犯法案第7.3条 · 扣款',
+        lore: '罚款事由：监控系统于本层记录到您的视线方向与走廊末端的异常实体产生了0.3秒的接触窗口。\n\n依据《联邦模因卫生条例》第7.3条第二款，模因防控费已自动划扣。如需申诉，请前往B9层档案室。该办公室自建立以来尚未接待过任何访客。'
+      },
+      {
+        tag: '通货膨胀', text: '购买力蒸发 · 资产缩',
+        lore: '账面缩水说明：本层内存在一个未公开的通货膨胀异常源。委员会已在内部档案中记录此事件，但决定不采取任何行动。\n\n您的购买力已被无形吸收。负责吸收的实体对"谢谢"没有任何反应。'
+      }
     ],
     LIQUIDATION: [
-      { tag: '强制清算', text: 'FBC 破产程序 · 账面核销' }
+      {
+        tag: '强制清算', text: 'FBC 破产程序 · 账面核销',
+        lore: '结算通知：账面归零程序已执行完毕。\n\n依据《联邦信用核销规程》附件F，您的全部探测杠杆已归还至局方信托储备池。此记录已自动同步至您的永久失信档案。\n\n委员会感谢您的参与，并祝您在下一轮探测中做出更为审慎的决策。'
+      }
     ]
   };
 
@@ -742,6 +833,7 @@
   GameController.CARD_IDENTITIES           = CARD_IDENTITIES;
   GameController.generateCardHand          = generateCardHand;
   GameController.cfg                       = cfg;
+  GameController.careerLoad                = careerLoad;
 
   /* ---- 重置 ---- */
   GameController.prototype.reset = function () {
@@ -1122,6 +1214,8 @@
       creditsMultiplier: 0, autoLiquidate: true
     };
     this._emitOutcome(this.lastOutcome);
+    /* 生涯档案：Hiss 入侵超时清算 */
+    careerMerge({ liquidation: true });
     this._setState(STATES.GAME_OVER);
   };
 
@@ -1303,6 +1397,8 @@
       this._applyBaselineGrowth();
       if (fj > 0) this._addCorruption(CORRUPTION.PER_FLOOR);
     }
+    /* 生涯档案：记录本次攀爬层数与历史最高深度 */
+    careerMerge({ floorsClimbed: floorsJumped, floorReached: this.floor });
     if (this._frozenPrincipal > 0 && this.floor >= this._frozenUnlockFloor) {
       this.credits += this._frozenPrincipal;
       this._frozenPrincipal = 0;
@@ -1501,6 +1597,8 @@
     if (this.state !== STATES.REVEALING) return { ok: false, reason: 'not_revealing' };
 
     if (this.lastOutcome && this.lastOutcome.kind === 'LIQUIDATION' && !this.lastOutcome.mitigated) {
+      /* 生涯档案：记录破产清算事件 */
+      careerMerge({ liquidation: true });
       this._setState(STATES.GAME_OVER);
       return { ok: true, gameOver: true, breach: false };
     }
@@ -1606,6 +1704,8 @@
     this._applyEarlyCashoutFreezePenalty();
     var payout   = Math.floor(this.credits);
     this.lastPayout = payout;
+    /* 生涯档案：成功撤离，累加核销资产总额 */
+    careerMerge({ creditsCollected: payout });
     this._setState(STATES.CASHED_OUT);
     for (var i = 0; i < this._listeners.cashOut.length; i++) {
       try { this._listeners.cashOut[i](payout, this); } catch (e) { console.error(e); }

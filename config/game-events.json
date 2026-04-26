@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "version": "0.03",
-    "description": "《暴富电梯》事件概率与数值配置表（局内计价规程）。修改此文件即可调整游戏平衡，无需改动代码。",
-    "lastUpdated": "2026-04-09"
+    "version": "0.05",
+    "description": "《暴富电梯》事件概率与数值配置表（局内计价规程）。修改此文件即可调整游戏平衡，无需改动代码。v0.05：删卡牌/连环爆雷/资产冻结/软盘重掷买断；新增封存货舱选盘 + 货舱清点逐项揭露 + FBC 代决议。",
+    "lastUpdated": "2026-04-26"
   },
 
   "thresholds": {
@@ -14,20 +14,10 @@
 
   "outcomeBands": {
     "_comment": "各结果带的资产倍率参数",
-    "liquidation": {
-      "creditsMultiplier": 0
-    },
-    "negative": {
-      "creditsMultiplierMin": 0.7,
-      "creditsMultiplierMax": 0.9
-    },
-    "positive": {
-      "creditsMultiplierMin": 1.1,
-      "creditsMultiplierMax": 1.2
-    },
-    "double": {
-      "creditsMultiplier": 2
-    }
+    "liquidation": { "creditsMultiplier": 0 },
+    "negative":    { "creditsMultiplierMin": 0.7, "creditsMultiplierMax": 0.9 },
+    "positive":    { "creditsMultiplierMin": 1.1, "creditsMultiplierMax": 1.2 },
+    "double":      { "creditsMultiplier": 2 }
   },
 
   "corruption": {
@@ -39,9 +29,9 @@
     "onPositive": 0.05,
     "onNegative": 0.12,
     "onDouble": 0.35,
-    "onReroll": 0.22,
     "onVipAuditRelief": -0.11,
-    "onDangerUnveil": 0.17
+    "onDangerUnveil": 0.17,
+    "onCommitteeOverride": 0.45
   },
 
   "floorLeverage": {
@@ -86,48 +76,65 @@
   },
 
   "passenger": {
-    "_comment": "乘客身份系统。控制上下车、类型权重、阈值/资本修正、伪装概率。",
+    "_comment": "乘客身份系统。控制上下车、类型权重、阈值/资本修正、伪装概率。共 5 种身份：监理员(VIP)、红圈商人(SCAMMER)、希斯潜伏者(DANGER)、内线情报员(INFORMER)、清扫员(CLEANER)。",
     "maxOnboard": 2,
     "boardChance": 0.40,
     "departChance": 0.30,
     "minFloor": 3,
     "types": {
       "VIP": {
-        "weight": 35,
+        "weight": 28,
         "liquidationShift": -0.04,
         "negShift": -0.02,
         "creditsMod": 1.15,
         "disguiseChance": 0,
-        "volatile": false
+        "volatile": false,
+        "label": "监理员"
       },
       "SCAMMER": {
-        "weight": 35,
+        "weight": 28,
         "liquidationShift": 0.06,
         "negShift": 0.03,
         "creditsMod": 0.85,
         "disguiseChance": 1.0,
-        "volatile": false
+        "volatile": false,
+        "label": "红圈商人"
       },
       "DANGER": {
-        "weight": 30,
+        "weight": 22,
         "liquidationShift": 0.08,
         "negShift": 0.02,
         "creditsMod": 1.0,
         "disguiseChance": 0.5,
-        "volatile": true
+        "volatile": true,
+        "label": "希斯潜伏者"
+      },
+      "INFORMER": {
+        "weight": 14,
+        "liquidationShift": 0.0,
+        "negShift": 0.0,
+        "creditsMod": 1.0,
+        "disguiseChance": 0,
+        "volatile": false,
+        "label": "内线情报员",
+        "lockerHintChance": 0.85,
+        "lockerHintAccuracy": 0.78
+      },
+      "CLEANER": {
+        "weight": 8,
+        "liquidationShift": -0.01,
+        "negShift": -0.01,
+        "creditsMod": 1.0,
+        "disguiseChance": 0,
+        "volatile": false,
+        "label": "清扫员",
+        "lockerHintChance": 0.45,
+        "lockerHintAccuracy": 0.55
       }
     },
     "combos": {
-      "vipScammer": {
-        "liquidationShift": 0.035,
-        "negShift": 0.02,
-        "creditsMult": 1.2
-      },
-      "vipDanger": {
-        "liquidationShift": -0.048,
-        "negShift": 0.062,
-        "creditsMult": 0.93
-      }
+      "vipScammer": { "liquidationShift": 0.035, "negShift": 0.02,  "creditsMult": 1.2  },
+      "vipDanger":  { "liquidationShift": -0.048, "negShift": 0.062, "creditsMult": 0.93 }
     },
     "volatilePositiveChance": 0.6,
     "volatilePositiveMult": 1.25,
@@ -137,14 +144,8 @@
   "surprise": {
     "_comment": "惊喜事件。非清算后额外掷骰触发，概率随贪婪(楼层)增长。",
     "minFloor": 3,
-    "coinRain": {
-      "baseProbability": 0.05,
-      "creditsBonusRatio": 0.25
-    },
-    "skipFloor": {
-      "baseProbability": 0.04,
-      "floorsToSkip": 1
-    },
+    "coinRain":  { "baseProbability": 0.05, "creditsBonusRatio": 0.25 },
+    "skipFloor": { "baseProbability": 0.04, "floorsToSkip": 1 },
     "greedSaturationFloor": 30
   },
 
@@ -153,18 +154,9 @@
     "triggerInterval": 5,
     "minFloor": 5,
     "events": {
-      "LIGHTS_OUT": {
-        "description": "熄灯 · 本层倍率隐藏",
-        "mechanicEffect": "display_only"
-      },
-      "CORRUPTION_SURGE": {
-        "description": "偏移涨潮 · 增速×2",
-        "corruptionMultiplier": 2
-      },
-      "BAND_DRIFT": {
-        "description": "阈值漂移 · 危险带扩",
-        "liquidationShiftBonus": 0.028
-      }
+      "LIGHTS_OUT":       { "description": "熄灯 · 本层倍率隐藏", "mechanicEffect": "display_only" },
+      "CORRUPTION_SURGE": { "description": "偏移涨潮 · 增速×2",   "corruptionMultiplier": 2 },
+      "BAND_DRIFT":       { "description": "阈值漂移 · 危险带扩",   "liquidationShiftBonus": 0.028 }
     }
   },
 
@@ -201,33 +193,10 @@
     "positiveRateBonus": 0.04
   },
 
-  "rerollBailout": {
-    "_comment": "软盘重掷掷中清算时，可支付当前账面一定比例买断并重掷；仍清算则降级为温和负面。",
-    "enabled": true,
-    "assetPayRatio": 0.4,
-    "fallbackCreditsMultiplier": 0.82,
-    "useNativeConfirm": true
-  },
-
   "goldenPositive": {
     "_comment": "肥尾：在落入正面带后，按概率升级为超高倍率（仍记为 POSITIVE，兼容现有 UI）。",
     "probability": 0.015,
     "creditsMultiplier": 10
-  },
-
-  "chainLightning": {
-    "_comment": "连环爆雷：极低概率在负面结算后追加折损，并写入 localStorage 供下一局开局扣除（跨局负债）。",
-    "probability": 0.0008,
-    "extraLossRatioOfSnapshot": 0.18,
-    "storageKey": "fbc_chain_margin_call_v1"
-  },
-
-  "assetFreeze": {
-    "_comment": "资产冻结：随机锁住部分流动性，再上行若干层归还；提前撤离则额外回吐账面。",
-    "probability": 0.035,
-    "lockRatio": 0.5,
-    "floorsToUnlock": 3,
-    "cashoutClawbackRatio": 0.2
   },
 
   "comboBlindConfidence": {
@@ -245,10 +214,9 @@
   },
 
   "copy": {
-    "quotaNudge": "未达配额 ¥${quota}；委员会建议继续上行。\n当前 ¥${credits}；强行撤离将划扣差额 ¥${debt}。",
-    "speculatorProtocol": "【对赌】未来 ${durationFloors} 层：正面/翻倍收益×${gainMult}，偏移增速×${corruptionMult}。\n签？取消则照常。",
-    "speculatorProtocolScan": "【对赌·揭穿后】同上条款，对方即将下车。\n签？",
-    "rerollBailout": "重掷=清算。付 ¥${pay} 重写？（账面 ¥${balance}）\n取消维持清算。"
+    "quotaNudge":          "未达配额 ¥${quota}；委员会建议继续上行。\n当前 ¥${credits}；强行撤离将划扣差额 ¥${debt}。",
+    "speculatorProtocol":  "【对赌】未来 ${durationFloors} 层：正面/翻倍收益×${gainMult}，偏移增速×${corruptionMult}。\n签？取消则照常。",
+    "speculatorProtocolScan": "【对赌·揭穿后】同上条款，对方即将下车。\n签？"
   },
 
   "item": {
@@ -275,71 +243,144 @@
     "odometerDelayAfterOpenMs": 160,
     "passengerResyncDelayMs": 560,
     "liquidationPanelDelayMs": 780,
-    "postCardToBreachMs": 240,
-    "rerollSceneClearMs": 1080,
+    "lockerOverlayShowMs": 360,
+    "lockerSelectFlipMs": 520,
+    "lockerToManifestMs": 320,
+    "manifestItemRevealMs": 620,
+    "manifestItemHoldMs": 540,
+    "manifestSettleMs": 480,
     "gainFlashHoldMultTier1": 1.32,
     "gainFlashHoldMultTier2": 1.58,
     "gainFlashHoldMultTier3": 1.98,
-    "gainFlashHoldMultTier4": 2.45,
-    "cardRewardResultMultTier1": 1.22,
-    "cardRewardResultMultTier2": 1.45,
-    "cardRewardResultMultTier3": 1.72,
-    "cardRewardResultMultTier4": 2.02
+    "gainFlashHoldMultTier4": 2.45
   },
 
   "biome": {
     "_comment": "场景Biome切换。按楼层范围自动换肤。",
     "ranges": [
-      { "minFloor": 1,  "maxFloor": 10, "biome": "admin" },
-      { "minFloor": 11, "maxFloor": 25, "biome": "maintenance" },
+      { "minFloor": 1,  "maxFloor": 10,   "biome": "admin" },
+      { "minFloor": 11, "maxFloor": 25,   "biome": "maintenance" },
       { "minFloor": 26, "maxFloor": 9999, "biome": "supernatural" }
     ]
   },
 
-  "cardSelection": {
-    "_comment": "丧尸楼层卡牌选取系统。电梯开门后出现灵异人物，弹出3张身份卡牌供选择，翻牌揭示收益或爆仓事件。",
+  "lockerSelection": {
+    "_comment": "封存货舱选盘。开门后弹出多个编号货舱供玩家选择，倒计时内不选则由 FBC 代决议自动选盘并加重偏移指数。",
     "enabled": true,
-    "cardsPerRound": 3,
-    "preShowDelayMs": 3200,
-    "figureAppearMs": 800,
-    "cardFlipMs": 600,
-    "resultShowMs": 2400,
+    "lockerCountByBiome": {
+      "admin": 2,
+      "maintenance": 3,
+      "supernatural": 4
+    },
+    "countdownPerLockerMs": 4000,
+    "countdownMinMs": 6000,
+    "countdownMaxMs": 16000,
+    "lockerNumberMin": 1,
+    "lockerNumberMax": 99,
+    "panicTickThresholdMs": 3000,
+    "minBidGapPositive": 1,
+    "subtitleTemplate": "超时未选 · 委员会代决议（账面按 {{ratio}} 折扣留存）",
+    "titleTemplate": "FBC · 选一只货舱开启",
+    "_note": "lockerNumberMin/Max 控制 02 位数编号上下界（01..99）。lockerCountByBiome 为各 Biome 默认柜数；首层（养猪期）会被强制收敛到 2。"
+  },
 
-    "ghostFigures": [
-      { "id": "medic",   "src": "assets/subjects/Subject 02.png", "name": "亡灵医师", "weight": 50 },
-      { "id": "wraith",  "src": "assets/subjects/Subject 03.png", "name": "血蚀怨灵", "weight": 50 }
+  "manifestReveal": {
+    "_comment": "货舱清点：选柜后将本层 outcome 拆成 3 件子产物逐步揭露。每件 reveal+hold 节拍由 uiPacing.manifestItem* 控制。子产物的金额比例从 splitPattern 中按 outcome 类型选取。",
+    "enabled": true,
+    "itemsPerReveal": 3,
+    "splitPattern": {
+      "POSITIVE": [0.25, 0.35, 0.40],
+      "DOUBLE":   [0.20, 0.30, 0.50],
+      "NEGATIVE": [0.30, 0.30, 0.40],
+      "LIQUIDATION": [0.0, 0.0, 1.0]
+    },
+    "fallbackSplit": [0.33, 0.33, 0.34]
+  },
+
+  "manifestPool": {
+    "_comment": "货舱清点子产物文案池。按 Biome × 子产物极性(positive/negative/neutral) 分组；每件子产物从对应池中权重随机抽取。",
+    "admin": {
+      "positive": [
+        { "id": "stamped_voucher",  "name": "盖章凭证",   "tag": "FBC-A02", "weight": 35 },
+        { "id": "audit_chit",       "name": "审计余额票", "tag": "FBC-A07", "weight": 30 },
+        { "id": "ledger_dust",      "name": "账册余尘",   "tag": "FBC-A11", "weight": 25 },
+        { "id": "stamp_kit",        "name": "三联印章",   "tag": "FBC-A18", "weight": 10 }
+      ],
+      "negative": [
+        { "id": "redaction_form",   "name": "涂改备案表", "tag": "FBC-D03", "weight": 35 },
+        { "id": "lost_chit",        "name": "走失餐补票", "tag": "FBC-D09", "weight": 30 },
+        { "id": "void_paperclip",   "name": "废止回形针", "tag": "FBC-D12", "weight": 25 },
+        { "id": "bad_carbon",       "name": "复写纸残角", "tag": "FBC-D17", "weight": 10 }
+      ],
+      "neutral": [
+        { "id": "blank_envelope",   "name": "空白档袋",   "tag": "FBC-N02", "weight": 50 },
+        { "id": "pencil_stub",      "name": "断头铅笔",   "tag": "FBC-N04", "weight": 50 }
+      ]
+    },
+    "maintenance": {
+      "positive": [
+        { "id": "copper_coupler",   "name": "黄铜联轴节", "tag": "MNT-A04", "weight": 30 },
+        { "id": "calibrated_gauge", "name": "校准压力表", "tag": "MNT-A09", "weight": 25 },
+        { "id": "spare_relay",      "name": "备用继电器", "tag": "MNT-A12", "weight": 25 },
+        { "id": "sealed_solder",    "name": "封装锡条",   "tag": "MNT-A19", "weight": 20 }
+      ],
+      "negative": [
+        { "id": "rusted_pin",       "name": "锈蚀销栓",   "tag": "MNT-D01", "weight": 30 },
+        { "id": "leaked_capacitor", "name": "漏液电容",   "tag": "MNT-D06", "weight": 25 },
+        { "id": "frayed_wire",      "name": "磨损导线",   "tag": "MNT-D11", "weight": 25 },
+        { "id": "cracked_bushing",  "name": "裂纹衬套",   "tag": "MNT-D15", "weight": 20 }
+      ],
+      "neutral": [
+        { "id": "shop_rag",         "name": "工程抹布",   "tag": "MNT-N01", "weight": 50 },
+        { "id": "cable_tie",        "name": "尼龙扎带",   "tag": "MNT-N04", "weight": 50 }
+      ]
+    },
+    "supernatural": {
+      "positive": [
+        { "id": "memetic_charm",    "name": "模因护符",   "tag": "SUP-A03", "weight": 25 },
+        { "id": "void_crystal",     "name": "虚空晶体",   "tag": "SUP-A07", "weight": 25 },
+        { "id": "redacted_relic",   "name": "涂黑遗物",   "tag": "SUP-A11", "weight": 25 },
+        { "id": "hiss_residue",     "name": "希斯凝液",   "tag": "SUP-A18", "weight": 25 }
+      ],
+      "negative": [
+        { "id": "cursed_ledger",    "name": "诅咒账册",   "tag": "SUP-D02", "weight": 30 },
+        { "id": "hiss_whisper_jar", "name": "低语容器",   "tag": "SUP-D08", "weight": 25 },
+        { "id": "corrupted_token",  "name": "侵蚀通证",   "tag": "SUP-D13", "weight": 25 },
+        { "id": "echo_fragment",    "name": "回响残片",   "tag": "SUP-D17", "weight": 20 }
+      ],
+      "neutral": [
+        { "id": "blank_glyph",      "name": "空白符纸",   "tag": "SUP-N02", "weight": 50 },
+        { "id": "muted_bell",       "name": "失声铃舌",   "tag": "SUP-N05", "weight": 50 }
+      ]
+    }
+  },
+
+  "fbcOverride": {
+    "_comment": "FBC 代决议：玩家未在倒计时内选盘时由委员会代为开柜。代决议无视玩家意志、追加偏移指数，并把账面结算上限按 ratio 折扣。生涯档案累计 total_committee_overrides 用于嘲讽评估。",
+    "enabled": true,
+    "creditsClampRatio": 0.62,
+    "extraCorruption": 0.45,
+    "banner": "FBC · 委员会代决议 · 强制开启 LOT-{{lot}}",
+    "messages": [
+      "委员会代决议：${locker} 号货舱已强制开启。",
+      "FBC 自动派发：${locker} 号——决策迟疑视同放弃异议。",
+      "联邦垂直局已替您处理 ${locker} 号货舱。\n剩余收益按规章折扣留存。",
+      "代决议执行：${locker} 号。\n请下次更果断地行使探测员裁量权。",
+      "${locker} 号已被委员会接管。\n您的犹豫已被记入信用档案。"
+    ]
+  },
+
+  "lockerHintCopy": {
+    "_comment": "情报员/清扫员 等乘客上车后给出的柜号情报话术。${locker} 是柜号，${kind} 是情报极性（好/坏）。",
+    "good": [
+      "情报员低声: \"${locker} 号有油水。\"",
+      "情报员: \"赌一把 ${locker} 号，错不了。\"",
+      "清扫员瞥了眼 ${locker}: \"昨天那柜……重得很。\""
     ],
-
-    "identities": [
-      { "id": "elder",    "name": "神秘老人",   "glyph": "👴", "weight": 25, "luckBias":  0.05 },
-      { "id": "child",    "name": "诡异小孩",   "glyph": "👦", "weight": 20, "luckBias": -0.08 },
-      { "id": "handsome", "name": "俊美青年",   "glyph": "🧑", "weight": 20, "luckBias":  0.0  },
-      { "id": "woman",    "name": "苍白女人",   "glyph": "👩", "weight": 15, "luckBias":  0.03 },
-      { "id": "shadow",   "name": "无面黑影",   "glyph": "🕴️", "weight": 10, "luckBias": -0.12 },
-      { "id": "doctor",   "name": "白衣医生",   "glyph": "🧑‍⚕️", "weight": 10, "luckBias":  0.06 }
-    ],
-
-    "rewardEvents": [
-      { "id": "windfall",         "name": "意外横财",   "description": "墙缝应急金",         "creditsBonusRatio": 0.30, "corruptionDelta": 0,     "weight": 25 },
-      { "id": "energy_crystal",   "name": "能量晶体",   "description": "高纯晶体出手",           "creditsBonusRatio": 0.20, "corruptionDelta": 0.05,  "weight": 30 },
-      { "id": "audit_pass",       "name": "审计通过",   "description": "审计过关 · 压力缓",     "creditsBonusRatio": 0.10, "corruptionDelta": -0.15, "weight": 20 },
-      { "id": "ghost_tip",        "name": "幽灵线报",   "description": "耳边指路",   "creditsBonusRatio": 0.05, "corruptionDelta": -0.10, "weight": 15 },
-      { "id": "time_rift",        "name": "时间裂缝",   "description": "时空扭曲 · 资产跳",     "creditsBonusRatio": 0.50, "corruptionDelta": 0.20,  "weight": 8  },
-      { "id": "blessed",          "name": "祝福之光",   "description": "暖光罩梯 · 偏移退",     "creditsBonusRatio": 0.08, "corruptionDelta": -0.30, "weight": 7  }
-    ],
-
-    "bustEvents": [
-      { "id": "ghost_tax",        "name": "亡灵税",     "description": "本层收通行税",           "creditsLossRatio": 0.25, "corruptionDelta": 0.10,  "weight": 25 },
-      { "id": "curse",            "name": "楼层诅咒",   "description": "诅咒区 · 资产蚀",         "creditsLossRatio": 0.35, "corruptionDelta": 0.15,  "weight": 20 },
-      { "id": "trap_floor",       "name": "陷阱楼层",   "description": "塌陷 · 制动耗资源",   "creditsLossRatio": 0.20, "corruptionDelta": 0.08,  "weight": 22 },
-      { "id": "hiss_whisper",     "name": "希斯低语",   "description": "低语入脑 · 偏移飙",   "creditsLossRatio": 0.10, "corruptionDelta": 0.35,  "weight": 18 },
-      { "id": "reality_collapse", "name": "现实崩塌",   "description": "空间折 · 资产压",         "creditsLossRatio": 0.50, "corruptionDelta": 0.25,  "weight": 10 },
-      { "id": "soul_drain",       "name": "灵魂汲取",   "description": "被抽走生命与账面",       "creditsLossRatio": 0.40, "corruptionDelta": 0.20,  "weight": 10 }
-    ],
-
-    "rewardTotalWeight": 0.55,
-    "bustTotalWeight": 0.45,
-
-    "_note": "rewardTotalWeight + bustTotalWeight = 1.0。每张卡的收益/爆仓由此概率决定，再在对应池中按 weight 加权随机选取具体事件。identities 的 luckBias 会额外偏移该卡的收益概率。"
+    "bad": [
+      "情报员低声: \"${locker} 号别碰，里面不干净。\"",
+      "情报员: \"听说 ${locker} 号是套子。\"",
+      "清扫员摇头: \"${locker} 号？我刚擦过血迹。\""
+    ]
   }
 }

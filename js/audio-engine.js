@@ -82,10 +82,15 @@
     this._bgmFilter = null;   /* BiquadFilterNode (lowpass)，仅 BGM 总线使用 */
     this._bgmBus    = null;   /* GainNode，BGM 总线音量 */
     this._bgmDimmed = false;
+    this._bgmMuted  = false;  /* 仅 BGM 总线静音（保留 SFX） */
+    this._muted     = false;  /* 主总线静音（关闭模式） */
     this._slots     = {};
     this._ready     = false;
     this._log       = [];
   }
+
+  /** 主总线常态音量；静音切换时作为还原目标。 */
+  AudioEngine.MASTER_LEVEL = 0.85;
 
   AudioEngine.SLOTS               = SLOTS;
   AudioEngine.SLOT_MAP_TRANSITIONS = SLOT_MAP_TRANSITIONS;
@@ -99,7 +104,7 @@
   AudioEngine.ASSET_PATHS = {
     BGM_DIR: 'assets/audio/bgm',
     /** 主循环 BGM（预留；可改为 .ogg / .m4a 并同步修改此处） */
-    BGM_MAIN_LOOP: 'assets/audio/bgm/main-loop.mp3'
+    BGM_MAIN_LOOP: 'assets/audio/bgm/main-loop3.mp3'
   };
 
   /* ---- 初始化（惰性，首次用户交互后调用） ---- */
@@ -122,7 +127,7 @@
       limiter.connect(this._ctx.destination);
 
       this._master = this._ctx.createGain();
-      this._master.gain.value = 0.85;
+      this._master.gain.value = this._muted ? 0.0001 : AudioEngine.MASTER_LEVEL;
       this._master.connect(limiter);
 
       /*
@@ -140,8 +145,10 @@
       this._bgmFilter.connect(this._bgmBus);
       this._bgmBus.connect(this._master);
 
-      /* 若在 Context 就绪前已设置降维状态，立即应用 */
-      if (this._bgmDimmed) {
+      /* 若在 Context 就绪前已设置降维或静音状态，立即应用 */
+      if (this._bgmMuted) {
+        this._bgmBus.gain.value = 0.0001;
+      } else if (this._bgmDimmed) {
         this._bgmFilter.frequency.value = 400;
         this._bgmBus.gain.value = 0.3;
       }
@@ -541,6 +548,305 @@
   /** @returns {boolean} */
   AudioEngine.prototype.isBgmDimmed = function () {
     return this._bgmDimmed;
+  };
+
+  /**
+   * 主总线静音/取消静音（关闭模式）。
+   *
+   * 与 BGM 降维不同，本方法直接调节 master 输出电平，
+   * 因此对所有插槽（BGM + SFX）以及 playCommitteePulse / playLeverPull 等
+   * 程序化音效都生效。Context 尚未就绪时仅记录意图，待 _ensureContext 应用。
+   *
+   * @param {boolean} muted  true = 关闭（master 趋零）
+   */
+  AudioEngine.prototype.setMasterMuted = function (muted) {
+    this._muted = !!muted;
+    if (!this._ctx || !this._master) return;
+    var t0      = this._ctx.currentTime;
+    var rampEnd = t0 + 0.18;
+    this._master.gain.cancelScheduledValues(t0);
+    this._master.gain.setValueAtTime(this._master.gain.value, t0);
+    this._master.gain.linearRampToValueAtTime(
+      this._muted ? 0.0001 : AudioEngine.MASTER_LEVEL,
+      rampEnd
+    );
+  };
+
+  /** @returns {boolean} */
+  AudioEngine.prototype.isMasterMuted = function () {
+    return !!this._muted;
+  };
+
+  /**
+   * 仅静音 BGM 总线（保留 SFX 与所有程序化音效）。
+   * 与 setBgmDimmed / setMasterMuted 互斥使用：
+   *   - setMasterMuted(true)  会让所有声音消失（包括 SFX）
+   *   - setBgmMuted(true)     只让 BGM 消失，SFX 一切照旧
+   *
+   * @param {boolean} muted  true = 静音 BGM；false = 还原 BGM 总线
+   */
+  AudioEngine.prototype.setBgmMuted = function (muted) {
+    this._bgmMuted = !!muted;
+    if (!this._ctx || !this._bgmBus) return;
+    var t0      = this._ctx.currentTime;
+    var rampEnd = t0 + 0.22;
+    this._bgmBus.gain.cancelScheduledValues(t0);
+    this._bgmBus.gain.setValueAtTime(this._bgmBus.gain.value, t0);
+    /* 还原时若处于"降维"状态，回到 0.3；否则回到 1.0 */
+    var restored = this._bgmDimmed ? 0.3 : 1.0;
+    this._bgmBus.gain.linearRampToValueAtTime(this._bgmMuted ? 0.0001 : restored, rampEnd);
+  };
+
+  /** @returns {boolean} */
+  AudioEngine.prototype.isBgmMuted = function () {
+    return !!this._bgmMuted;
+  };
+
+  /* =====================================================================
+   * 选盘 / 货舱 SFX —— 直连 master，不进 BGM 总线
+   * ===================================================================== */
+
+  /**
+   * 选盘浮层弹出：金属插销轻响 + 低空悬念长音。
+   */
+  AudioEngine.prototype.playLockerSelectionEnter = function () {
+    this.resumeIfNeeded();
+    if (!this._ctx || !this._master) return;
+    if (this._ctx.state === 'suspended') return;
+    try {
+      var ctx = this._ctx;
+      var master = this._master;
+      var t0 = ctx.currentTime;
+
+      /* 上闩"咔" */
+      var click = ctx.createOscillator();
+      click.type = 'square';
+      click.frequency.setValueAtTime(1480, t0);
+      click.frequency.exponentialRampToValueAtTime(880, t0 + 0.04);
+      var cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.0001, t0);
+      cg.gain.exponentialRampToValueAtTime(0.06, t0 + 0.005);
+      cg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
+      click.connect(cg); cg.connect(master);
+      click.start(t0); click.stop(t0 + 0.07);
+
+      /* 悬念长音：低频 sine 缓慢推升 */
+      var pad = ctx.createOscillator();
+      pad.type = 'sine';
+      pad.frequency.setValueAtTime(146, t0 + 0.04);
+      pad.frequency.linearRampToValueAtTime(196, t0 + 0.5);
+      var pg = ctx.createGain();
+      pg.gain.setValueAtTime(0.0001, t0 + 0.04);
+      pg.gain.linearRampToValueAtTime(0.045, t0 + 0.18);
+      pg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.78);
+      pad.connect(pg); pg.connect(master);
+      pad.start(t0 + 0.04); pad.stop(t0 + 0.8);
+    } catch (e) {
+      console.warn('[AudioEngine] playLockerSelectionEnter:', e);
+    }
+  };
+
+  /**
+   * 玩家点选某柜：滑动金属 + 锁芯解锁 click。
+   */
+  AudioEngine.prototype.playLockerOpen = function () {
+    this.resumeIfNeeded();
+    if (!this._ctx || !this._master) return;
+    if (this._ctx.state === 'suspended') return;
+    try {
+      var ctx = this._ctx;
+      var master = this._master;
+      var t0 = ctx.currentTime;
+
+      /* 解锁 click */
+      var click = ctx.createOscillator();
+      click.type = 'square';
+      click.frequency.setValueAtTime(720, t0);
+      click.frequency.exponentialRampToValueAtTime(380, t0 + 0.05);
+      var cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.0001, t0);
+      cg.gain.exponentialRampToValueAtTime(0.085, t0 + 0.005);
+      cg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
+      click.connect(cg); cg.connect(master);
+      click.start(t0); click.stop(t0 + 0.08);
+
+      /* 滑动金属：白噪 → bandpass 扫频 */
+      var len = Math.floor(ctx.sampleRate * 0.18);
+      var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.9;
+      }
+      var src = ctx.createBufferSource(); src.buffer = buf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.Q.value = 1.2;
+      bp.frequency.setValueAtTime(900, t0 + 0.04);
+      bp.frequency.exponentialRampToValueAtTime(2400, t0 + 0.2);
+      var sg = ctx.createGain();
+      sg.gain.setValueAtTime(0.0001, t0 + 0.04);
+      sg.gain.exponentialRampToValueAtTime(0.07, t0 + 0.07);
+      sg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+      src.connect(bp); bp.connect(sg); sg.connect(master);
+      src.start(t0 + 0.04); src.stop(t0 + 0.24);
+
+      /* 共鸣 ping */
+      var ping = ctx.createOscillator();
+      ping.type = 'triangle';
+      ping.frequency.setValueAtTime(660, t0 + 0.18);
+      var pg = ctx.createGain();
+      pg.gain.setValueAtTime(0.0001, t0 + 0.18);
+      pg.gain.exponentialRampToValueAtTime(0.04, t0 + 0.19);
+      pg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.42);
+      ping.connect(pg); pg.connect(master);
+      ping.start(t0 + 0.18); ping.stop(t0 + 0.45);
+    } catch (e) {
+      console.warn('[AudioEngine] playLockerOpen:', e);
+    }
+  };
+
+  /**
+   * 倒计时进入恐慌段：单次心跳重音（建议进入 panic 时一次性触发）。
+   */
+  AudioEngine.prototype.playLockerPanic = function () {
+    this.resumeIfNeeded();
+    if (!this._ctx || !this._master) return;
+    if (this._ctx.state === 'suspended') return;
+    try {
+      var ctx = this._ctx;
+      var master = this._master;
+      var t0 = ctx.currentTime;
+
+      function thump(at, peak) {
+        var o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(120, at);
+        o.frequency.exponentialRampToValueAtTime(58, at + 0.12);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(peak, at + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + 0.14);
+        o.connect(g); g.connect(master);
+        o.start(at); o.stop(at + 0.15);
+      }
+      thump(t0,        0.085);
+      thump(t0 + 0.18, 0.07);
+    } catch (e) {
+      console.warn('[AudioEngine] playLockerPanic:', e);
+    }
+  };
+
+  /**
+   * FBC 代决议盖章：低沉冲击 + 公文章戳 + 阴森余音。
+   */
+  AudioEngine.prototype.playFbcOverrideStamp = function () {
+    this.resumeIfNeeded();
+    if (!this._ctx || !this._master) return;
+    if (this._ctx.state === 'suspended') return;
+    try {
+      var ctx = this._ctx;
+      var master = this._master;
+      var t0 = ctx.currentTime;
+
+      /* 重落: 低 square 强压 */
+      var thud = ctx.createOscillator();
+      thud.type = 'square';
+      thud.frequency.setValueAtTime(110, t0);
+      thud.frequency.exponentialRampToValueAtTime(48, t0 + 0.13);
+      var tg = ctx.createGain();
+      tg.gain.setValueAtTime(0.0001, t0);
+      tg.gain.exponentialRampToValueAtTime(0.13, t0 + 0.008);
+      tg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+      var lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 720;
+      thud.connect(lp); lp.connect(tg); tg.connect(master);
+      thud.start(t0); thud.stop(t0 + 0.2);
+
+      /* 公文章纸面摩擦 */
+      var len = Math.floor(ctx.sampleRate * 0.08);
+      var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.6;
+      var src = ctx.createBufferSource(); src.buffer = buf;
+      var bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.8;
+      var sg = ctx.createGain();
+      sg.gain.setValueAtTime(0.0001, t0 + 0.04);
+      sg.gain.exponentialRampToValueAtTime(0.05, t0 + 0.05);
+      sg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+      src.connect(bp); bp.connect(sg); sg.connect(master);
+      src.start(t0 + 0.04); src.stop(t0 + 0.13);
+
+      /* 阴森余音 */
+      var dr = ctx.createOscillator();
+      dr.type = 'sawtooth';
+      dr.frequency.setValueAtTime(72, t0 + 0.1);
+      dr.frequency.linearRampToValueAtTime(58, t0 + 0.6);
+      var dg = ctx.createGain();
+      dg.gain.setValueAtTime(0.0001, t0 + 0.1);
+      dg.gain.linearRampToValueAtTime(0.035, t0 + 0.18);
+      dg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.8);
+      var dlp = ctx.createBiquadFilter();
+      dlp.type = 'lowpass'; dlp.frequency.value = 460;
+      dr.connect(dlp); dlp.connect(dg); dg.connect(master);
+      dr.start(t0 + 0.1); dr.stop(t0 + 0.85);
+    } catch (e) {
+      console.warn('[AudioEngine] playFbcOverrideStamp:', e);
+    }
+  };
+
+  /**
+   * 货舱清点单件揭露音。
+   * @param {'gain'|'loss'|'neutral'} polarity
+   */
+  AudioEngine.prototype.playManifestRevealItem = function (polarity) {
+    this.resumeIfNeeded();
+    if (!this._ctx || !this._master) return;
+    if (this._ctx.state === 'suspended') return;
+    try {
+      var ctx = this._ctx;
+      var master = this._master;
+      var t0 = ctx.currentTime;
+
+      if (polarity === 'gain') {
+        /* 清亮上扬 */
+        var o = ctx.createOscillator();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(880, t0);
+        o.frequency.exponentialRampToValueAtTime(1320, t0 + 0.08);
+        var g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.06, t0 + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+        o.connect(g); g.connect(master);
+        o.start(t0); o.stop(t0 + 0.2);
+      } else if (polarity === 'loss') {
+        /* 短促下沉 */
+        var o2 = ctx.createOscillator();
+        o2.type = 'sine';
+        o2.frequency.setValueAtTime(220, t0);
+        o2.frequency.exponentialRampToValueAtTime(96, t0 + 0.12);
+        var g2 = ctx.createGain();
+        g2.gain.setValueAtTime(0.0001, t0);
+        g2.gain.exponentialRampToValueAtTime(0.07, t0 + 0.01);
+        g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+        o2.connect(g2); g2.connect(master);
+        o2.start(t0); o2.stop(t0 + 0.2);
+      } else {
+        /* 中性轻 tick */
+        var o3 = ctx.createOscillator();
+        o3.type = 'square';
+        o3.frequency.setValueAtTime(640, t0);
+        var g3 = ctx.createGain();
+        g3.gain.setValueAtTime(0.0001, t0);
+        g3.gain.exponentialRampToValueAtTime(0.025, t0 + 0.005);
+        g3.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.05);
+        o3.connect(g3); g3.connect(master);
+        o3.start(t0); o3.stop(t0 + 0.06);
+      }
+    } catch (e) {
+      console.warn('[AudioEngine] playManifestRevealItem:', e);
+    }
   };
 
   global.AudioEngine = AudioEngine;

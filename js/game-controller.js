@@ -1,15 +1,20 @@
 /**
- * Elevator Rush — GameController v3.1
+ * Elevator Rush — GameController v3.2
  *
- * v3.1 变更：所有概率与数值参数从 config/game-events.json 加载。
- * 若加载失败则回退到内置默认值（与 v3 一致）。
+ * v3.2 变更：
+ *   ‑ 删卡牌、连环爆雷、资产冻结、软盘重掷买断（含 _frozenPrincipal / chainDebt 全栈）。
+ *   ‑ 新增 LOCKER_SELECTING 状态：开门后玩家在多个封存货舱中选盘，倒计时由 UI 维护。
+ *   ‑ 新增 generateLockerHand / selectLocker / autoSelectLocker（FBC 代决议）。
+ *   ‑ 生涯档案新增 total_committee_overrides 字段。
+ *   ‑ 乘客系统扩展为 5 类（VIP / SCAMMER / DANGER / INFORMER / CLEANER）。
+ *   ‑ 配置加载错误时回退到内置默认值（与 v3.1 对齐）。
  */
 
 (function (global) {
   'use strict';
 
   /* =====================================================================
-   * 配置加载器（同步 XHR / 全局注入 二选一）
+   * 配置加载器
    * ===================================================================== */
 
   var _externalConfig = null;
@@ -47,29 +52,31 @@
 
   function _careerBlank() {
     return {
-      total_credits_collected: 0,
-      total_floors_climbed:    0,
-      max_floor_reached:       0,
-      total_liquidations:      0
+      total_credits_collected:    0,
+      total_floors_climbed:       0,
+      max_floor_reached:          0,
+      total_liquidations:         0,
+      total_committee_overrides:  0
     };
   }
 
   function careerLoad() {
+    var b = _careerBlank();
     try {
       var raw = (typeof localStorage !== 'undefined')
         ? localStorage.getItem(_FBC_CAREER_KEY) : null;
       if (raw) {
         var d = JSON.parse(raw);
-        var b = _careerBlank();
         return {
-          total_credits_collected: (d.total_credits_collected || 0) + b.total_credits_collected,
-          total_floors_climbed:    (d.total_floors_climbed    || 0) + b.total_floors_climbed,
-          max_floor_reached:       Math.max(d.max_floor_reached    || 0, b.max_floor_reached),
-          total_liquidations:      (d.total_liquidations      || 0) + b.total_liquidations
+          total_credits_collected:    d.total_credits_collected    || 0,
+          total_floors_climbed:       d.total_floors_climbed       || 0,
+          max_floor_reached:          d.max_floor_reached          || 0,
+          total_liquidations:         d.total_liquidations         || 0,
+          total_committee_overrides:  d.total_committee_overrides  || 0
         };
       }
     } catch (e) {}
-    return _careerBlank();
+    return b;
   }
 
   function _careerSave(data) {
@@ -81,10 +88,11 @@
 
   function careerMerge(delta) {
     var a = careerLoad();
-    if (delta.creditsCollected) a.total_credits_collected += Math.floor(delta.creditsCollected);
-    if (delta.floorsClimbed)    a.total_floors_climbed    += delta.floorsClimbed;
-    if (delta.floorReached)     a.max_floor_reached        = Math.max(a.max_floor_reached, delta.floorReached);
-    if (delta.liquidation)      a.total_liquidations      += 1;
+    if (delta.creditsCollected)    a.total_credits_collected   += Math.floor(delta.creditsCollected);
+    if (delta.floorsClimbed)       a.total_floors_climbed      += delta.floorsClimbed;
+    if (delta.floorReached)        a.max_floor_reached          = Math.max(a.max_floor_reached, delta.floorReached);
+    if (delta.liquidation)         a.total_liquidations        += 1;
+    if (delta.committeeOverride)   a.total_committee_overrides += 1;
     _careerSave(a);
     return a;
   }
@@ -108,26 +116,26 @@
   };
 
   var STATES = {
-    IDLE:           'IDLE',
-    ASCENDING:      'ASCENDING',
-    EVALUATING:     'EVALUATING',
-    CARD_SELECTION: 'CARD_SELECTION',
-    REVEALING:      'REVEALING',
-    DECIDING:       'DECIDING',
-    HISS_BREACH:    'HISS_BREACH',
-    SAFE_NODE:      'SAFE_NODE',
-    GAME_OVER:      'GAME_OVER',
-    CASHED_OUT:     'CASHED_OUT',
-    DEBT_CASHOUT:   'DEBT_CASHOUT'
+    IDLE:             'IDLE',
+    ASCENDING:        'ASCENDING',
+    EVALUATING:       'EVALUATING',
+    LOCKER_SELECTING: 'LOCKER_SELECTING',
+    REVEALING:        'REVEALING',
+    DECIDING:         'DECIDING',
+    HISS_BREACH:      'HISS_BREACH',
+    SAFE_NODE:        'SAFE_NODE',
+    GAME_OVER:        'GAME_OVER',
+    CASHED_OUT:       'CASHED_OUT',
+    DEBT_CASHOUT:     'DEBT_CASHOUT'
   };
 
   var SAFE_NODE_FLOORS = cfg('safeNode.floors', [5, 10]);
 
   var _floorLev = {
-    earlyMax:      cfg('floorLeverage.earlyFloorMax',  3),
-    earlyVal:      cfg('floorLeverage.earlyLeverage',  1.8),
-    growth:        cfg('floorLeverage.growthPerFloor',  0.65),
-    cap:           cfg('floorLeverage.maxLeverage',     8.0)
+    earlyMax: cfg('floorLeverage.earlyFloorMax',  3),
+    earlyVal: cfg('floorLeverage.earlyLeverage',  1.8),
+    growth:   cfg('floorLeverage.growthPerFloor', 0.65),
+    cap:      cfg('floorLeverage.maxLeverage',    8.0)
   };
 
   function floorLeverage(floor) {
@@ -136,16 +144,16 @@
   }
 
   var CORRUPTION = {
-    MAX:               cfg('corruption.max',              3.0),
-    LIQUIDATION_SHIFT: cfg('corruption.liquidationShift', 0.05),
+    MAX:                   cfg('corruption.max',                 3.0),
+    LIQUIDATION_SHIFT:     cfg('corruption.liquidationShift',    0.05),
     LIQUIDATION_SHIFT_CAP: cfg('corruption.liquidationShiftCap', 0.20),
-    PER_FLOOR:    cfg('corruption.perFloor',    0.08),
-    ON_POSITIVE:  cfg('corruption.onPositive',  0.05),
-    ON_NEGATIVE:  cfg('corruption.onNegative',  0.12),
-    ON_DOUBLE:    cfg('corruption.onDouble',    0.35),
-    ON_REROLL:    cfg('corruption.onReroll',    0.22),
-    ON_VIP_AUDIT: cfg('corruption.onVipAuditRelief', -0.11),
-    ON_DANGER_UNVEIL: cfg('corruption.onDangerUnveil', 0.17)
+    PER_FLOOR:             cfg('corruption.perFloor',            0.08),
+    ON_POSITIVE:           cfg('corruption.onPositive',          0.05),
+    ON_NEGATIVE:           cfg('corruption.onNegative',          0.12),
+    ON_DOUBLE:             cfg('corruption.onDouble',            0.35),
+    ON_VIP_AUDIT:          cfg('corruption.onVipAuditRelief',   -0.11),
+    ON_DANGER_UNVEIL:      cfg('corruption.onDangerUnveil',      0.17),
+    ON_COMMITTEE_OVERRIDE: cfg('corruption.onCommitteeOverride', 0.45)
   };
 
   var BREACH_PROB      = cfg('breach.baseProbability', 0.10);
@@ -153,8 +161,8 @@
   var BREACH_MIN_FLOOR = cfg('breach.minFloor',        5);
   var BREACH_MIN_PROB  = cfg('breach.minProbability',  0.028);
   var BREACH_MAX_PROB  = cfg('breach.maxProbability',  0.44);
-  var BREACH_DANGER_BONUS    = cfg('breach.dangerBonus',        0.075);
-  var BREACH_VIP_REDUCTION   = cfg('breach.vipReduction',       -0.042);
+  var BREACH_DANGER_BONUS     = cfg('breach.dangerBonus',         0.075);
+  var BREACH_VIP_REDUCTION    = cfg('breach.vipReduction',       -0.042);
   var BREACH_VIP_DANGER_COMBO = cfg('breach.vipDangerComboBonus', 0.115);
 
   var PIG_PERIOD = {
@@ -170,62 +178,65 @@
   var FLOORS_JUMPED_MAX = cfg('floorsJumped.max', 8);
 
   var QUOTA_CFG = {
-    target:            cfg('quota.target',             1000),
-    pressureMaxShift:  cfg('quota.pressureMaxShift',   0.065),
-    pressureLinear:    cfg('quota.pressureLinearFactor', 0.075),
-    nearRange:         cfg('quota.nearQuotaRange',     0.2),
-    nearPeak:          cfg('quota.nearQuotaPeakShift', 0.038)
+    target:           cfg('quota.target',               1000),
+    pressureMaxShift: cfg('quota.pressureMaxShift',     0.065),
+    pressureLinear:   cfg('quota.pressureLinearFactor', 0.075),
+    nearRange:        cfg('quota.nearQuotaRange',       0.2),
+    nearPeak:         cfg('quota.nearQuotaPeakShift',   0.038)
   };
 
   var SPECULATOR_CFG = {
-    enabled: cfg('speculatorProtocol.enabled', true),
-    targetId: cfg('speculatorProtocol.targetIdentity', 'SCAMMER'),
+    enabled:        cfg('speculatorProtocol.enabled', true),
+    targetId:       cfg('speculatorProtocol.targetIdentity', 'SCAMMER'),
     durationFloors: cfg('speculatorProtocol.durationFloors', 3),
-    gainMult: cfg('speculatorProtocol.gainMult', 3),
-    corMult: cfg('speculatorProtocol.corruptionOutcomeMult', 2)
+    gainMult:       cfg('speculatorProtocol.gainMult', 3),
+    corMult:        cfg('speculatorProtocol.corruptionOutcomeMult', 2)
   };
 
   var ANGEL_CFG = {
-    enabled: cfg('angelInvestor.enabled', true),
-    targetId: cfg('angelInvestor.targetIdentity', 'VIP'),
+    enabled:        cfg('angelInvestor.enabled', true),
+    targetId:       cfg('angelInvestor.targetIdentity', 'VIP'),
     durationFloors: cfg('angelInvestor.durationFloors', 2),
-    rateBonus: cfg('angelInvestor.positiveRateBonus', 0.04)
-  };
-
-  var REROLL_BAILOUT_CFG = {
-    enabled: cfg('rerollBailout.enabled', true),
-    payRatio: cfg('rerollBailout.assetPayRatio', 0.4),
-    fallbackMult: cfg('rerollBailout.fallbackCreditsMultiplier', 0.82)
+    rateBonus:      cfg('angelInvestor.positiveRateBonus', 0.04)
   };
 
   var GOLDEN_POS_CFG = {
-    probability: cfg('goldenPositive.probability', 0.015),
+    probability:       cfg('goldenPositive.probability', 0.015),
     creditsMultiplier: cfg('goldenPositive.creditsMultiplier', 10)
   };
 
-  var CHAIN_LIGHTNING_CFG = {
-    probability: cfg('chainLightning.probability', 0.0008),
-    extraLossRatio: cfg('chainLightning.extraLossRatioOfSnapshot', 0.18),
-    storageKey: cfg('chainLightning.storageKey', 'fbc_chain_margin_call_v1')
-  };
-
-  var ASSET_FREEZE_CFG = {
-    probability: cfg('assetFreeze.probability', 0.035),
-    lockRatio: cfg('assetFreeze.lockRatio', 0.5),
-    floorsToUnlock: cfg('assetFreeze.floorsToUnlock', 3),
-    cashoutClawback: cfg('assetFreeze.cashoutClawbackRatio', 0.2)
-  };
-
   var COMBO_BLIND_CFG = {
-    windowMs: cfg('comboBlindConfidence.windowMs', 1500),
-    gainMult: cfg('comboBlindConfidence.gainMult', 1.05),
+    windowMs:         cfg('comboBlindConfidence.windowMs', 1500),
+    gainMult:         cfg('comboBlindConfidence.gainMult', 1.05),
     hiddenQuotaShift: cfg('comboBlindConfidence.hiddenQuotaShiftBonus', 0.024)
   };
 
   var SUSPENSE_CFG = {
-    liquidationMs: cfg('suspense.liquidationBusyWaitMs', 0),
-    negativeLowRunwayMs: cfg('suspense.lowRunwayNegativeBusyWaitMs', 0),
-    lowRunwayRatio: cfg('suspense.lowRunwayCreditsToQuotaMax', 0.22)
+    liquidationMs:        cfg('suspense.liquidationBusyWaitMs', 0),
+    negativeLowRunwayMs:  cfg('suspense.lowRunwayNegativeBusyWaitMs', 0),
+    lowRunwayRatio:       cfg('suspense.lowRunwayCreditsToQuotaMax', 0.22)
+  };
+
+  var LOCKER_CFG = {
+    enabled:               cfg('lockerSelection.enabled', true),
+    countByBiome:          cfg('lockerSelection.lockerCountByBiome', { admin: 2, maintenance: 3, supernatural: 4 }),
+    countdownPerLockerMs:  cfg('lockerSelection.countdownPerLockerMs', 4000),
+    countdownMinMs:        cfg('lockerSelection.countdownMinMs', 6000),
+    countdownMaxMs:        cfg('lockerSelection.countdownMaxMs', 16000),
+    numberMin:             cfg('lockerSelection.lockerNumberMin', 1),
+    numberMax:             cfg('lockerSelection.lockerNumberMax', 99)
+  };
+
+  var FBC_OVERRIDE_CFG = {
+    enabled:           cfg('fbcOverride.enabled', true),
+    creditsClampRatio: cfg('fbcOverride.creditsClampRatio', 0.62),
+    extraCorruption:   cfg('fbcOverride.extraCorruption', 0.45),
+    messages:          cfg('fbcOverride.messages', [])
+  };
+
+  var LOCKER_HINT_COPY = {
+    good: cfg('lockerHintCopy.good', []),
+    bad:  cfg('lockerHintCopy.bad',  [])
   };
 
   function tpl(str, o) {
@@ -253,66 +264,64 @@
     return false;
   }
 
-  function chainDebtLoad() {
-    try {
-      if (typeof global.localStorage === 'undefined') return 0;
-      var v = parseInt(global.localStorage.getItem(CHAIN_LIGHTNING_CFG.storageKey), 10);
-      return isNaN(v) ? 0 : Math.max(0, v);
-    } catch (e) { return 0; }
-  }
-
-  function chainDebtAdd(amount) {
-    try {
-      if (typeof global.localStorage === 'undefined' || amount <= 0) return;
-      var cur = chainDebtLoad();
-      global.localStorage.setItem(CHAIN_LIGHTNING_CFG.storageKey, String(cur + Math.floor(amount)));
-    } catch (e) { void e; }
-  }
-
-  function chainDebtClear() {
-    try {
-      if (typeof global.localStorage !== 'undefined') {
-        global.localStorage.removeItem(CHAIN_LIGHTNING_CFG.storageKey);
-      }
-    } catch (e) { void e; }
-  }
-
-  var BRAKE_RETAIN = cfg('item.floppyDisk.brakeRetainRatio', 0.30);
+  var BRAKE_RETAIN     = cfg('item.floppyDisk.brakeRetainRatio', 0.30);
   var FLOPPY_INIT_COUNT = cfg('item.floppyDisk.initialCount', 3);
 
   var SAFE_NODE_PURGE_COST = cfg('safeNode.purgeCostRatio', 0.20);
 
   /* =====================================================================
+   * Biome 区段映射（与 UI biomeClass 共用）
+   * ===================================================================== */
+
+  function biomeForFloor(floor) {
+    var ranges = cfg('biome.ranges', [
+      { minFloor: 1,  maxFloor: 10,   biome: 'admin' },
+      { minFloor: 11, maxFloor: 25,   biome: 'maintenance' },
+      { minFloor: 26, maxFloor: 9999, biome: 'supernatural' }
+    ]);
+    for (var i = 0; i < ranges.length; i++) {
+      var r = ranges[i];
+      if (floor >= r.minFloor && floor <= r.maxFloor) return r.biome;
+    }
+    return 'admin';
+  }
+
+  /* =====================================================================
    * 乘客身份系统
    * ===================================================================== */
 
-  var _pCfg = cfg('passenger', {});
+  var _pCfg   = cfg('passenger', {});
   var _pTypes = _pCfg.types || {};
 
   function _buildPassengerType(id, defaults) {
     var t = _pTypes[id] || {};
     return {
-      identity: id,
-      weight: t.weight != null ? t.weight : defaults.weight,
+      identity:       id,
+      label:          t.label != null ? t.label : (defaults.label || id),
+      weight:         t.weight != null ? t.weight : defaults.weight,
       thresholdMod: {
         liquidationShift: t.liquidationShift != null ? t.liquidationShift : defaults.liquidationShift,
-        negShift: t.negShift != null ? t.negShift : defaults.negShift
+        negShift:         t.negShift         != null ? t.negShift         : defaults.negShift
       },
-      creditsMod: t.creditsMod != null ? t.creditsMod : defaults.creditsMod,
-      volatile: t.volatile != null ? t.volatile : defaults.volatile,
-      disguiseChance: t.disguiseChance != null ? t.disguiseChance : defaults.disguiseChance
+      creditsMod:     t.creditsMod     != null ? t.creditsMod     : defaults.creditsMod,
+      volatile:       t.volatile       != null ? t.volatile       : defaults.volatile,
+      disguiseChance: t.disguiseChance != null ? t.disguiseChance : defaults.disguiseChance,
+      lockerHintChance:   t.lockerHintChance   != null ? t.lockerHintChance   : (defaults.lockerHintChance   || 0),
+      lockerHintAccuracy: t.lockerHintAccuracy != null ? t.lockerHintAccuracy : (defaults.lockerHintAccuracy || 0)
     };
   }
 
   var PASSENGER = {
     MAX_ONBOARD:   cfg('passenger.maxOnboard',   2),
-    BOARD_CHANCE:  cfg('passenger.boardChance',   0.40),
-    DEPART_CHANCE: cfg('passenger.departChance',  0.30),
-    MIN_FLOOR:     cfg('passenger.minFloor',      3),
+    BOARD_CHANCE:  cfg('passenger.boardChance',  0.40),
+    DEPART_CHANCE: cfg('passenger.departChance', 0.30),
+    MIN_FLOOR:     cfg('passenger.minFloor',     3),
     TYPES: {
-      VIP:     _buildPassengerType('VIP',     { weight: 35, liquidationShift: -0.04, negShift: -0.02, creditsMod: 1.15, disguiseChance: 0,   volatile: false }),
-      SCAMMER: _buildPassengerType('SCAMMER', { weight: 35, liquidationShift: 0.06,  negShift: 0.03,  creditsMod: 0.85, disguiseChance: 1.0, volatile: false }),
-      DANGER:  _buildPassengerType('DANGER',  { weight: 30, liquidationShift: 0.08,  negShift: 0.02,  creditsMod: 1.0,  disguiseChance: 0.5, volatile: true })
+      VIP:      _buildPassengerType('VIP',      { weight: 28, liquidationShift: -0.04, negShift: -0.02, creditsMod: 1.15, disguiseChance: 0,   volatile: false, label: '监理员' }),
+      SCAMMER:  _buildPassengerType('SCAMMER',  { weight: 28, liquidationShift:  0.06, negShift:  0.03, creditsMod: 0.85, disguiseChance: 1.0, volatile: false, label: '红圈商人' }),
+      DANGER:   _buildPassengerType('DANGER',   { weight: 22, liquidationShift:  0.08, negShift:  0.02, creditsMod: 1.00, disguiseChance: 0.5, volatile: true,  label: '希斯潜伏者' }),
+      INFORMER: _buildPassengerType('INFORMER', { weight: 14, liquidationShift:  0.00, negShift:  0.00, creditsMod: 1.00, disguiseChance: 0,   volatile: false, label: '内线情报员', lockerHintChance: 0.85, lockerHintAccuracy: 0.78 }),
+      CLEANER:  _buildPassengerType('CLEANER',  { weight:  8, liquidationShift: -0.01, negShift: -0.01, creditsMod: 1.00, disguiseChance: 0,   volatile: false, label: '清扫员',     lockerHintChance: 0.45, lockerHintAccuracy: 0.55 })
     }
   };
 
@@ -405,19 +414,21 @@
         tag: '强制清算', text: 'FBC 破产程序 · 账面核销',
         lore: '结算通知：账面归零程序已执行完毕。\n\n依据《联邦信用核销规程》附件F，您的全部探测杠杆已归还至局方信托储备池。此记录已自动同步至您的永久失信档案。\n\n委员会感谢您的参与，并祝您在下一轮探测中做出更为审慎的决策。'
       }
+    ],
+    COMMITTEE_OVERRIDE: [
+      {
+        tag: '代决议执行', text: '委员会代开柜 · 收益折扣',
+        lore: 'FBC 内部备忘：探测员未能在规定窗口内完成货舱选择，委员会依《迟疑代决议条例》第三条接管开柜流程。\n\n备注：剩余收益按规章折扣留存，偏移指数已加重。下次请果断行使探测员裁量权。'
+      }
     ]
   };
 
-  /**
-   * 根据 outcome 返回叙事文案对象 { tag, text }。
-   * 供 UI 在结果前 0.5s 展示「事件短文本」制造悬念。
-   * @param {object} outcome
-   * @returns {{ tag: string, text: string }|null}
-   */
   function getOutcomeNarrative(outcome) {
     if (!outcome) return null;
     var pool;
-    if (outcome.kind === 'DOUBLE') {
+    if (outcome.committeeOverride) {
+      pool = OUTCOME_NARRATIVE_POOL.COMMITTEE_OVERRIDE;
+    } else if (outcome.kind === 'DOUBLE') {
       pool = OUTCOME_NARRATIVE_POOL.DOUBLE;
     } else if (outcome.kind === 'POSITIVE' && outcome.goldenFloor) {
       pool = OUTCOME_NARRATIVE_POOL.GOLDEN_FLOOR;
@@ -455,18 +466,18 @@
       neg += (tm && tm.negShift) || 0;
       if (p.creditsMod && p.creditsMod !== 1) cred *= p.creditsMod;
       if (p.volatile) hasVolatile = true;
-      if (p.identity === 'VIP') hasVip = true;
+      if (p.identity === 'VIP')     hasVip = true;
       if (p.identity === 'SCAMMER') hasScammer = true;
-      if (p.identity === 'DANGER') hasDanger = true;
+      if (p.identity === 'DANGER')  hasDanger = true;
     }
     if (hasVip && hasScammer) {
-      liq += PASSENGER_COMBOS.vipScammer.liquidationShift;
-      neg += PASSENGER_COMBOS.vipScammer.negShift;
+      liq  += PASSENGER_COMBOS.vipScammer.liquidationShift;
+      neg  += PASSENGER_COMBOS.vipScammer.negShift;
       cred *= PASSENGER_COMBOS.vipScammer.creditsMult;
     }
     if (hasVip && hasDanger) {
-      liq += PASSENGER_COMBOS.vipDanger.liquidationShift;
-      neg += PASSENGER_COMBOS.vipDanger.negShift;
+      liq  += PASSENGER_COMBOS.vipDanger.liquidationShift;
+      neg  += PASSENGER_COMBOS.vipDanger.negShift;
       cred *= PASSENGER_COMBOS.vipDanger.creditsMult;
     }
     return {
@@ -489,28 +500,34 @@
     passengers = passengers || [];
     for (i = 0; i < passengers.length; i++) {
       px = passengers[i];
-      if (px.identity === 'VIP') hasVip = true;
+      if (px.identity === 'VIP')    hasVip    = true;
       if (px.identity === 'DANGER') hasDanger = true;
     }
-    if (hasDanger) p += BREACH_DANGER_BONUS;
-    if (hasVip) p += BREACH_VIP_REDUCTION;
-    if (hasVip && hasDanger) p += BREACH_VIP_DANGER_COMBO;
+    if (hasDanger)            p += BREACH_DANGER_BONUS;
+    if (hasVip)               p += BREACH_VIP_REDUCTION;
+    if (hasVip && hasDanger)  p += BREACH_VIP_DANGER_COMBO;
     return Math.max(BREACH_MIN_PROB, Math.min(BREACH_MAX_PROB, p));
   }
 
   function createPassenger(rng) {
-    var r = rng() * 100, cumulative = 0, type = PASSENGER.TYPES.VIP;
-    var keys = ['VIP', 'SCAMMER', 'DANGER'];
-    for (var i = 0; i < keys.length; i++) {
-      cumulative += PASSENGER.TYPES[keys[i]].weight;
-      if (r < cumulative) { type = PASSENGER.TYPES[keys[i]]; break; }
+    var keys = ['VIP', 'SCAMMER', 'DANGER', 'INFORMER', 'CLEANER'];
+    var totalW = 0;
+    for (var i = 0; i < keys.length; i++) totalW += PASSENGER.TYPES[keys[i]].weight;
+    var r = rng() * totalW, cumulative = 0;
+    var type = PASSENGER.TYPES.VIP;
+    for (var j = 0; j < keys.length; j++) {
+      cumulative += PASSENGER.TYPES[keys[j]].weight;
+      if (r < cumulative) { type = PASSENGER.TYPES[keys[j]]; break; }
     }
     return {
-      identity:     type.identity,
-      thresholdMod: type.thresholdMod,
-      creditsMod:   type.creditsMod,
-      volatile:     !!type.volatile,
-      isDisguised:  rng() < type.disguiseChance
+      identity:           type.identity,
+      label:              type.label,
+      thresholdMod:       type.thresholdMod,
+      creditsMod:         type.creditsMod,
+      volatile:           !!type.volatile,
+      isDisguised:        rng() < type.disguiseChance,
+      lockerHintChance:   type.lockerHintChance   || 0,
+      lockerHintAccuracy: type.lockerHintAccuracy || 0
     };
   }
 
@@ -520,9 +537,6 @@
 
   var ITEM_REGISTRY = {};
 
-  /**
-   * 局里多功能模块盘：审查 / 应急制动（双模式，同一库存计数）
-   */
   ITEM_REGISTRY['floppy-disk'] = {
     id:   'floppy-disk',
     name: 'Bureau Module',
@@ -530,16 +544,12 @@
     modes: {
       scan: {
         usableIn: [STATES.DECIDING, STATES.HISS_BREACH],
-        canUse: function (ctrl) {
-          return ctrl.passengers && ctrl.passengers.length > 0;
-        },
-        onUse: function (ctrl) { return ctrl.scanPassenger(); }
+        canUse: function (ctrl) { return ctrl.passengers && ctrl.passengers.length > 0; },
+        onUse:  function (ctrl) { return ctrl.scanPassenger(); }
       },
       brake: {
         usableIn: [STATES.DECIDING, STATES.HISS_BREACH],
-        canUse: function (ctrl) {
-          return !ctrl.brakeMitigationPending;
-        },
+        canUse: function (ctrl) { return !ctrl.brakeMitigationPending; },
         onUse: function (ctrl) {
           ctrl.brakeMitigationPending = true;
           return { ok: true, mode: 'brake' };
@@ -552,14 +562,6 @@
    * 赔率引擎（可审计 + 偏移指数感知）
    * ===================================================================== */
 
-  /**
-   * @param {number}      corruption
-   * @param {object[]}    passengers
-   * @param {string|null} envEventId
-   * @param {number}      [quotaShift=0]  配额压力附加偏移
-   * @param {number}      [floor=0]       当前楼层（1-3 层养猪期保护）
-   * @returns {{ liquidationMax, negMax, posMax }}
-   */
   function computeEffectiveThresholds(corruption, passengers, envEventId, quotaShift, floor) {
     var shift = Math.min(corruption * CORRUPTION.LIQUIDATION_SHIFT, CORRUPTION.LIQUIDATION_SHIFT_CAP);
     var agg   = aggregatePassengerModifiers(passengers || []);
@@ -587,16 +589,6 @@
     };
   }
 
-  /**
-   * 单随机数可审计映射。
-   * @param {number}       r           ∈ [0, 1)
-   * @param {number}       corruption  当前偏移指数（默认 0）
-   * @param {object[]}     passengers  乘客列表（可空）
-   * @param {string|null}  envEventId  当前环境事件
-   * @param {number}       [quotaShift=0]
-   * @param {number}       [floor=0]   当前楼层（养猪期保护透传）
-   * @param {function():number} [rngFn]  子掷骰（黄金楼层 / 连环标记）
-   */
   function rollEventFromR(r, corruption, passengers, envEventId, quotaShift, floor, rngFn) {
     if (r < 0 || r >= 1) throw new Error('rollEventFromR: r must be in [0, 1)');
     corruption = corruption || 0;
@@ -613,13 +605,11 @@
     if (r < T.negMax) {
       var tN = (r - T.liquidationMax) / (T.negMax - T.liquidationMax);
       var negRange = OUTCOME_BANDS.NEGATIVE_MULT_MAX - OUTCOME_BANDS.NEGATIVE_MULT_MIN;
-      var negOut = {
+      return {
         kind: 'NEGATIVE', raw: r,
         band: '[' + T.liquidationMax.toFixed(3) + ', ' + T.negMax.toFixed(3) + ')',
         creditsMultiplier: OUTCOME_BANDS.NEGATIVE_MULT_MIN + tN * negRange
       };
-      if (rnd() < CHAIN_LIGHTNING_CFG.probability) negOut.chainLightning = true;
-      return negOut;
     }
     if (r < T.posMax) {
       var tP = (r - T.negMax) / (T.posMax - T.negMax);
@@ -667,9 +657,11 @@
     var pC = SurpriseEvent.BASE_PROB_COIN_RAIN  * (1 + greed);
     var pS = SurpriseEvent.BASE_PROB_SKIP_FLOOR * (1 + greed);
     if (sr < pC) {
-      return { kind: SurpriseEvent.KINDS.COIN_RAIN,
-               creditsBonus: Math.max(1, Math.floor(game.credits * SurpriseEvent.COIN_RAIN_RATIO)),
-               floorBonus: 0 };
+      return {
+        kind: SurpriseEvent.KINDS.COIN_RAIN,
+        creditsBonus: Math.max(1, Math.floor(game.credits * SurpriseEvent.COIN_RAIN_RATIO)),
+        floorBonus: 0
+      };
     }
     if (sr < pC + pS) {
       return { kind: SurpriseEvent.KINDS.SKIP_FLOOR, creditsBonus: 0, floorBonus: SurpriseEvent.SKIP_FLOORS };
@@ -678,89 +670,86 @@
   };
 
   /* =====================================================================
-   * 卡牌选取系统（丧尸楼层）
+   * 封存货舱 / 选盘系统
    * ===================================================================== */
 
-  var CARD_CFG = cfg('cardSelection', {});
-  var CARD_ENABLED     = CARD_CFG.enabled !== false;
-  var CARDS_PER_ROUND  = CARD_CFG.cardsPerRound || 3;
-  var CARD_IDENTITIES  = CARD_CFG.identities || [
-    { id: 'elder', name: '神秘老人', glyph: '👴', weight: 25, luckBias: 0.05 },
-    { id: 'child', name: '诡异小孩', glyph: '👦', weight: 20, luckBias: -0.08 },
-    { id: 'handsome', name: '俊美青年', glyph: '🧑', weight: 20, luckBias: 0 }
-  ];
-  var CARD_REWARD_EVENTS = CARD_CFG.rewardEvents || [];
-  var CARD_BUST_EVENTS   = CARD_CFG.bustEvents || [];
-  var CARD_REWARD_WEIGHT = CARD_CFG.rewardTotalWeight || 0.55;
+  /**
+   * 生成本层货舱手牌：N 个候选 outcome（每个独立掷骰），其中 1 个会成为本层最终结果。
+   *   - 每个 outcome 的 creditsMultiplier 已固定，selectLocker 时再施加副作用。
+   *   - 柜号在 [LOCKER_CFG.numberMin, LOCKER_CFG.numberMax] 区间无重复抽取。
+   *   - 至少有 1 个候选会落到 POSITIVE/DOUBLE 带（minBidGapPositive=1），避免一手全坏极端体验。
+   *
+   * @param {object} ctrl     GameController 实例
+   * @param {number} count    柜数（已根据 Biome / 养猪期裁剪）
+   * @param {number} quotaShift 配额压力偏移
+   * @returns {{ candidates: Array<{lockerNumber, outcome, r}>, biome }}
+   */
+  function generateLockerHand(ctrl, count, quotaShift) {
+    var rng = ctrl._rng;
+    var biome = biomeForFloor(ctrl.floor);
+    var minPos = cfg('lockerSelection.minBidGapPositive', 1);
 
-  function _weightedPick(list, rng) {
-    var total = 0, i;
-    for (i = 0; i < list.length; i++) total += (list[i].weight || 1);
-    var r = rng() * total, cum = 0;
-    for (i = 0; i < list.length; i++) {
-      cum += (list[i].weight || 1);
-      if (r < cum) return list[i];
+    var candidates = [];
+    var hasPositive = false;
+    var attempts = 0;
+    while (candidates.length < count && attempts < count * 6) {
+      attempts++;
+      var r = rng();
+      var oc = rollEventFromR(r, ctrl.corruption, ctrl.passengers, ctrl.activeEnvEvent, quotaShift || 0, ctrl.floor, rng);
+      candidates.push({ outcome: oc, r: r });
+      if (oc.kind === 'POSITIVE' || oc.kind === 'DOUBLE') hasPositive = true;
     }
-    return list[list.length - 1];
-  }
-
-  function _pickUniqueIdentities(count, rng) {
-    var pool = CARD_IDENTITIES.slice();
-    var result = [];
-    for (var i = 0; i < count && pool.length > 0; i++) {
-      var picked = _weightedPick(pool, rng);
-      result.push(picked);
-      pool = pool.filter(function (x) { return x.id !== picked.id; });
+    if (!hasPositive && minPos > 0 && candidates.length > 0) {
+      var rPos = THRESHOLDS.NEGATIVE_MAX + rng() * (THRESHOLDS.POSITIVE_MAX - THRESHOLDS.NEGATIVE_MAX - 1e-4);
+      var posOc = rollEventFromR(rPos, ctrl.corruption, ctrl.passengers, ctrl.activeEnvEvent, quotaShift || 0, ctrl.floor, rng);
+      candidates[Math.floor(rng() * candidates.length)] = { outcome: posOc, r: rPos };
     }
-    return result;
-  }
 
-  function generateCardHand(game) {
-    var identities = _pickUniqueIdentities(CARDS_PER_ROUND, game._rng);
-    var cards = [];
-    var hasReward = CARD_REWARD_EVENTS.length > 0;
-    var hasBust = CARD_BUST_EVENTS.length > 0;
-    for (var i = 0; i < identities.length; i++) {
-      var ident = identities[i];
-      var bias = ident.luckBias || 0;
-      var wantReward = game._rng() < (CARD_REWARD_WEIGHT + bias);
-      var evt;
-      if (wantReward && hasReward) {
-        evt = _weightedPick(CARD_REWARD_EVENTS, game._rng);
-        cards.push({
-          identity: ident,
-          type: 'reward',
-          event: {
-            id: evt.id, name: evt.name, description: evt.description,
-            creditsBonusRatio: evt.creditsBonusRatio || 0,
-            corruptionDelta: evt.corruptionDelta || 0
-          }
-        });
-      } else if (hasBust) {
-        evt = _weightedPick(CARD_BUST_EVENTS, game._rng);
-        cards.push({
-          identity: ident,
-          type: 'bust',
-          event: {
-            id: evt.id, name: evt.name, description: evt.description,
-            creditsLossRatio: evt.creditsLossRatio || 0,
-            corruptionDelta: evt.corruptionDelta || 0
-          }
-        });
-      } else if (hasReward) {
-        evt = _weightedPick(CARD_REWARD_EVENTS, game._rng);
-        cards.push({
-          identity: ident,
-          type: 'reward',
-          event: {
-            id: evt.id, name: evt.name, description: evt.description,
-            creditsBonusRatio: evt.creditsBonusRatio || 0,
-            corruptionDelta: evt.corruptionDelta || 0
-          }
-        });
+    var numbers = [];
+    var lockerSet = {};
+    var span = LOCKER_CFG.numberMax - LOCKER_CFG.numberMin + 1;
+    var numAttempts = 0;
+    var numAttemptCap = Math.max(40, count * 12);
+    while (numbers.length < count && numAttempts < numAttemptCap) {
+      numAttempts++;
+      var n = LOCKER_CFG.numberMin + Math.floor(rng() * span);
+      if (!lockerSet[n]) {
+        lockerSet[n] = true;
+        numbers.push(n);
       }
     }
-    return cards;
+    /* 兜底：RNG 退化时顺序补齐，避免确定性测试场景死循环 */
+    if (numbers.length < count) {
+      var probe = LOCKER_CFG.numberMin;
+      while (numbers.length < count && probe <= LOCKER_CFG.numberMax) {
+        if (!lockerSet[probe]) {
+          lockerSet[probe] = true;
+          numbers.push(probe);
+        }
+        probe++;
+      }
+    }
+
+    for (var i = 0; i < candidates.length; i++) {
+      candidates[i].lockerNumber = numbers[i];
+    }
+    return { candidates: candidates, biome: biome };
+  }
+
+  function _resolveLockerCount(biome, floor) {
+    var byBiome = LOCKER_CFG.countByBiome || {};
+    var n = byBiome[biome];
+    if (typeof n !== 'number') n = 3;
+    if (floor <= PIG_PERIOD.maxFloor) n = Math.min(n, 2);
+    return Math.max(2, Math.min(4, n));
+  }
+
+  /**
+   * 单次选柜倒计时：count × perLocker 毫秒，被 [min, max] 截断。
+   */
+  function _resolveLockerCountdown(count) {
+    var base = count * LOCKER_CFG.countdownPerLockerMs;
+    return Math.max(LOCKER_CFG.countdownMinMs, Math.min(LOCKER_CFG.countdownMaxMs, base));
   }
 
   /* =====================================================================
@@ -769,15 +758,18 @@
 
   function createAudioStub() {
     return {
-      playStateTransition: function (f, t) { void f; void t; },
-      playOutcome:      function (k) { void k; },
-      playSurprise:     function (k) { void k; },
-      playBreach:       function ()  {},
-      resumeIfNeeded:   function ()  {},
-      playCommitteePulse: function () {},
-      playLeverPull:    function () {},
-      tryPlaySlot:      function () {},
-      playQuotaReached: function () {}
+      playStateTransition: function () {},
+      playOutcome:         function () {},
+      playSurprise:        function () {},
+      playBreach:          function () {},
+      resumeIfNeeded:      function () {},
+      playCommitteePulse:  function () {},
+      playLeverPull:       function () {},
+      tryPlaySlot:         function () {},
+      playQuotaReached:    function () {},
+      playLockerOpen:      function () {},
+      playLockerSelect:    function () {},
+      playCommitteeOverride: function () {}
     };
   }
 
@@ -785,12 +777,6 @@
    * GameController
    * ===================================================================== */
 
-  /**
-   * @param {object}            options
-   * @param {number}            [options.initialBet=200]
-   * @param {function():number} [options.random]     可注入确定性 RNG
-   * @param {object}            [options.audio]      AudioEngine 实例
-   */
   function GameController(options) {
     options = options || {};
     this.initialBet  = typeof options.initialBet === 'number' ? options.initialBet : 200;
@@ -798,77 +784,79 @@
     this.audio       = options.audio || createAudioStub();
     this._listeners  = {
       state: [], outcome: [], surprise: [], cashOut: [],
-      corruption: [], breach: [], reroll: [],
+      corruption: [], breach: [],
       passengerBoard: [], passengerLeave: [], passengerReveal: [],
       envEvent: [], passengerStack: [], uiWarning: [],
-      cardHand: [], cardResult: []
+      lockerHand: [], lockerSelected: [], lockerHint: []
     };
-    this._breachTimer   = null;
+    this._breachTimer    = null;
     this._breachDeadline = 0;
     this.reset();
   }
 
   /* ---- 静态导出 ---- */
-  GameController.STATES                    = STATES;
-  GameController.THRESHOLDS                = THRESHOLDS;
-  GameController.OUTCOME_BANDS             = OUTCOME_BANDS;
-  GameController.CORRUPTION                = CORRUPTION;
-  GameController.ITEM_REGISTRY             = ITEM_REGISTRY;
-  GameController.SurpriseEvent             = SurpriseEvent;
-  GameController.rollEventFromR            = rollEventFromR;
+  GameController.STATES                     = STATES;
+  GameController.THRESHOLDS                 = THRESHOLDS;
+  GameController.OUTCOME_BANDS              = OUTCOME_BANDS;
+  GameController.CORRUPTION                 = CORRUPTION;
+  GameController.ITEM_REGISTRY              = ITEM_REGISTRY;
+  GameController.SurpriseEvent              = SurpriseEvent;
+  GameController.rollEventFromR             = rollEventFromR;
   GameController.computeEffectiveThresholds = computeEffectiveThresholds;
-  GameController.computeBreachProbability  = computeBreachProbability;
-  GameController.BREACH_DURATION_MS        = BREACH_MS;
-  GameController.PASSENGER                 = PASSENGER;
-  GameController.PASSENGER_COMBOS          = PASSENGER_COMBOS;
-  GameController.createPassenger           = createPassenger;
-  GameController.ENV_EVENT_IDS             = ENV_EVENT_IDS;
-  GameController.SAFE_NODE_FLOORS          = SAFE_NODE_FLOORS;
-  GameController.floorLeverage             = floorLeverage;
-  GameController.getOutcomeNarrative       = getOutcomeNarrative;
-  GameController.OUTCOME_NARRATIVE_POOL    = OUTCOME_NARRATIVE_POOL;
-  GameController.PIG_PERIOD                = PIG_PERIOD;
-  GameController.QUOTA_CFG                 = QUOTA_CFG;
-  GameController.CARD_ENABLED              = CARD_ENABLED;
-  GameController.CARD_IDENTITIES           = CARD_IDENTITIES;
-  GameController.generateCardHand          = generateCardHand;
-  GameController.cfg                       = cfg;
-  GameController.careerLoad                = careerLoad;
+  GameController.computeBreachProbability   = computeBreachProbability;
+  GameController.BREACH_DURATION_MS         = BREACH_MS;
+  GameController.PASSENGER                  = PASSENGER;
+  GameController.PASSENGER_COMBOS           = PASSENGER_COMBOS;
+  GameController.createPassenger            = createPassenger;
+  GameController.ENV_EVENT_IDS              = ENV_EVENT_IDS;
+  GameController.SAFE_NODE_FLOORS           = SAFE_NODE_FLOORS;
+  GameController.floorLeverage              = floorLeverage;
+  GameController.getOutcomeNarrative        = getOutcomeNarrative;
+  GameController.OUTCOME_NARRATIVE_POOL     = OUTCOME_NARRATIVE_POOL;
+  GameController.PIG_PERIOD                 = PIG_PERIOD;
+  GameController.QUOTA_CFG                  = QUOTA_CFG;
+  GameController.LOCKER_CFG                 = LOCKER_CFG;
+  GameController.FBC_OVERRIDE_CFG           = FBC_OVERRIDE_CFG;
+  GameController.LOCKER_HINT_COPY           = LOCKER_HINT_COPY;
+  GameController.generateLockerHand         = generateLockerHand;
+  GameController.biomeForFloor              = biomeForFloor;
+  GameController.cfg                        = cfg;
+  GameController.careerLoad                 = careerLoad;
 
   /* ---- 重置 ---- */
   GameController.prototype.reset = function () {
-    this.floor               = 1;
-    this.credits             = this.initialBet;
-    this.corruption          = 0;
-    this.quota               = QUOTA_CFG.target;
-    this.inventory           = [{ id: 'floppy-disk', count: FLOPPY_INIT_COUNT }];
-    this.passengers          = [];
-    this.activeEnvEvent      = null;
+    this.floor                  = 1;
+    this.credits                = this.initialBet;
+    this.corruption             = 0;
+    this.quota                  = QUOTA_CFG.target;
+    this.inventory              = [{ id: 'floppy-disk', count: FLOPPY_INIT_COUNT }];
+    this.passengers             = [];
+    this.activeEnvEvent         = null;
     this.brakeMitigationPending = false;
-    this.state               = STATES.IDLE;
-    this.rngLog              = [];
-    this.lastOutcome         = null;
-    this.lastSurprise        = null;
-    this.lastPayout          = null;
-    this._floorCreditsBefore = null;  // 用于 reroll 回滚
-    this._pendingBreach      = false;
-    this._quotaCrossed       = false; // 是否已触发 quota-reached 音效
-    this._liquidationDebtAmount = 0;  // 强制清算时的负债快照（供 UI）
-    this._peakCredits        = this.initialBet;  // 本局最高持有记录
-    this._safeNodeVisited    = {};    // { floor: true } 已访问的安全屋
-    this._pendingCards       = null;  // 当前卡牌手牌
-    this._cardSelectionDone  = false;
-    this._speculatorContract = null;  // { floorsRemaining, gainMult, corMult }
-    this._angelLift          = null;   // { floorsRemaining, rateBonus }
+    this.state                  = STATES.IDLE;
+    this.rngLog                 = [];
+    this.lastOutcome            = null;
+    this.lastSurprise           = null;
+    this.lastPayout             = null;
+    this._floorCreditsBefore    = null;
+    this._pendingBreach         = false;
+    this._quotaCrossed          = false;
+    this._liquidationDebtAmount = 0;
+    this._peakCredits           = this.initialBet;
+    this._safeNodeVisited       = {};
+    this._speculatorContract    = null;
+    this._angelLift             = null;
     this._blindConfidenceActive = false;
-    this._lastDecidingAt     = 0;
-    this._frozenPrincipal    = 0;
-    this._frozenUnlockFloor  = 999999;
-    var chainDebt = chainDebtLoad();
-    if (chainDebt > 0) {
-      this.credits = Math.max(0, Math.floor(this.credits - chainDebt));
-      chainDebtClear();
-    }
+    this._lastDecidingAt        = 0;
+
+    this._lockerHand            = null;
+    this._lockerHandMeta        = null;
+    this._lockerHandQuotaShift  = 0;
+    this._lockerHandPaxEvents   = null;
+    this._lockerHandFloorsJumped = 0;
+    this._lockerHandEnvRoll     = null;
+    this._lockerCountdownDeadline = 0;
+
     this._clearBreachTimer();
     this._emitState(STATES.IDLE, null);
   };
@@ -879,7 +867,6 @@
     get: function () { return Math.min((this.floor - 1) / SurpriseEvent.GREED_SAT, 1); }
   });
 
-  /** 偏移比率 ∈ [0, 1]，供 CSS 使用 */
   Object.defineProperty(GameController.prototype, 'corruptionRatio', {
     get: function () { return Math.min(this.corruption / CORRUPTION.MAX, 1); }
   });
@@ -888,11 +875,8 @@
     return computeEffectiveThresholds(this.corruption, this.passengers, this.activeEnvEvent, 0, this.floor);
   };
 
-  /** 本局最高持有资产记录（供结算界面展示） */
   GameController.prototype._updatePeakCredits = function () {
-    if (this.credits > this._peakCredits) {
-      this._peakCredits = this.credits;
-    }
+    if (this.credits > this._peakCredits) this._peakCredits = this.credits;
   };
 
   Object.defineProperty(GameController.prototype, 'passenger', {
@@ -901,15 +885,9 @@
     }
   });
 
-  /** 净资产 = 当前资产 - 配额（负值代表负债） */
-  GameController.prototype.getNetAsset = function () {
-    return this.credits - this.quota;
-  };
+  GameController.prototype.getNetAsset = function () { return this.credits - this.quota; };
 
-  /** 当前负债额（正值代表欠款，0 代表已达标） */
-  GameController.prototype.getDebt = function () {
-    return Math.max(0, this.quota - this.credits);
-  };
+  GameController.prototype.getDebt = function () { return Math.max(0, this.quota - this.credits); };
 
   GameController.prototype.getTheoreticalCredits = function () {
     return this.initialBet * Math.pow(BASELINE_GROWTH, this.floor - 1);
@@ -923,21 +901,21 @@
   };
 
   /* ---- 事件监听注册 ---- */
-  GameController.prototype.onStateChange  = function (fn) { this._listeners.state.push(fn); };
-  GameController.prototype.onOutcome      = function (fn) { this._listeners.outcome.push(fn); };
-  GameController.prototype.onSurprise     = function (fn) { this._listeners.surprise.push(fn); };
-  GameController.prototype.onCashOut      = function (fn) { this._listeners.cashOut.push(fn); };
-  GameController.prototype.onCorruption   = function (fn) { this._listeners.corruption.push(fn); };
-  GameController.prototype.onBreach       = function (fn) { this._listeners.breach.push(fn); };
-  GameController.prototype.onReroll          = function (fn) { this._listeners.reroll.push(fn); };
-  GameController.prototype.onPassengerBoard  = function (fn) { this._listeners.passengerBoard.push(fn); };
-  GameController.prototype.onPassengerLeave  = function (fn) { this._listeners.passengerLeave.push(fn); };
-  GameController.prototype.onPassengerReveal = function (fn) { this._listeners.passengerReveal.push(fn); };
-  GameController.prototype.onEnvEvent        = function (fn) { this._listeners.envEvent.push(fn); };
-  GameController.prototype.onPassengerStack  = function (fn) { this._listeners.passengerStack.push(fn); };
-  GameController.prototype.onUiWarning       = function (fn) { this._listeners.uiWarning.push(fn); };
-  GameController.prototype.onCardHand        = function (fn) { this._listeners.cardHand.push(fn); };
-  GameController.prototype.onCardResult      = function (fn) { this._listeners.cardResult.push(fn); };
+  GameController.prototype.onStateChange       = function (fn) { this._listeners.state.push(fn); };
+  GameController.prototype.onOutcome           = function (fn) { this._listeners.outcome.push(fn); };
+  GameController.prototype.onSurprise          = function (fn) { this._listeners.surprise.push(fn); };
+  GameController.prototype.onCashOut           = function (fn) { this._listeners.cashOut.push(fn); };
+  GameController.prototype.onCorruption        = function (fn) { this._listeners.corruption.push(fn); };
+  GameController.prototype.onBreach            = function (fn) { this._listeners.breach.push(fn); };
+  GameController.prototype.onPassengerBoard    = function (fn) { this._listeners.passengerBoard.push(fn); };
+  GameController.prototype.onPassengerLeave    = function (fn) { this._listeners.passengerLeave.push(fn); };
+  GameController.prototype.onPassengerReveal   = function (fn) { this._listeners.passengerReveal.push(fn); };
+  GameController.prototype.onEnvEvent          = function (fn) { this._listeners.envEvent.push(fn); };
+  GameController.prototype.onPassengerStack    = function (fn) { this._listeners.passengerStack.push(fn); };
+  GameController.prototype.onUiWarning         = function (fn) { this._listeners.uiWarning.push(fn); };
+  GameController.prototype.onLockerHand        = function (fn) { this._listeners.lockerHand.push(fn); };
+  GameController.prototype.onLockerSelected    = function (fn) { this._listeners.lockerSelected.push(fn); };
+  GameController.prototype.onLockerHint        = function (fn) { this._listeners.lockerHint.push(fn); };
 
   /* ---- 事件派发 ---- */
   GameController.prototype._emitState = function (next, prev) {
@@ -962,25 +940,17 @@
     this.audio.playSurprise(s.kind);
   };
 
-  /** 每次偏移指数变化后调用，传递原始值和比率 */
   GameController.prototype._emitCorruption = function () {
     for (var i = 0; i < this._listeners.corruption.length; i++) {
       try { this._listeners.corruption[i](this.corruption, this.corruptionRatio, this); } catch (e) { console.error(e); }
     }
   };
 
-  /** 广播 Breach 开始，传递截止时间戳（供 UI 绘制倒计时） */
   GameController.prototype._emitBreach = function () {
     for (var i = 0; i < this._listeners.breach.length; i++) {
       try { this._listeners.breach[i](this._breachDeadline, this); } catch (e) { console.error(e); }
     }
     this.audio.playBreach();
-  };
-
-  GameController.prototype._emitReroll = function (newOutcome) {
-    for (var i = 0; i < this._listeners.reroll.length; i++) {
-      try { this._listeners.reroll[i](newOutcome, this); } catch (e) { console.error(e); }
-    }
   };
 
   GameController.prototype._emitPassengerBoard = function (p) {
@@ -1013,13 +983,27 @@
     }
   };
 
-  /**
-   * 配额未达成拦截事件。
-   * @param {{ text, quota, credits, debt }} data
-   */
   GameController.prototype._emitUiWarning = function (data) {
     for (var i = 0; i < this._listeners.uiWarning.length; i++) {
       try { this._listeners.uiWarning[i](data, this); } catch (e) { console.error(e); }
+    }
+  };
+
+  GameController.prototype._emitLockerHand = function (payload) {
+    for (var i = 0; i < this._listeners.lockerHand.length; i++) {
+      try { this._listeners.lockerHand[i](payload, this); } catch (e) { console.error(e); }
+    }
+  };
+
+  GameController.prototype._emitLockerSelected = function (payload) {
+    for (var i = 0; i < this._listeners.lockerSelected.length; i++) {
+      try { this._listeners.lockerSelected[i](payload, this); } catch (e) { console.error(e); }
+    }
+  };
+
+  GameController.prototype._emitLockerHint = function (hint) {
+    for (var i = 0; i < this._listeners.lockerHint.length; i++) {
+      try { this._listeners.lockerHint[i](hint, this); } catch (e) { console.error(e); }
     }
   };
 
@@ -1029,7 +1013,6 @@
 
   /**
    * 激进投机者对赌（浏览器原生 confirm，不新增 DOM）。
-   * @param {boolean} fromScanReveal  是否为审查揭穿后的话术变体
    */
   GameController.prototype._tryOfferSpeculatorContract = function (fromScanReveal) {
     if (!SPECULATOR_CFG.enabled) return;
@@ -1037,15 +1020,15 @@
     var key = fromScanReveal ? 'copy.speculatorProtocolScan' : 'copy.speculatorProtocol';
     var msg = tpl(cfg(key, ''), {
       durationFloors: SPECULATOR_CFG.durationFloors,
-      gainMult: SPECULATOR_CFG.gainMult,
+      gainMult:       SPECULATOR_CFG.gainMult,
       corruptionMult: SPECULATOR_CFG.corMult
     });
     if (!msg) return;
     if (!nativeConfirm(msg)) return;
     this._speculatorContract = {
       floorsRemaining: SPECULATOR_CFG.durationFloors,
-      gainMult: SPECULATOR_CFG.gainMult,
-      corMult: SPECULATOR_CFG.corMult
+      gainMult:        SPECULATOR_CFG.gainMult,
+      corMult:         SPECULATOR_CFG.corMult
     };
   };
 
@@ -1054,11 +1037,10 @@
     if (p.identity !== ANGEL_CFG.targetId) return;
     this._angelLift = {
       floorsRemaining: ANGEL_CFG.durationFloors,
-      rateBonus: ANGEL_CFG.rateBonus
+      rateBonus:       ANGEL_CFG.rateBonus
     };
   };
 
-  /** 每层结算末尾：连击窗口标记、对赌/天使投资人回合衰减 */
   GameController.prototype._tickFloorMetaBuffs = function () {
     this._blindConfidenceActive = false;
     if (this._speculatorContract && this._speculatorContract.floorsRemaining > 0) {
@@ -1106,12 +1088,10 @@
 
   /**
    * 模块盘 · 审查：优先揭露第一个仍伪装的乘客；否则揭露首位。
-   * SCAMMER 伪装被揭后逃离。
    */
   GameController.prototype.scanPassenger = function () {
     if (!this.passengers.length) return { ok: false, reason: 'no_passenger' };
-    var idx = 0;
-    var i, p;
+    var idx = 0, i, p;
     for (i = 0; i < this.passengers.length; i++) {
       if (this.passengers[i].isDisguised) { idx = i; break; }
     }
@@ -1131,9 +1111,7 @@
       this.passengers.splice(idx, 1);
       this._emitPassengerLeave(p, 'fled');
     }
-    var auditRelief = false;
-    var hissUnveil = false;
-    /* P1：审查博弈 — 审计员背书降温（每位每局仅一次）；伪装希斯被揭穿则偏移尖峰 */
+    var auditRelief = false, hissUnveil = false;
     if (identity === 'VIP' && !p.auditCleared) {
       p.auditCleared = true;
       this._adjustCorruption(CORRUPTION.ON_VIP_AUDIT);
@@ -1163,7 +1141,6 @@
     this._emitCorruption();
   };
 
-  /** P1：允许审查等事件小幅回退偏移指数（下限 0） */
   GameController.prototype._adjustCorruption = function (delta) {
     this.corruption = Math.max(0, Math.min(CORRUPTION.MAX, this.corruption + delta));
     this._emitCorruption();
@@ -1176,7 +1153,7 @@
       ? SPECULATOR_CFG.corMult
       : 1;
     this._addCorruption(CORRUPTION.PER_FLOOR * em);
-    if (outcome.kind === 'DOUBLE')   this._addCorruption(CORRUPTION.ON_DOUBLE * em * scm);
+    if (outcome.kind === 'DOUBLE')   this._addCorruption(CORRUPTION.ON_DOUBLE   * em * scm);
     if (outcome.kind === 'NEGATIVE') this._addCorruption(CORRUPTION.ON_NEGATIVE * em * scm);
     if (outcome.kind === 'POSITIVE') this._addCorruption(CORRUPTION.ON_POSITIVE * em * scm);
   };
@@ -1199,9 +1176,6 @@
     }, BREACH_MS);
   };
 
-  /**
-   * 倒计时归零：强制清算，不走正常事件带。
-   */
   GameController.prototype._autoLiquidate = function () {
     if (this.state !== STATES.HISS_BREACH) return;
     this._clearBreachTimer();
@@ -1214,7 +1188,6 @@
       creditsMultiplier: 0, autoLiquidate: true
     };
     this._emitOutcome(this.lastOutcome);
-    /* 生涯档案：Hiss 入侵超时清算 */
     careerMerge({ liquidation: true });
     this._setState(STATES.GAME_OVER);
   };
@@ -1223,10 +1196,8 @@
 
   GameController.prototype.canGoUp = function () {
     return this.state === STATES.IDLE || this.state === STATES.DECIDING;
-    /* 注意：SAFE_NODE 状态下不允许上行，必须先通过 resolveSafeNode 完成选择 */
   };
 
-  /** Hiss Breach / 安全屋期间均可结算撤离 */
   GameController.prototype.canCashOut = function () {
     return this.state === STATES.IDLE       ||
            this.state === STATES.DECIDING   ||
@@ -1247,71 +1218,9 @@
     return true;
   };
 
-  /* ---- 卡牌派发与选择 ---- */
-
-  GameController.prototype._emitCardHand = function (cards) {
-    for (var i = 0; i < this._listeners.cardHand.length; i++) {
-      try { this._listeners.cardHand[i](cards, this); } catch (e) { console.error(e); }
-    }
-  };
-
-  GameController.prototype._emitCardResult = function (result) {
-    for (var i = 0; i < this._listeners.cardResult.length; i++) {
-      try { this._listeners.cardResult[i](result, this); } catch (e) { console.error(e); }
-    }
-  };
-
-  GameController.prototype.selectCard = function (index) {
-    if (this.state !== STATES.CARD_SELECTION) return { ok: false, reason: 'not_card_selection' };
-    if (!this._pendingCards || index < 0 || index >= this._pendingCards.length) {
-      return { ok: false, reason: 'invalid_card_index' };
-    }
-    var card = this._pendingCards[index];
-    var evt = card.event;
-    var delta = 0;
-
-    if (card.type === 'reward') {
-      delta = Math.max(1, Math.floor(this.credits * (evt.creditsBonusRatio || 0)));
-      this.credits += delta;
-      this._updatePeakCredits();
-    } else {
-      delta = Math.floor(this.credits * (evt.creditsLossRatio || 0));
-      this.credits = Math.max(0, this.credits - delta);
-    }
-
-    if (evt.corruptionDelta) {
-      this._adjustCorruption(evt.corruptionDelta);
-    }
-
-    var result = {
-      card: card,
-      index: index,
-      allCards: this._pendingCards,
-      creditsDelta: card.type === 'reward' ? delta : -delta,
-      creditsAfter: Math.floor(this.credits)
-    };
-
-    this._pendingCards = null;
-    this._cardSelectionDone = true;
-    this._emitCardResult(result);
-    this._setState(STATES.REVEALING);
-    return { ok: true, result: result };
-  };
-
-  /**
-   * 卡牌 UI 无法展开时的逃生阀（例如历史版本发出空牌组仍进入 CARD_SELECTION）。
-   * 将状态切回 REVEALING 以便 UI 继续 finishReveal 流程。
-   */
-  GameController.prototype.skipEmptyCardSelection = function () {
-    if (this.state !== STATES.CARD_SELECTION) return { ok: false };
-    if (this._pendingCards && this._pendingCards.length > 0) return { ok: false };
-    this._pendingCards = null;
-    this._cardSelectionDone = true;
-    this._setState(STATES.REVEALING);
-    return { ok: true };
-  };
-
-  /* ---- 主流程 ---- */
+  /* =====================================================================
+   * 主流程
+   * ===================================================================== */
 
   GameController.prototype.startAscend = function () {
     if (!this.canGoUp()) return { ok: false, reason: 'invalid_state' };
@@ -1329,17 +1238,6 @@
     this._updatePeakCredits();
   };
 
-  /**
-   * 动态复利杠杆结算。
-   *
-   * 公式：delta = stake × (creditsMultiplier - 1) × leverage
-   *   - stake    = 本层进入快照（_floorCreditsBefore），优先用快照保证可审计性
-   *   - leverage = floorLeverage(floor)，楼层越高、波动越大
-   *
-   * 养猪期特例（1-3 层）：
-   *   - 负面 delta 最多扣减 stake × 12%（排除极大额度负面扣减）
-   *   - stake 向下保底为 initialBet，避免滚雪球式快速归零
-   */
   GameController.prototype._applyOutcomeToCredits = function (outcome) {
     if (outcome.kind === 'LIQUIDATION') { this.credits = 0; return; }
     var stake = this._floorCreditsBefore !== null ? this._floorCreditsBefore : this.credits;
@@ -1360,7 +1258,6 @@
       delta = Math.round(delta * COMBO_BLIND_CFG.gainMult);
     }
     this.credits = Math.max(0, this.credits + delta);
-    /* 把实际有效倍率写回 outcome，供叙事判断 */
     outcome._effectiveDelta      = delta;
     outcome._effectiveMultiplier = stake > 0 ? (this.credits / stake) : 1;
     this._updatePeakCredits();
@@ -1383,9 +1280,17 @@
   /**
    * 关门动画结束后由 UI 调用。
    *
-   * 流程：EVALUATING → 事件带（含偏移指数）→ 偏移指数累积 → SurpriseEvent → Breach 判定 → REVEALING
+   * 流程（v3.2）：
+   *   ASCENDING → EVALUATING
+   *   ↓ 楼层跳跃 / 基线增值 / 乘客下上
+   *   ↓ 安全屋拦截（直接 REVEALING）
+   *   ↓ 环境事件 / 配额压力
+   *   ↓ 生成货舱手牌（多个候选 outcome）
+   *   ↓ LOCKER_SELECTING
+   *   ↓ UI 倒计时；玩家选择 → selectLocker；超时 → autoSelectLocker(FBC 代决议)
+   *   ↓ REVEALING
    *
-   * @returns {{ ok, outcome, surprise }}
+   * @returns {{ ok, lockerHand?, candidates?, lockerCount?, biome?, countdownMs?, safeNode?, outcome? }}
    */
   GameController.prototype.processAscendComplete = function () {
     if (this.state !== STATES.ASCENDING) return { ok: false, reason: 'not_ascending' };
@@ -1397,20 +1302,11 @@
       this._applyBaselineGrowth();
       if (fj > 0) this._addCorruption(CORRUPTION.PER_FLOOR);
     }
-    /* 生涯档案：记录本次攀爬层数与历史最高深度 */
     careerMerge({ floorsClimbed: floorsJumped, floorReached: this.floor });
-    if (this._frozenPrincipal > 0 && this.floor >= this._frozenUnlockFloor) {
-      this.credits += this._frozenPrincipal;
-      this._frozenPrincipal = 0;
-      this._frozenUnlockFloor = 999999;
-      this._updatePeakCredits();
-    }
     this._floorCreditsBefore = this.credits;
 
-    /* 乘客生命周期（到站后先下后上） */
     var pEvents = this._updatePassengers();
 
-    /* 伪救赎安全屋：第 5 / 10 层（每局首次到达时触发） */
     if (SAFE_NODE_FLOORS.indexOf(this.floor) >= 0 && !this._safeNodeVisited[this.floor]) {
       var safeOutcome = {
         kind: 'SAFE_NODE', raw: -1, band: 'SAFE_NODE',
@@ -1454,10 +1350,143 @@
       quotaShift += COMBO_BLIND_CFG.hiddenQuotaShift;
     }
 
-    /* 主事件（偏移指数 + 乘客叠加 + 环境 + 配额压力 + 楼层养猪期保护） */
-    var r       = this._rng();
-    var rngSub  = this._rng;
-    var outcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, quotaShift, this.floor, rngSub);
+    /* === 生成货舱手牌 === */
+    var biome = biomeForFloor(this.floor);
+    var lockerCount = _resolveLockerCount(biome, this.floor);
+    var hand = generateLockerHand(this, lockerCount, quotaShift);
+    var countdownMs = _resolveLockerCountdown(lockerCount);
+
+    this._lockerHand            = hand.candidates;
+    this._lockerHandMeta = {
+      biome:         biome,
+      floorsJumped:  floorsJumped,
+      envRoll:       envRoll,
+      paxEvents:     pEvents,
+      quotaShift:    quotaShift,
+      countdownMs:   countdownMs
+    };
+    this._lockerCountdownDeadline = Date.now() + countdownMs;
+
+    this._setState(STATES.LOCKER_SELECTING);
+
+    var hint = this._computeLockerHint(hand.candidates);
+    if (hint) this._emitLockerHint(hint);
+
+    var payload = {
+      candidates:  hand.candidates,
+      lockerCount: lockerCount,
+      biome:       biome,
+      countdownMs: countdownMs,
+      deadline:    this._lockerCountdownDeadline,
+      floorsJumped:      floorsJumped,
+      passengerBoarded:  pEvents.boarded,
+      passengerDeparted: pEvents.departed,
+      envEvent:          envRoll,
+      envActive:         this.activeEnvEvent,
+      hint:              hint
+    };
+    this._emitLockerHand(payload);
+
+    return {
+      ok: true,
+      lockerHand:  payload,
+      candidates:  hand.candidates,
+      lockerCount: lockerCount,
+      biome:       biome,
+      countdownMs: countdownMs,
+      floorsJumped:      floorsJumped,
+      passengerBoarded:  pEvents.boarded,
+      passengerDeparted: pEvents.departed,
+      envEvent:          envRoll,
+      envActive:         this.activeEnvEvent
+    };
+  };
+
+  /**
+   * 情报员/清扫员上车后给一条柜号情报；准确率由乘客 lockerHintAccuracy 决定。
+   * 仅在生成完手牌后调用，确保柜号已敲定。
+   */
+  GameController.prototype._computeLockerHint = function (candidates) {
+    if (!candidates || !candidates.length) return null;
+    var bestPax = null;
+    for (var i = 0; i < this.passengers.length; i++) {
+      var p = this.passengers[i];
+      if (!p.lockerHintChance || p.isDisguised) continue;
+      if (this._rng() >= p.lockerHintChance) continue;
+      if (!bestPax || (p.lockerHintAccuracy > bestPax.lockerHintAccuracy)) bestPax = p;
+    }
+    if (!bestPax) return null;
+
+    var goodIdx = -1, badIdx = -1;
+    for (var k = 0; k < candidates.length; k++) {
+      var oc = candidates[k].outcome;
+      if ((oc.kind === 'POSITIVE' || oc.kind === 'DOUBLE') && goodIdx < 0) goodIdx = k;
+      if ((oc.kind === 'NEGATIVE' || oc.kind === 'LIQUIDATION') && badIdx < 0) badIdx = k;
+    }
+    var truthful = this._rng() < bestPax.lockerHintAccuracy;
+    var pickGood = (goodIdx >= 0) && (badIdx < 0 || this._rng() < 0.5);
+
+    var targetIdx, polarity;
+    if (pickGood) {
+      polarity = 'good';
+      targetIdx = truthful ? goodIdx : (badIdx >= 0 ? badIdx : Math.floor(this._rng() * candidates.length));
+    } else {
+      polarity = 'bad';
+      targetIdx = truthful ? (badIdx >= 0 ? badIdx : Math.floor(this._rng() * candidates.length))
+                           : (goodIdx >= 0 ? goodIdx : Math.floor(this._rng() * candidates.length));
+    }
+    var lockerNumber = candidates[targetIdx].lockerNumber;
+    var pool = LOCKER_HINT_COPY[polarity] || [];
+    var line = pool.length ? pool[Math.floor(this._rng() * pool.length)] : null;
+    var text = line ? tpl(line, { locker: _formatLockerNumber(lockerNumber) }) : null;
+    return {
+      passenger:    bestPax,
+      polarity:     polarity,
+      lockerNumber: lockerNumber,
+      targetIdx:    targetIdx,
+      truthful:     truthful,
+      text:         text
+    };
+  };
+
+  /**
+   * 玩家主动选盘。
+   * @param {number} idx  柜子索引（基于 _lockerHand 数组顺序）
+   */
+  GameController.prototype.selectLocker = function (idx) {
+    if (this.state !== STATES.LOCKER_SELECTING) return { ok: false, reason: 'not_locker_selecting' };
+    if (!this._lockerHand || idx < 0 || idx >= this._lockerHand.length) {
+      return { ok: false, reason: 'invalid_locker_idx' };
+    }
+    return this._resolveLockerSelection(idx, false);
+  };
+
+  /**
+   * UI 倒计时归零时调用：随机挑一柜并按 FBC 代决议折扣处置。
+   */
+  GameController.prototype.autoSelectLocker = function () {
+    if (this.state !== STATES.LOCKER_SELECTING) return { ok: false, reason: 'not_locker_selecting' };
+    if (!this._lockerHand || !this._lockerHand.length) return { ok: false, reason: 'no_hand' };
+    var idx = Math.floor(this._rng() * this._lockerHand.length);
+    return this._resolveLockerSelection(idx, true);
+  };
+
+  GameController.prototype._resolveLockerSelection = function (idx, isCommitteeOverride) {
+    var chosen = this._lockerHand[idx];
+    var meta = this._lockerHandMeta || {};
+    var lockerNumber = chosen.lockerNumber;
+    var outcome = chosen.outcome;
+    var allCandidates = this._lockerHand;
+
+    /* 留底；selectLocker 完成后再清空 */
+    this._lockerHandMeta = null;
+    this._lockerHand = null;
+    this._lockerCountdownDeadline = 0;
+
+    if (isCommitteeOverride) {
+      outcome.committeeOverride = true;
+      outcome.committeeOverrideLocker = lockerNumber;
+    }
 
     if (outcome.kind === 'LIQUIDATION' && SUSPENSE_CFG.liquidationMs > 0) {
       busyWaitSync(SUSPENSE_CFG.liquidationMs);
@@ -1482,7 +1511,6 @@
       this.brakeMitigationPending = false;
     }
 
-    /* 乘客资本修正（叠加 + 组合加成） */
     if (this.passengers.length && outcome.kind !== 'LIQUIDATION') {
       var agg = aggregatePassengerModifiers(this.passengers);
       this.credits *= agg.creditsMult;
@@ -1491,27 +1519,24 @@
       }
     }
 
-    if (outcome.kind === 'NEGATIVE' && outcome.chainLightning) {
-      var chExtra = Math.round(this._floorCreditsBefore * CHAIN_LIGHTNING_CFG.extraLossRatio);
-      this.credits = Math.max(0, this.credits - chExtra);
-      chainDebtAdd(chExtra);
-      outcome._chainLightningLoss = chExtra;
-    }
-
-    if (outcome.kind !== 'LIQUIDATION' && this._rng() < ASSET_FREEZE_CFG.probability) {
-      var lockAmt = Math.round(this.credits * ASSET_FREEZE_CFG.lockRatio);
-      lockAmt = Math.min(Math.max(0, lockAmt), Math.floor(this.credits));
-      if (lockAmt > 0) {
-        this.credits -= lockAmt;
-        this._frozenPrincipal += lockAmt;
-        this._frozenUnlockFloor = this.floor + ASSET_FREEZE_CFG.floorsToUnlock;
-        outcome.assetFreezeLocked = lockAmt;
+    /* 委员会代决议折扣（在乘客修正后再裁剪，确保最终账面被压扁） */
+    if (isCommitteeOverride && outcome.kind !== 'LIQUIDATION') {
+      var ratio = FBC_OVERRIDE_CFG.creditsClampRatio || 1;
+      var preClamp = this.credits;
+      if (preClamp > this._floorCreditsBefore) {
+        var gain = preClamp - this._floorCreditsBefore;
+        this.credits = Math.max(0, Math.floor(this._floorCreditsBefore + gain * ratio));
+        outcome._committeeOverrideClampDelta = Math.floor(this.credits - preClamp);
+      } else {
+        var loss = this._floorCreditsBefore - preClamp;
+        this.credits = Math.max(0, Math.floor(this._floorCreditsBefore - loss * (1 + (1 - ratio))));
+        outcome._committeeOverrideClampDelta = Math.floor(this.credits - preClamp);
       }
+      this._addCorruption(FBC_OVERRIDE_CFG.extraCorruption || 0);
     }
 
     this._applyCorruptionForOutcome(outcome);
 
-    /* 配额穿越：资产首次从负转正时触发音效（每局仅一次） */
     if (!this._quotaCrossed && outcome.kind !== 'LIQUIDATION') {
       var preCredits = this._floorCreditsBefore || 0;
       if (preCredits < this.quota && this.credits >= this.quota) {
@@ -1525,18 +1550,25 @@
     var pid = this.passengers.map(function (x) { return x.identity; }).join('+') || null;
     this.rngLog.push({
       floor:        this.floor,
-      raw:          r,
+      raw:          outcome.raw,
       outcomeKind:  outcome.kind,
       band:         outcome.band,
       creditsAfter: this.credits,
       corruption:   this.corruption,
       passenger:    pid,
       envEvent:     this.activeEnvEvent,
-      mitigated:    !!outcome.mitigated
+      mitigated:    !!outcome.mitigated,
+      lockerNumber: lockerNumber,
+      committeeOverride: !!isCommitteeOverride
     });
 
     this.lastOutcome = outcome;
     this._emitOutcome(outcome);
+
+    if (isCommitteeOverride) {
+      careerMerge({ committeeOverride: true });
+      try { this.audio.playCommitteeOverride && this.audio.playCommitteeOverride(); } catch (e) {}
+    }
 
     var surprise = null;
     if (outcome.kind !== 'LIQUIDATION') {
@@ -1551,8 +1583,7 @@
       }
 
       var bProb = computeBreachProbability(this.passengers);
-      this._pendingBreach =
-        this.floor >= BREACH_MIN_FLOOR && this._rng() < bProb;
+      this._pendingBreach = this.floor >= BREACH_MIN_FLOOR && this._rng() < bProb;
     } else {
       this.lastSurprise   = null;
       this._pendingBreach = false;
@@ -1560,56 +1591,55 @@
 
     this._tickFloorMetaBuffs();
 
-    /* 卡牌选取阶段：非清算时进入卡牌选择（无牌可发时不得卡死在 CARD_SELECTION） */
-    if (CARD_ENABLED && outcome.kind !== 'LIQUIDATION') {
-      this._cardSelectionDone = false;
-      this._pendingCards = generateCardHand(this);
-      if (this._pendingCards && this._pendingCards.length > 0) {
-        this._setState(STATES.CARD_SELECTION);
-        this._emitCardHand(this._pendingCards);
-        return {
-          ok: true, outcome: outcome, surprise: surprise,
-          floorsJumped: floorsJumped, cardSelection: true,
-          passengerBoarded: pEvents.boarded, passengerDeparted: pEvents.departed,
-          envEvent: envRoll, envActive: this.activeEnvEvent
-        };
-      }
-      this._pendingCards = null;
-    }
+    var payload = {
+      idx:                idx,
+      lockerNumber:       lockerNumber,
+      outcome:            outcome,
+      surprise:           surprise,
+      committeeOverride:  !!isCommitteeOverride,
+      allCandidates:      allCandidates,
+      floorsJumped:       meta.floorsJumped || 0,
+      passengerBoarded:   meta.paxEvents ? meta.paxEvents.boarded : null,
+      passengerDeparted:  meta.paxEvents ? meta.paxEvents.departed : null,
+      envEvent:           meta.envRoll || null,
+      envActive:          this.activeEnvEvent
+    };
 
+    this._emitLockerSelected(payload);
     this._setState(STATES.REVEALING);
     return {
-      ok: true, outcome: outcome, surprise: surprise,
-      floorsJumped: floorsJumped,
-      passengerBoarded: pEvents.boarded, passengerDeparted: pEvents.departed,
-      envEvent: envRoll, envActive: this.activeEnvEvent
+      ok:                true,
+      idx:               payload.idx,
+      lockerNumber:      payload.lockerNumber,
+      outcome:           payload.outcome,
+      surprise:          payload.surprise,
+      committeeOverride: payload.committeeOverride,
+      allCandidates:     payload.allCandidates,
+      floorsJumped:      payload.floorsJumped,
+      passengerBoarded:  payload.passengerBoarded,
+      passengerDeparted: payload.passengerDeparted,
+      envEvent:          payload.envEvent,
+      envActive:         payload.envActive
     };
   };
 
   /**
    * 开门展示结束后由 UI 调用。
-   *
-   * 返回：
-   *   { ok, gameOver, breach }
-   *   breach=true → 状态切换到 HISS_BREACH，5s 倒计时启动
    */
   GameController.prototype.finishReveal = function () {
     if (this.state !== STATES.REVEALING) return { ok: false, reason: 'not_revealing' };
 
     if (this.lastOutcome && this.lastOutcome.kind === 'LIQUIDATION' && !this.lastOutcome.mitigated) {
-      /* 生涯档案：记录破产清算事件 */
       careerMerge({ liquidation: true });
       this._setState(STATES.GAME_OVER);
       return { ok: true, gameOver: true, breach: false };
     }
 
-    /* 安全屋：切换到 SAFE_NODE 等待玩家选择 */
     if (this.lastOutcome && this.lastOutcome.kind === 'SAFE_NODE') {
       this._setState(STATES.SAFE_NODE);
       return { ok: true, gameOver: false, breach: false, safeNode: true };
     }
 
-    /* Hiss Breach → 进入 HISS_BREACH，启动倒计时 */
     if (this._pendingBreach) {
       this._pendingBreach = false;
       this._setState(STATES.HISS_BREACH);
@@ -1617,16 +1647,11 @@
       return { ok: true, gameOver: false, breach: true };
     }
 
-    /* 正常 → DECIDING */
     this._setState(STATES.DECIDING);
     this._stampDecidingEnter();
     return { ok: true, gameOver: false, breach: false };
   };
 
-  /**
-   * 伪救赎安全屋：玩家选择净化（按净资产比例划扣一笔整数金额并清零偏移指数）或跳过。
-   * @param {'purge'|'skip'} choice
-   */
   GameController.prototype.resolveSafeNode = function (choice) {
     if (this.state !== STATES.SAFE_NODE) return { ok: false, reason: 'not_safe_node' };
     this._safeNodeVisited[this.floor] = true;
@@ -1645,11 +1670,6 @@
 
   /* ---- 结算撤离 ---- */
 
-  /**
-   * 公共撤离入口（带配额拦截）。
-   * - 净资产 < 0 → 拦截，发出 UI_WARNING 事件，返回 { ok: false, reason: 'quota_not_met' }
-   * - 净资产 ≥ 0 → 调用 cashOut()，正常结算
-   */
   GameController.prototype.requestCashOut = function () {
     if (!this.canCashOut()) return { ok: false, reason: 'invalid_state' };
     if (this.getNetAsset() < 0) {
@@ -1671,22 +1691,9 @@
     return this.cashOut();
   };
 
-  /**
-   * 强行割肉撤离（配额未达成时玩家主动确认）。
-   * 资产归零视为 GAME OVER，展示《资产清算通知书》。
-   */
-  GameController.prototype._applyEarlyCashoutFreezePenalty = function () {
-    if (!(this._frozenPrincipal > 0 && this.floor < this._frozenUnlockFloor)) return;
-    var claw = Math.round(this.credits * ASSET_FREEZE_CFG.cashoutClawback);
-    this.credits = Math.max(0, this.credits - claw);
-    this._frozenPrincipal = 0;
-    this._frozenUnlockFloor = 999999;
-  };
-
   GameController.prototype.forceDebtCashOut = function () {
     if (!this.canCashOut()) return { ok: false, reason: 'invalid_state' };
     this._clearBreachTimer();
-    this._applyEarlyCashoutFreezePenalty();
     var payout = Math.floor(this.credits);
     var debt   = Math.floor(this.getDebt());
     this.lastPayout = payout;
@@ -1701,10 +1708,8 @@
   GameController.prototype.cashOut = function () {
     if (!this.canCashOut()) return { ok: false, reason: 'invalid_state' };
     this._clearBreachTimer();
-    this._applyEarlyCashoutFreezePenalty();
-    var payout   = Math.floor(this.credits);
+    var payout = Math.floor(this.credits);
     this.lastPayout = payout;
-    /* 生涯档案：成功撤离，累加核销资产总额 */
     careerMerge({ creditsCollected: payout });
     this._setState(STATES.CASHED_OUT);
     for (var i = 0; i < this._listeners.cashOut.length; i++) {
@@ -1724,11 +1729,6 @@
    * 物品系统
    * ===================================================================== */
 
-  /**
-   * 使用物品。
-   * @param {string} itemId  注册表 ID
-   * @returns {{ ok, reason?, ... }}  由各物品 onUse 的返回值决定
-   */
   GameController.prototype.useItem = function (itemId, options) {
     options = options || {};
     var mode = options.mode || 'scan';
@@ -1739,127 +1739,21 @@
 
     inv.count -= 1;
     if (inv.count < 0) inv.count = 0;
-    /* 模块盘耗尽后保留 ×0 条目，供 UI 呈现「离线」态 */
     if (inv.count <= 0 && itemId !== 'floppy-disk') {
       this.inventory = this.inventory.filter(function (it) { return it.id !== itemId; });
     }
-
     return sub.onUse(this);
   };
 
-  /**
-   * The Floppy Disk 效果：重掷当前楼层结果。
-   *
-   * - 仅在 DECIDING 状态下可调用（canUseItem 已保证）
-   * - 回滚至 _floorCreditsBefore（基线后、结果前的快照）
-   * - 消耗 CORRUPTION.ON_REROLL 偏移指数（干预代价）
-   * - 新结果若为 LIQUIDATION → 直接进入 GAME_OVER
-   * - 不重新触发 SurpriseEvent（重掷代价之一）
-   *
-   * @returns {{ ok, newOutcome, liquidated }}
-   */
-  GameController.prototype.rerollCurrentFloor = function () {
-    if (this.state !== STATES.DECIDING) return { ok: false, reason: 'not_deciding' };
-    if (this._floorCreditsBefore === null) return { ok: false, reason: 'no_snapshot' };
+  /* =====================================================================
+   * 工具
+   * ===================================================================== */
 
-    /* 回滚金额到基线快照 */
-    this.credits = this._floorCreditsBefore;
-
-    /* 移除上一条 rngLog（本层旧数据） */
-    if (this.rngLog.length && this.rngLog[this.rngLog.length - 1].floor === this.floor) {
-      this.rngLog.pop();
-    }
-
-    /* 偏移指数代价（先加，再用新偏移指数掷骰） */
-    this._addCorruption(CORRUPTION.ON_REROLL);
-
-    var r          = this._rng();
-    var rngSub     = this._rng;
-    var newOutcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, 0, this.floor, rngSub);
-
-    if (newOutcome.kind === 'LIQUIDATION' && REROLL_BAILOUT_CFG.enabled) {
-      var pay = Math.round(this.credits * REROLL_BAILOUT_CFG.payRatio);
-      var bailMsg = tpl(cfg('copy.rerollBailout', ''), {
-        pay: pay,
-        balance: Math.floor(this.credits)
-      });
-      if (bailMsg && nativeConfirm(bailMsg)) {
-        this.credits = Math.max(0, this.credits - pay);
-        r = this._rng();
-        newOutcome = rollEventFromR(r, this.corruption, this.passengers, this.activeEnvEvent, 0, this.floor, rngSub);
-        if (newOutcome.kind === 'LIQUIDATION') {
-          newOutcome = {
-            kind: 'NEGATIVE',
-            raw: r,
-            band: 'REROLL_BAILOUT_FALLBACK',
-            creditsMultiplier: REROLL_BAILOUT_CFG.fallbackMult,
-            bailoutRewrite: true
-          };
-        }
-      }
-    }
-
-    if (newOutcome.kind === 'LIQUIDATION' && SUSPENSE_CFG.liquidationMs > 0) {
-      busyWaitSync(SUSPENSE_CFG.liquidationMs);
-    }
-    if (newOutcome.kind === 'NEGATIVE' && SUSPENSE_CFG.negativeLowRunwayMs > 0 &&
-        this._floorCreditsBefore < this.quota * SUSPENSE_CFG.lowRunwayRatio) {
-      busyWaitSync(SUSPENSE_CFG.negativeLowRunwayMs);
-    }
-
-    if (newOutcome.kind === 'LIQUIDATION') {
-      this._liquidationDebtAmount = (this._floorCreditsBefore < this.quota)
-        ? Math.max(0, Math.floor(this.quota - this._floorCreditsBefore))
-        : 0;
-    }
-
-    this._applyOutcomeToCredits(newOutcome);
-
-    if (newOutcome.kind === 'LIQUIDATION' && this.brakeMitigationPending) {
-      this.credits = Math.max(0, Math.floor(this._floorCreditsBefore * BRAKE_RETAIN));
-      newOutcome.mitigated = true;
-      newOutcome.displayKind = 'MITIGATED';
-      this.brakeMitigationPending = false;
-    }
-
-    if (this.passengers.length && newOutcome.kind !== 'LIQUIDATION') {
-      var aggR = aggregatePassengerModifiers(this.passengers);
-      this.credits *= aggR.creditsMult;
-      if (aggR.hasVolatile) {
-        this.credits *= (this._rng() < VOLATILE_POS_CHANCE ? VOLATILE_POS_MULT : VOLATILE_NEG_MULT);
-      }
-    }
-
-    if (newOutcome.kind === 'NEGATIVE' && newOutcome.chainLightning) {
-      var chR = Math.round(this._floorCreditsBefore * CHAIN_LIGHTNING_CFG.extraLossRatio);
-      this.credits = Math.max(0, this.credits - chR);
-      chainDebtAdd(chR);
-      newOutcome._chainLightningLoss = chR;
-    }
-
-    this._applyCorruptionForOutcome(newOutcome);
-
-    this.rngLog.push({
-      floor:        this.floor,
-      raw:          r,
-      outcomeKind:  newOutcome.kind,
-      band:         newOutcome.band,
-      creditsAfter: this.credits,
-      corruption:   this.corruption,
-      rerolled:     true
-    });
-
-    this.lastOutcome = newOutcome;
-    this._emitOutcome(newOutcome);
-    this._emitReroll(newOutcome);
-
-    if (newOutcome.kind === 'LIQUIDATION') {
-      this._setState(STATES.GAME_OVER);
-      return { ok: true, newOutcome: newOutcome, liquidated: true };
-    }
-
-    return { ok: true, newOutcome: newOutcome, liquidated: false };
-  };
+  function _formatLockerNumber(n) {
+    if (typeof n !== 'number') return String(n);
+    return (n < 10 ? '0' : '') + n;
+  }
+  GameController.formatLockerNumber = _formatLockerNumber;
 
   global.GameController = GameController;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -2,6 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta http-equiv="Permissions-Policy" content="autoplay=(self)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -9,6 +11,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=VT323&display=swap" rel="stylesheet">
 <title>暴富电梯 · 联邦控制局</title>
 <style>
+  /* =======================================================
+   * 全局字体规范
+   * 最小字体：8px（0.5rem @ 16px 根），任何可见文字不得低于此值。
+   * 主要信息（数字 / 行动标签）≥ 12px；说明/辅助 ≥ 8px；
+   * 无法在当前空间放下的信息优先折叠或收入右上角 ≡ 菜单。
+   * ======================================================= */
+
   /* =======================================================
    * 启动界面（解锁浏览器音频）
    * ======================================================= */
@@ -98,250 +107,604 @@
   }
 
   /* =======================================================
-   * 卡牌选取界面
+   * 封存货舱 / 选盘界面
    * ======================================================= */
-  #card-selection-overlay {
+  #locker-selection-overlay {
     position: fixed; inset: 0; z-index: 350;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    background: rgba(0,0,0,.92);
-    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    background: rgba(0,0,0,.88);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
     opacity: 0; pointer-events: none;
-    transition: opacity .35s ease;
+    transition: opacity .28s ease;
   }
-  #card-selection-overlay.active {
+  #locker-selection-overlay.active {
     opacity: 1; pointer-events: all;
   }
 
-  .card-figure {
-    width: 120px; height: 180px;
-    border-radius: 4px;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 1.5rem;
-    position: relative;
-    filter: drop-shadow(0 0 30px rgba(160,20,15,.5));
-    animation: figure-float 3s ease-in-out infinite;
-    overflow: hidden;
-  }
-  .card-figure img {
-    width: 100%; height: 100%;
-    object-fit: contain;
-    filter: brightness(.85) contrast(1.15);
-    animation: figure-glow-img 2.5s ease-in-out infinite;
-  }
-  .card-figure--placeholder::after {
-    content: '?';
-    font-size: 3rem;
-    color: #a01515;
-    font-family: 'VT323', monospace;
-    animation: figure-glow 2s ease-in-out infinite;
-  }
-  @keyframes figure-float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
-  @keyframes figure-glow {
-    0%, 100% { text-shadow: 0 0 10px rgba(160,20,15,.4); }
-    50% { text-shadow: 0 0 25px rgba(160,20,15,.8); }
-  }
-  @keyframes figure-glow-img {
-    0%, 100% { filter: brightness(.85) contrast(1.15) drop-shadow(0 0 8px rgba(160,20,15,.3)); }
-    50% { filter: brightness(1) contrast(1.2) drop-shadow(0 0 20px rgba(160,20,15,.7)); }
-  }
-
-  /* 电梯内鬼影：开门后出现在场景中，位于局长(director z:1)之后 */
-  .elevator-ghost {
-    position: absolute;
-    bottom: 2%; 
-    left: 50%;
-    transform: translateX(-50%) scale(0);
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: bottom center;
-    z-index: 0;
-    filter: brightness(.65) contrast(1.3) drop-shadow(0 0 30px rgba(160,20,15,.6));
-    animation: ghost-materialize .8s cubic-bezier(.2,1.1,.4,1) forwards;
-    pointer-events: none;
-  }
-  @keyframes ghost-materialize {
-    0%   { transform: translateX(-50%) scale(0); opacity: 0; filter: brightness(2) contrast(.5) blur(10px); }
-    60%  { transform: translateX(-50%) scale(1.05); opacity: .85; }
-    100% { transform: translateX(-50%) scale(1); opacity: 1; filter: brightness(.65) contrast(1.3) drop-shadow(0 0 30px rgba(160,20,15,.6)); }
-  }
-  .elevator-ghost.ghost-idle {
-    animation: ghost-materialize .8s cubic-bezier(.2,1.1,.4,1) forwards,
-               ghost-breathe 3s 0.8s ease-in-out infinite;
-  }
-  @keyframes ghost-breathe {
-    0%, 100% { transform: translateX(-50%) scale(1) translateY(0); }
-    50%      { transform: translateX(-50%) scale(1.02) translateY(-5px); }
-  }
-
-  .card-prompt {
+  .locker-overlay__classification {
     font-family: 'Courier New', monospace;
-    font-size: .6rem;
-    color: #6b7580;
-    letter-spacing: .3em;
+    font-size: .58rem;
+    color: rgba(200, 140, 130, 0.9);
+    letter-spacing: .26em;
     text-transform: uppercase;
-    margin-bottom: 1.2rem;
+    margin-bottom: .35rem;
+  }
+  .locker-overlay__title {
+    font-family: 'VT323', monospace;
+    font-size: 1.05rem;
+    color: #c8d0d8;
+    letter-spacing: .14em;
+    margin: 0 0 .15rem;
+    text-align: center;
+  }
+  .locker-overlay__subtitle {
+    font-family: 'Courier New', monospace;
+    font-size: .52rem;
+    color: #6b7580;
+    letter-spacing: .18em;
+    margin-bottom: 1rem;
+    text-align: center;
+    padding: 0 1.5rem;
+  }
+  .locker-overlay__hint {
+    font-family: 'Courier New', monospace;
+    font-size: .58rem;
+    color: #a8c0d0;
+    letter-spacing: .08em;
+    margin-bottom: .9rem;
+    padding: .35rem .8rem;
+    border-left: 2px solid #5a4a1a;
+    border-right: 2px solid #5a4a1a;
+    background: rgba(40,30,5,.35);
+    max-width: 320px;
+    text-align: center;
+    min-height: 1.1rem;
+    opacity: 0;
+    transition: opacity .35s ease;
+  }
+  .locker-overlay__hint.visible { opacity: 1; }
+
+  .locker-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 480px;
+    padding: 0 1rem;
+    margin-bottom: 1rem;
   }
 
-  .card-hand {
-    display: flex; gap: 16px;
-    perspective: 800px;
-  }
-
-  .card-slot {
-    width: 110px; height: 165px;
+  .locker-slot {
+    width: 110px; height: 150px;
     position: relative;
     cursor: pointer;
-    transform-style: preserve-3d;
-    transition: transform .6s cubic-bezier(.4,.0,.2,1);
+    background: linear-gradient(150deg, #2a2a2a 0%, #161616 100%);
+    border: 2px solid #4a4a4a;
+    border-radius: 4px;
+    box-shadow: inset 0 -8px 20px rgba(0,0,0,.6), 0 4px 18px rgba(0,0,0,.6);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: transform .25s cubic-bezier(.4,.0,.2,1),
+                border-color .25s ease,
+                box-shadow .25s ease;
+    overflow: hidden;
   }
-  .card-slot:hover:not(.flipped):not(.disabled) {
-    transform: translateY(-8px) scale(1.04);
+  .locker-slot::before {
+    content: "";
+    position: absolute;
+    top: 12%; left: 8%; right: 8%;
+    height: 6px;
+    background: linear-gradient(90deg, transparent, #6b7580, transparent);
+    opacity: .6;
   }
-  .card-slot.flipped {
-    transform: rotateY(180deg);
-    pointer-events: none;
+  .locker-slot::after {
+    content: "";
+    position: absolute;
+    bottom: 12%; left: 50%; transform: translateX(-50%);
+    width: 14px; height: 14px;
+    background: radial-gradient(circle, #f5c800 0%, #5a4a1a 70%, #1a1a1a 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(245, 200, 0, .35);
+    opacity: .85;
   }
-  .card-slot.disabled {
+  .locker-slot:hover:not(.disabled):not(.opening) {
+    transform: translateY(-6px);
+    border-color: #f5c800;
+    box-shadow: inset 0 -8px 20px rgba(0,0,0,.6), 0 8px 28px rgba(245, 200, 0, .25);
+  }
+  .locker-slot.disabled {
     opacity: .35;
     pointer-events: none;
   }
-
-  .card-face {
-    position: absolute; inset: 0;
-    border-radius: 6px;
-    backface-visibility: hidden;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    padding: .5rem;
-    box-sizing: border-box;
+  .locker-slot.opening {
+    pointer-events: none;
+    border-color: #f5c800;
+    animation: locker-flash .55s ease-out forwards;
+  }
+  .locker-slot.fbc-override {
+    border-color: #d42020;
+    animation: locker-fbc-stamp .8s ease-out forwards;
+  }
+  @keyframes locker-flash {
+    0%   { box-shadow: inset 0 -8px 20px rgba(0,0,0,.6), 0 4px 18px rgba(0,0,0,.6); transform: scale(1); }
+    40%  { box-shadow: inset 0 0 60px rgba(245, 200, 0, .8), 0 0 40px rgba(245, 200, 0, .55); transform: scale(1.05); }
+    100% { box-shadow: inset 0 0 30px rgba(245, 200, 0, .35), 0 0 18px rgba(245, 200, 0, .35); transform: scale(1); }
+  }
+  @keyframes locker-fbc-stamp {
+    0%   { box-shadow: inset 0 -8px 20px rgba(0,0,0,.6), 0 4px 18px rgba(0,0,0,.6); transform: scale(1); }
+    40%  { box-shadow: inset 0 0 80px rgba(212, 32, 32, .85), 0 0 40px rgba(212, 32, 32, .65); transform: scale(1.04); }
+    100% { box-shadow: inset 0 0 35px rgba(212, 32, 32, .45), 0 0 22px rgba(212, 32, 32, .45); transform: scale(1); }
   }
 
-  .card-front {
-    background: linear-gradient(145deg, #1a1a1a, #0e0e0e);
-    border: 2px solid #3d3d3d;
-    box-shadow: 0 4px 20px rgba(0,0,0,.6);
-  }
-  .card-front__glyph {
-    font-size: 2.2rem;
-    margin-bottom: .4rem;
-    filter: grayscale(.3);
-  }
-  .card-front__name {
+  .locker-slot__id {
     font-family: 'VT323', monospace;
-    font-size: .82rem;
+    font-size: 2.1rem;
     color: #c8d0d8;
-    text-align: center;
-    letter-spacing: .06em;
-  }
-  .card-front__hint {
-    font-family: 'Courier New', monospace;
-    font-size: .42rem;
-    color: #3d3d3d;
-    letter-spacing: .15em;
-    margin-top: .3rem;
-  }
-
-  .card-back {
-    transform: rotateY(180deg);
-    border: 2px solid;
-    box-shadow: 0 4px 20px rgba(0,0,0,.6);
-    text-align: center;
-    gap: .3rem;
-  }
-  .card-back--reward {
-    background: linear-gradient(145deg, #0a1a0a, #0e1e0e);
-    border-color: #1a5a2a;
-    box-shadow: 0 0 30px rgba(30,140,70,.25);
-  }
-  .card-back--bust {
-    background: linear-gradient(145deg, #1a0a0a, #1e0e0e);
-    border-color: #5a1a1a;
-    box-shadow: 0 0 30px rgba(160,20,15,.3);
-  }
-  .card-back__icon {
-    font-size: 1.6rem;
-  }
-  .card-back__name {
-    font-family: 'VT323', monospace;
-    font-size: .8rem;
     letter-spacing: .08em;
+    text-shadow: 0 0 6px rgba(0,0,0,.85);
   }
-  .card-back--reward .card-back__name { color: #4ade80; }
-  .card-back--bust .card-back__name { color: #f87171; }
-
-  .card-back__desc {
+  .locker-slot__label {
+    /* "LOT" 是纯装饰 —— 数字已足够表意；隐藏以聚焦核心 */
+    display: none;
+  }
+  .locker-slot__status {
+    position: absolute;
+    bottom: 6px; left: 0; right: 0;
+    text-align: center;
     font-family: 'Courier New', monospace;
-    font-size: .45rem;
-    color: #6b7580;
-    line-height: 1.5;
-    padding: 0 .2rem;
+    font-size: .5rem;   /* 8px min */
+    letter-spacing: .14em;
+    color: #4a4a4a;
   }
-  .card-back__delta {
-    font-family: 'VT323', monospace;
-    font-size: .85rem;
-    margin-top: .15rem;
+  /* === 情报员高亮：LED 顶条 + 强外辉光 + 呼吸 === */
+  .locker-slot.tagged-good,
+  .locker-slot.tagged-bad {
+    /* 让上沿装饰 ::before 让位给彩色 LED 顶条 */
   }
-  .card-back--reward .card-back__delta { color: #4ade80; }
-  .card-back--bust .card-back__delta { color: #f87171; }
-
-  .card-result-bar {
-    margin-top: 1.2rem;
-    font-family: 'Courier New', monospace;
-    font-size: .55rem;
-    color: #6b7580;
-    letter-spacing: .2em;
-    opacity: 0;
-    transition: opacity .4s ease;
+  .locker-slot.tagged-good::before,
+  .locker-slot.tagged-bad::before {
+    content: "";
+    position: absolute;
+    top: 6px; left: 50%; transform: translateX(-50%);
+    width: 70%; height: 9px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 60%),
+                var(--led-fill, #4ade80);
+    box-shadow:
+      0 0 6px var(--led-glow, rgba(74,222,128,.85)),
+      0 0 14px var(--led-glow, rgba(74,222,128,.55)),
+      inset 0 0 4px rgba(0,0,0,.4);
+    opacity: .95;
+    animation: locker-hint-led 1.4s ease-in-out infinite;
   }
-  .card-result-bar.active { opacity: 1; }
-  .card-result-bar.card-result-bar--reward-tier-1 {
-    color: #8fd9a8;
-    letter-spacing: 0.16em;
-    animation: card-result-reward-glow 1.4s ease-in-out infinite;
+  .locker-slot.tagged-good {
+    --led-fill:  #4ade80;
+    --led-glow:  rgba(74, 222, 128, .85);
+    --hint-stroke: #4ade80;
+    --hint-tint:  rgba(74, 222, 128, .12);
+    border-color: #4ade80;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 18%, var(--hint-tint), transparent 70%),
+      linear-gradient(150deg, #2a2a2a 0%, #161616 100%);
+    box-shadow:
+      inset 0 -8px 20px rgba(0,0,0,.6),
+      inset 0 0 26px rgba(74,222,128,.15),
+      0 0 18px rgba(74,222,128,.45),
+      0 0 38px rgba(74,222,128,.30);
+    animation: locker-hint-pulse-good 1.8s ease-in-out infinite;
   }
-  .card-result-bar.card-result-bar--reward-tier-2 {
-    color: #b8f5c8;
-    font-size: 0.58rem;
-    letter-spacing: 0.14em;
-    animation: card-result-reward-glow 1.15s ease-in-out infinite;
+  .locker-slot.tagged-bad {
+    --led-fill:  #ff4d4d;
+    --led-glow:  rgba(255, 80, 80, .85);
+    --hint-stroke: #ff4d4d;
+    --hint-tint:  rgba(212, 32, 32, .14);
+    border-color: #ff4d4d;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 18%, var(--hint-tint), transparent 70%),
+      linear-gradient(150deg, #2a2a2a 0%, #161616 100%);
+    box-shadow:
+      inset 0 -8px 20px rgba(0,0,0,.6),
+      inset 0 0 26px rgba(212,32,32,.15),
+      0 0 18px rgba(212,32,32,.45),
+      0 0 38px rgba(212,32,32,.30);
+    animation: locker-hint-pulse-bad 1.8s ease-in-out infinite;
   }
-  .card-result-bar.card-result-bar--reward-tier-3 {
-    color: #e8ffd8;
-    font-size: 0.62rem;
-    letter-spacing: 0.12em;
-    text-shadow: 0 0 12px rgba(180, 255, 200, 0.45);
-    animation: card-result-reward-glow 0.95s ease-in-out infinite;
+  /* 状态字（底部）替换 SEALED → INTEL ✓ / WARN ! */
+  .locker-slot.tagged-good .locker-slot__status,
+  .locker-slot.tagged-bad  .locker-slot__status {
+    color: var(--hint-stroke);
+    font-weight: bold;
+    text-shadow: 0 0 6px var(--led-glow);
   }
-  .card-result-bar.card-result-bar--reward-tier-4 {
-    color: #ffffff;
-    font-size: 0.66rem;
-    letter-spacing: 0.1em;
-    text-shadow: 0 0 14px rgba(255, 240, 160, 0.75), 0 0 28px rgba(120, 255, 200, 0.35);
-    animation: card-result-reward-glow 0.8s ease-in-out infinite;
+  /* 把底部小圆灯（::after）也染色 */
+  .locker-slot.tagged-good::after { background: radial-gradient(circle, #4ade80 0%, #1a3a22 70%, #0a0a0a 100%); box-shadow: 0 0 12px rgba(74,222,128,.7); }
+  .locker-slot.tagged-bad::after  { background: radial-gradient(circle, #ff4d4d 0%, #3a1010 70%, #0a0a0a 100%); box-shadow: 0 0 12px rgba(212,32,32,.7); }
+  /* hover 在情报锚点上保留主色调，不再被黄色覆盖 */
+  .locker-slot.tagged-good:hover:not(.disabled):not(.opening) {
+    transform: translateY(-6px);
+    border-color: #4ade80;
+    box-shadow:
+      inset 0 -8px 20px rgba(0,0,0,.6),
+      inset 0 0 30px rgba(74,222,128,.20),
+      0 12px 38px rgba(74,222,128,.45);
   }
-  @keyframes card-result-reward-glow {
-    0%, 100% { opacity: 1; filter: brightness(1); }
-    50%      { opacity: 0.94; filter: brightness(1.2); }
+  .locker-slot.tagged-bad:hover:not(.disabled):not(.opening) {
+    transform: translateY(-6px);
+    border-color: #ff4d4d;
+    box-shadow:
+      inset 0 -8px 20px rgba(0,0,0,.6),
+      inset 0 0 30px rgba(212,32,32,.20),
+      0 12px 38px rgba(212,32,32,.45);
   }
-  @media (prefers-reduced-motion: reduce) {
-    .card-result-bar.card-result-bar--reward-tier-1,
-    .card-result-bar.card-result-bar--reward-tier-2,
-    .card-result-bar.card-result-bar--reward-tier-3,
-    .card-result-bar.card-result-bar--reward-tier-4 {
-      animation: none;
+  @keyframes locker-hint-led {
+    0%, 100% { opacity: 1;   transform: translateX(-50%) scaleX(1); }
+    50%      { opacity: .55; transform: translateX(-50%) scaleX(.92); }
+  }
+  @keyframes locker-hint-pulse-good {
+    0%, 100% {
+      box-shadow:
+        inset 0 -8px 20px rgba(0,0,0,.6),
+        inset 0 0 26px rgba(74,222,128,.15),
+        0 0 18px rgba(74,222,128,.45),
+        0 0 38px rgba(74,222,128,.30);
+    }
+    50% {
+      box-shadow:
+        inset 0 -8px 20px rgba(0,0,0,.6),
+        inset 0 0 36px rgba(74,222,128,.28),
+        0 0 28px rgba(74,222,128,.65),
+        0 0 56px rgba(74,222,128,.45);
     }
   }
+  @keyframes locker-hint-pulse-bad {
+    0%, 100% {
+      box-shadow:
+        inset 0 -8px 20px rgba(0,0,0,.6),
+        inset 0 0 26px rgba(212,32,32,.15),
+        0 0 18px rgba(212,32,32,.45),
+        0 0 38px rgba(212,32,32,.30);
+    }
+    50% {
+      box-shadow:
+        inset 0 -8px 20px rgba(0,0,0,.6),
+        inset 0 0 36px rgba(212,32,32,.28),
+        0 0 28px rgba(212,32,32,.65),
+        0 0 56px rgba(212,32,32,.45);
+    }
+  }
+  /* 选中开柜后停掉发光呼吸，避免与 .opening / fbc-override 动画打架 */
+  .locker-slot.tagged-good.opening,
+  .locker-slot.tagged-bad.opening {
+    animation: locker-flash .55s ease-out forwards;
+  }
+  .locker-slot.tagged-good.fbc-override,
+  .locker-slot.tagged-bad.fbc-override {
+    animation: locker-fbc-stamp .8s ease-out forwards;
+  }
 
-  @media (max-width: 400px) {
-    .card-hand { gap: 10px; }
-    .card-slot { width: 95px; height: 142px; }
-    .card-front__glyph { font-size: 1.8rem; }
-    .card-front__name { font-size: .72rem; }
+  .locker-countdown {
+    position: relative;
+    width: 280px;
+    margin-top: .35rem;
+  }
+  .locker-countdown__bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(80,80,80,.5);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .locker-countdown__fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f5c800 0%, #c8d0d8 50%, #f5c800 100%);
+    width: 100%;
+    transform-origin: left center;
+    transition: transform .12s linear;
+  }
+  .locker-countdown.panic .locker-countdown__fill {
+    background: linear-gradient(90deg, #d42020 0%, #a01515 100%);
+    animation: countdown-panic .35s ease-in-out infinite;
+  }
+  @keyframes countdown-panic {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.55; }
+  }
+  .locker-countdown__label {
+    font-family: 'Courier New', monospace;
+    font-size: .5rem;   /* 8px min */
+    letter-spacing: .22em;
+    color: #6b7580;
+    text-align: center;
+    margin-top: .35rem;
+  }
+
+  @media (max-width: 460px) {
+    .locker-grid { gap: 10px; }
+    .locker-slot { width: 92px; height: 128px; }
+    .locker-slot__id { font-size: 1.65rem; }
+    .locker-overlay__title { font-size: .9rem; }
+  }
+
+  /* =======================================================
+   * 货舱清点（manifest）逐项揭露条 —— v0.06 起被全屏翻页 overlay 取代，
+   * 保留 .manifest-strip / .manifest-row 选择器仅用于历史兼容（DOM 已隐藏）。
+   * ======================================================= */
+  .manifest-strip {
+    display: none;
+  }
+  .manifest-strip--legacy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: stretch;
+    pointer-events: none;
+    margin-top: 6px;
+  }
+  .manifest-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+    padding: 4px 8px;
+    background: rgba(15, 15, 15, .72);
+    border-left: 2px solid #4a4a4a;
+    font-family: 'Courier New', monospace;
+    font-size: .5rem;
+    letter-spacing: .08em;
+    color: #6b7580;
+    opacity: 0;
+    transform: translateX(-6px);
+    transition: opacity .28s ease, transform .28s ease, color .28s ease, border-color .28s ease;
+  }
+  .manifest-row.revealed { opacity: 1; transform: translateX(0); }
+  .manifest-row.gain { color: #cfeed7; border-left-color: #4ade80; }
+  .manifest-row.loss { color: #f4c8c4; border-left-color: #d42020; }
+  .manifest-row__name { white-space: nowrap; }
+  /* FBC 编码（如 FBC-A02）是内部代码，玩家无需解读 —— 直接隐藏 */
+  .manifest-row__tag  { display: none; }
+  .manifest-row__delta {
+    font-family: 'VT323', monospace;
+    font-size: .72rem;
+    letter-spacing: .04em;
+  }
+  .manifest-row.gain .manifest-row__delta { color: #b8f5c8; }
+  .manifest-row.loss .manifest-row__delta { color: #f87171; }
+
+  /* =======================================================
+   * 货舱清点 · 全屏翻页 overlay
+   * ======================================================= */
+  .manifest-reveal-overlay {
+    position: fixed; inset: 0; z-index: 360;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 50%, rgba(60,40,10,.18) 0%, rgba(0,0,0,.92) 60%),
+      rgba(0,0,0,.94);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    opacity: 0; pointer-events: none;
+    transition: opacity .22s ease;
+  }
+  .manifest-reveal-overlay.active {
+    opacity: 1; pointer-events: all;
+  }
+  .manifest-reveal-overlay__head {
+    position: absolute; top: 6%; left: 0; right: 0;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    font-family: 'Courier New', monospace;
+  }
+  .manifest-reveal-overlay__class {
+    font-size: .58rem;
+    color: rgba(200, 140, 130, 0.9);
+    letter-spacing: .26em;
+    text-transform: uppercase;
+  }
+  .manifest-reveal-overlay__lot {
+    font-family: 'VT323', monospace;
+    font-size: .92rem;
+    color: #c8d0d8;
+    letter-spacing: .14em;
+  }
+  .manifest-reveal-overlay__page {
+    font-size: .5rem;   /* 8px min */
+    color: #6b7580;
+    letter-spacing: .22em;
+  }
+  .manifest-reveal-stage {
+    perspective: 1200px;
+    width: 280px;
+    height: 360px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .manifest-card {
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transform: rotateY(-92deg) translateY(8px);
+    opacity: 0;
+    transition:
+      transform .42s cubic-bezier(.34,1.2,.64,1),
+      opacity .28s ease;
+  }
+  .manifest-card.entering {
+    transform: rotateY(0deg) translateY(0);
+    opacity: 1;
+  }
+  .manifest-card.exiting {
+    transform: rotateY(92deg) translateY(-6px);
+    opacity: 0;
+    transition:
+      transform .26s cubic-bezier(.4,0,.7,.2),
+      opacity .22s ease;
+  }
+  .manifest-card__shell {
+    position: relative;
+    width: 100%; height: 100%;
+    background:
+      linear-gradient(180deg, #1f1f1f 0%, #141414 50%, #0e0e0e 100%);
+    border: 1px solid #3d3d3d;
+    box-shadow:
+      inset 0 0 30px rgba(0,0,0,.65),
+      inset 0 0 0 2px rgba(0,0,0,.4),
+      0 0 22px rgba(248,165,155,.06),
+      0 16px 48px rgba(0,0,0,.6);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    padding: 30px 22px 26px;
+    overflow: hidden;
+  }
+  .manifest-card__shell::before {
+    content: "";
+    position: absolute; inset: 6px;
+    border: 1px dashed rgba(200,130,115,.18);
+    pointer-events: none;
+  }
+  .manifest-card__corner {
+    position: absolute; width: 14px; height: 14px;
+    border: 2px solid rgba(200, 130, 115, 0.7);
+    opacity: .85;
+  }
+  .manifest-card__corner--tl { top: 8px; left: 8px;  border-right: none; border-bottom: none; }
+  .manifest-card__corner--tr { top: 8px; right: 8px; border-left: none;  border-bottom: none; }
+  .manifest-card__corner--bl { bottom: 8px; left: 8px;  border-right: none; border-top: none; }
+  .manifest-card__corner--br { bottom: 8px; right: 8px; border-left: none;  border-top: none; }
+
+  /* 中心货箱：占位位图 + 极性色温辉光叠层
+   * 后期：替换 crate-placeholder.png 即可；尺寸/排版完全由容器决定，位图按 contain 适配 */
+  .manifest-card__crate {
+    position: relative;
+    width: 168px; height: 132px;
+    margin-top: 14px;
+    /* 占位位图本身就是货箱，不需要金属边框 */
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+  .manifest-card__crate-img {
+    position: relative; z-index: 1;
+    display: block;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    object-position: center bottom;
+    pointer-events: none;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,.55))
+            drop-shadow(0 0 6px var(--card-glow-soft, rgba(245,200,0,.20)));
+    transition: filter .35s ease;
+  }
+  /* 色温 overlay：从位图中部向上散开，模拟开盖辉光 */
+  .manifest-card__crate-glow {
+    position: absolute;
+    z-index: 2;
+    top: -6px; left: 50%; transform: translateX(-50%);
+    width: 78%; height: 70%;
+    border-radius: 50% 50% 32% 32% / 60% 60% 30% 30%;
+    background:
+      radial-gradient(ellipse 78% 64% at 50% 38%,
+        var(--card-glow, rgba(245,200,0,.65)) 0%,
+        var(--card-glow-mid, rgba(245,200,0,.20)) 45%,
+        transparent 80%);
+    filter: blur(4px);
+    mix-blend-mode: screen;
+    opacity: .85;
+    pointer-events: none;
+    animation: manifest-card-glow 1.6s ease-in-out infinite;
+  }
+  @keyframes manifest-card-glow {
+    0%, 100% { opacity: .85; transform: translateX(-50%) scale(1); }
+    50%      { opacity: 1;   transform: translateX(-50%) scale(1.06); }
+  }
+
+  /* 极性着色 */
+  .manifest-card[data-polarity="gain"] {
+    --card-glow:      rgba(255, 210, 80, .85);
+    --card-glow-mid:  rgba(255, 180, 40, .35);
+    --card-glow-soft: rgba(255, 200, 60, .30);
+  }
+  .manifest-card[data-polarity="gain"] .manifest-card__shell {
+    box-shadow:
+      inset 0 0 32px rgba(245,200,0,.18),
+      inset 0 0 0 2px rgba(0,0,0,.4),
+      0 0 28px rgba(245,200,0,.30),
+      0 16px 48px rgba(0,0,0,.6);
+  }
+  .manifest-card[data-polarity="loss"] {
+    --card-glow:      rgba(255, 80, 80, .80);
+    --card-glow-mid:  rgba(212, 32, 32, .30);
+    --card-glow-soft: rgba(212, 32, 32, .35);
+  }
+  .manifest-card[data-polarity="loss"] .manifest-card__shell {
+    box-shadow:
+      inset 0 0 32px rgba(212,32,32,.18),
+      inset 0 0 0 2px rgba(0,0,0,.4),
+      0 0 28px rgba(212,32,32,.30),
+      0 16px 48px rgba(0,0,0,.6);
+  }
+  .manifest-card[data-polarity="loss"] .manifest-card__corner { border-color: #ff4d4d; opacity: .85; }
+  /* 红色凶光：位图染上一层冷红光 */
+  .manifest-card[data-polarity="loss"] .manifest-card__crate-img {
+    filter:
+      drop-shadow(0 6px 14px rgba(0,0,0,.55))
+      drop-shadow(0 0 8px rgba(212,32,32,.45))
+      hue-rotate(-22deg)
+      saturate(1.05);
+  }
+  .manifest-card[data-polarity="neutral"] {
+    --card-glow:      rgba(150, 170, 190, .55);
+    --card-glow-mid:  rgba(150, 170, 190, .18);
+    --card-glow-soft: rgba(150, 170, 190, .20);
+  }
+  .manifest-card[data-polarity="neutral"] .manifest-card__crate-img {
+    filter:
+      drop-shadow(0 6px 14px rgba(0,0,0,.55))
+      drop-shadow(0 0 6px rgba(150,170,190,.20))
+      saturate(.55);
+  }
+
+  .manifest-card__meta {
+    margin-top: 22px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  /* 货舱清点卡 FBC 代码标签：仅做 badge 装饰，字号提到 8px 底线 */
+  .manifest-card__tag {
+    font-family: 'Courier New', monospace;
+    font-size: .5rem;   /* 8px min */
+    letter-spacing: .2em;
+    color: #6b7580;
+    text-transform: uppercase;
+  }
+  .manifest-card__name {
+    font-family: 'VT323', monospace;
+    font-size: 1.12rem;
+    letter-spacing: .14em;
+    color: #c8d0d8;
+    text-shadow: 0 0 6px rgba(0,0,0,.85);
+  }
+  .manifest-card__delta {
+    margin-top: 14px;
+    font-family: 'VT323', monospace;
+    font-size: 1.84rem;
+    letter-spacing: .04em;
+    color: #c8d0d8;
+    text-shadow: 0 0 8px rgba(0,0,0,.85);
+  }
+  .manifest-card[data-polarity="gain"] .manifest-card__delta { color: #ffd24d; text-shadow: 0 0 12px rgba(255,200,40,.55); }
+  .manifest-card[data-polarity="loss"] .manifest-card__delta { color: #ff5a5a; text-shadow: 0 0 12px rgba(212,32,32,.55); }
+  .manifest-card[data-polarity="neutral"] .manifest-card__delta { color: #a8b0b8; }
+
+  .manifest-reveal-overlay__foot {
+    position: absolute; bottom: 7%; left: 0; right: 0;
+    display: flex; justify-content: center;
+  }
+  .manifest-reveal-overlay__hint {
+    font-family: 'Courier New', monospace;
+    font-size: .5rem;
+    color: #6b7580;
+    letter-spacing: .26em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 460px) {
+    .manifest-reveal-stage { width: 240px; height: 320px; }
+    .manifest-card__crate  { width: 144px; height: 116px; }
+    .manifest-card__name   { font-size: .96rem; }
+    .manifest-card__delta  { font-size: 1.6rem; }
   }
 
   /* =======================================================
@@ -575,7 +938,7 @@
 
   .stage__subtitle {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.42rem, 1.9vw, 0.54rem);
+    font-size: clamp(0.5rem, 1.9vw, 0.6rem);  /* 8px min */
     letter-spacing: 0.12em;
     text-transform: none;
     color: var(--bureau-white-dim); text-align: right;
@@ -593,7 +956,7 @@
     min-width: 0;
   }
 
-  /* BGM 降维开关 ---------------------------------------------- */
+  /* BGM 两态开关：开启 / 关闭（仅控制背景音乐，事件 / 操作 SFX 始终保留） ---- */
   .bgm-toggle {
     display: flex;
     align-items: center;
@@ -606,7 +969,7 @@
     cursor: pointer;
     color: #c4aea6;
     opacity: 0.5;
-    transition: opacity 0.16s ease;
+    transition: opacity 0.16s ease, color 0.16s ease, transform 0.12s ease;
     flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
     outline: none;
@@ -615,6 +978,10 @@
   .bgm-toggle:focus-visible {
     opacity: 0.9;
   }
+  .bgm-toggle:active { transform: scale(0.92); }
+  .bgm-toggle[data-bgm-mode="off"]  { color: #b8635a; opacity: 0.78; }
+  .bgm-toggle[data-bgm-mode="off"]:hover,
+  .bgm-toggle[data-bgm-mode="off"]:focus-visible { opacity: 1; }
   .bgm-toggle svg {
     display: block;
     width: 15px;
@@ -626,6 +993,246 @@
     stroke-linejoin: round;
     overflow: visible;
     shape-rendering: geometricPrecision;
+  }
+  .bgm-toggle .bgm-toggle__mute-x { stroke-width: 1.8; }
+
+  /* =======================================================
+   * 右上角菜单按钮（规则 / 战绩档案）
+   * ======================================================= */
+  .fbc-menu-btn {
+    --bar-color: #c4aea6;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    width: 24px; height: 24px;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.16s ease, transform 0.12s ease;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+  }
+  .fbc-menu-btn:hover,
+  .fbc-menu-btn:focus-visible { opacity: 0.95; }
+  .fbc-menu-btn:active { transform: scale(0.92); }
+  .fbc-menu-btn[aria-expanded="true"] { opacity: 1; --bar-color: #f8a59b; }
+  .fbc-menu-btn__bar {
+    display: block;
+    width: 16px; height: 1.6px;
+    background: var(--bar-color);
+    border-radius: 1px;
+    transition: background 0.16s ease, transform 0.18s ease, opacity 0.18s ease;
+  }
+  .fbc-menu-btn[aria-expanded="true"] .fbc-menu-btn__bar:nth-child(1) {
+    transform: translateY(4.6px) rotate(45deg);
+  }
+  .fbc-menu-btn[aria-expanded="true"] .fbc-menu-btn__bar:nth-child(2) {
+    opacity: 0;
+  }
+  .fbc-menu-btn[aria-expanded="true"] .fbc-menu-btn__bar:nth-child(3) {
+    transform: translateY(-4.6px) rotate(-45deg);
+  }
+
+  /* =======================================================
+   * 菜单弹窗（FBC · 规则 / 战绩档案）
+   * ======================================================= */
+  .fbc-menu-overlay {
+    position: fixed; inset: 0; z-index: 9000;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, .82);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    opacity: 0; pointer-events: none;
+    transition: opacity .22s ease;
+  }
+  .fbc-menu-overlay.active { opacity: 1; pointer-events: all; }
+
+  .fbc-menu-panel {
+    position: relative;
+    width: min(420px, 92vw);
+    max-height: 86vh;
+    background:
+      linear-gradient(180deg, #161616 0%, #0d0d0d 100%);
+    border: 1px solid rgba(140, 65, 55, 0.45);
+    box-shadow:
+      inset 0 0 0 1px rgba(0,0,0,.5),
+      0 14px 48px rgba(0,0,0,.7),
+      0 0 22px rgba(248,165,155,.05);
+    display: flex; flex-direction: column;
+    transform: translateY(8px) scale(.985);
+    opacity: 0;
+    transition: transform .22s cubic-bezier(.34,1.2,.64,1), opacity .22s ease;
+  }
+  .fbc-menu-overlay.active .fbc-menu-panel {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  .fbc-menu-panel__corner {
+    position: absolute; width: 12px; height: 12px;
+    border: 2px solid rgba(200, 130, 115, 0.6); opacity: .85;
+  }
+  .fbc-menu-panel__corner--tl { top: 6px; left: 6px;  border-right: none; border-bottom: none; }
+  .fbc-menu-panel__corner--tr { top: 6px; right: 6px; border-left: none;  border-bottom: none; }
+  .fbc-menu-panel__corner--bl { bottom: 6px; left: 6px;  border-right: none; border-top: none; }
+  .fbc-menu-panel__corner--br { bottom: 6px; right: 6px; border-left: none;  border-top: none; }
+
+  .fbc-menu-panel__header {
+    padding: 14px 18px 8px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(140, 65, 55, 0.3);
+  }
+  .fbc-menu-panel__class {
+    font-family: 'Courier New', monospace;
+    font-size: .54rem;
+    color: rgba(200, 140, 130, 0.9);
+    letter-spacing: .26em;
+    text-transform: uppercase;
+  }
+  .fbc-menu-panel__close {
+    width: 24px; height: 24px;
+    background: none; border: none; cursor: pointer;
+    color: #c8d0d8;
+    font-family: 'Courier New', monospace;
+    font-size: .9rem; line-height: 1;
+    opacity: .6; padding: 0;
+    transition: opacity .16s ease, transform .12s ease;
+  }
+  .fbc-menu-panel__close:hover,
+  .fbc-menu-panel__close:focus-visible { opacity: 1; }
+  .fbc-menu-panel__close:active { transform: scale(.92); }
+
+  .fbc-menu-panel__tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(60, 30, 28, 0.8);
+  }
+  .fbc-menu-tab {
+    flex: 1;
+    padding: 10px 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-size: .56rem;
+    color: #6b7580;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+    transition: color .16s ease, border-color .16s ease, background .16s ease;
+  }
+  .fbc-menu-tab:hover { color: #c8d0d8; background: rgba(248,165,155,.04); }
+  .fbc-menu-tab[aria-selected="true"] {
+    color: #f8a59b;
+    border-bottom-color: #f8a59b;
+    background: rgba(248,165,155,.06);
+  }
+
+  .fbc-menu-panel__body {
+    overflow-y: auto;
+    padding: 14px 18px 18px;
+    flex: 1;
+  }
+  .fbc-menu-page { display: none; }
+  .fbc-menu-page.active { display: block; }
+
+  /* === 规则页 === */
+  .fbc-rules-section {
+    margin-bottom: 14px;
+  }
+  .fbc-rules-section__title {
+    font-family: 'VT323', monospace;
+    font-size: .92rem;
+    color: #c8d0d8;
+    letter-spacing: .14em;
+    margin: 0 0 6px;
+    border-left: 3px solid rgba(200, 130, 115, 0.7);
+    padding-left: 8px;
+  }
+  .fbc-rules-section__body {
+    font-family: 'Courier New', monospace;
+    font-size: .58rem;
+    color: #a8b0b8;
+    line-height: 1.65;
+    letter-spacing: .04em;
+    margin: 0;
+  }
+  .fbc-rules-section__body strong { color: #f8a59b; font-weight: normal; }
+  .fbc-rules-section__body em     { color: #f87171; font-style: normal; }
+
+  /* === 战绩页 === */
+  .fbc-career-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 10px;
+    margin-bottom: 14px;
+  }
+  .fbc-career-cell {
+    background: rgba(255,255,255,.02);
+    border: 1px solid rgba(60, 30, 28, 0.7);
+    padding: 10px 10px 8px;
+    position: relative;
+  }
+  .fbc-career-cell__label {
+    font-family: 'Courier New', monospace;
+    font-size: .5rem;
+    color: #6b7580;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .fbc-career-cell__value {
+    font-family: 'VT323', monospace;
+    font-size: 1.2rem;
+    color: #c8d0d8;
+    letter-spacing: .04em;
+    line-height: 1;
+  }
+  .fbc-career-cell--accent .fbc-career-cell__value { color: #f8a59b; }
+  .fbc-career-cell--warn   .fbc-career-cell__value { color: #ff5a5a; }
+
+  .fbc-career-eval {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: rgba(248,165,155,.04);
+    border-left: 2px solid rgba(200, 130, 115, 0.55);
+    font-family: 'Courier New', monospace;
+    font-size: .56rem;
+    color: #c8d0d8;
+    letter-spacing: .04em;
+    line-height: 1.65;
+  }
+  .fbc-career-empty {
+    text-align: center;
+    color: #4a4a4a;
+    font-family: 'Courier New', monospace;
+    font-size: .54rem;
+    letter-spacing: .14em;
+    padding: 22px 0;
+  }
+  .fbc-career-reset {
+    margin-top: 14px;
+    width: 100%;
+    padding: 8px 0;
+    background: rgba(212,32,32,.06);
+    border: 1px solid #5a0a0a;
+    color: #ff7b6b;
+    font-family: 'Courier New', monospace;
+    font-size: .54rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background .16s ease, color .16s ease;
+  }
+  .fbc-career-reset:hover { background: rgba(212,32,32,.14); color: #ffaaa3; }
+
+  @media (max-width: 460px) {
+    .fbc-menu-panel { width: 94vw; }
+    .fbc-menu-tab { font-size: .5rem; padding: 9px 4px; letter-spacing: .14em; }
+    .fbc-rules-section__body, .fbc-career-cell__label { font-size: .52rem; }
   }
 
   /* =======================================================
@@ -794,7 +1401,7 @@
   .hud__mission-line {
     margin: 0;
     font-family: "Inter", system-ui, -apple-system, "PingFang SC", sans-serif;
-    font-size: clamp(0.42rem, 1.85vw, 0.56rem);
+    font-size: clamp(0.5rem, 1.85vw, 0.6rem);  /* 8px min */
     font-weight: 700;
     letter-spacing: 0.06em;
     line-height: 1.45;
@@ -1732,14 +2339,15 @@
     border-left-color: rgba(200, 50, 50, 0.85);
   }
 
-  /* 委员会边缘碎闪（主舞台四角感） */
+  /* 委员会边缘碎闪（主舞台四角感）
+   * 纯氛围文字，不传递信息；提升到 8px 底线，仍保持低对比 */
   .committee-edge {
     position: absolute;
     z-index: 199;
     max-width: 42%;
     pointer-events: none;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.3rem, 2.2vw, 0.4rem);
+    font-size: clamp(0.5rem, 2.2vw, 0.6rem);  /* 8px min */
     line-height: 1.45;
     letter-spacing: 0.1em;
     color: rgba(255, 100, 90, 0.42);
@@ -1849,7 +2457,7 @@
   }
   .hud__net-asset__label {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.38rem, 1.5vw, 0.48rem);
+    font-size: clamp(0.5rem, 1.5vw, 0.56rem);  /* 8px min */
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: rgba(248, 165, 155, 0.32);
@@ -1966,7 +2574,7 @@
   }
   .debt-warning__stamp {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.34rem, 1.6vw, 0.42rem);
+    font-size: clamp(0.5rem, 1.6vw, 0.58rem);  /* 8px min，原 0.34rem */
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: rgba(160, 120, 110, 0.4);
@@ -2054,11 +2662,12 @@
   .result-overlay__liquidation-notice strong {
     color: rgba(210, 130, 118, 0.9);
   }
+  /* 清算印章：纯装饰低对比文字，但仍提到 8px 底线 */
   .result-overlay__liquidation-seal {
     display: block;
     text-align: right;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.36rem, 1.6vw, 0.44rem);
+    font-size: clamp(0.5rem, 1.6vw, 0.56rem);  /* 8px min */
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: rgba(140, 70, 60, 0.4);
@@ -2229,7 +2838,7 @@
   .result-overlay__badge {
     display: block;
     font-family: "Courier New", monospace;
-    font-size: 0.42rem;
+    font-size: 0.5rem;  /* 8px min */
     letter-spacing: 0.28em;
     text-transform: uppercase;
     color: rgba(110, 118, 128, 0.75);
@@ -2405,7 +3014,7 @@
     padding-top: 0.65rem;
     border-top: 1px solid #151515;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.34rem, 1.65vw, 0.42rem);
+    font-size: clamp(0.5rem, 1.65vw, 0.56rem);  /* 8px min，原 0.34rem */
     letter-spacing: 0.04em;
     color: rgba(82, 86, 92, 0.75);
   }
@@ -2789,7 +3398,7 @@
   }
   .safe-node__trap-hint {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.38rem, 1.75vw, 0.46rem);
+    font-size: clamp(0.5rem, 1.75vw, 0.6rem);  /* 8px min */
     letter-spacing: 0.06em;
     color: rgba(110, 150, 125, 0.45);
     text-align: center;
@@ -2895,7 +3504,7 @@
   }
   .risk-auth-panel__clause {
     margin-top: 0.4rem;
-    font-size: clamp(0.38rem, 1.7vw, 0.45rem);
+    font-size: clamp(0.5rem, 1.7vw, 0.58rem);  /* 8px min */
     letter-spacing: 0.04em;
     color: rgba(140, 100, 90, 0.65);
     font-style: italic;
@@ -3212,9 +3821,13 @@
     transition: opacity 0.6s ease;
   }
   .fbc-career-stats.visible { opacity: 1; }
+  /* 授权面板内的生涯档案小字：战绩已移入右上角 ≡ 菜单可查，此处隐藏减少视觉噪声 */
+  .fbc-career-stats {
+    display: none !important;
+  }
   .fbc-career-stats__line {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.38rem, 1.6vw, 0.48rem);
+    font-size: clamp(0.5rem, 1.6vw, 0.56rem);  /* 8px min */
     letter-spacing: 0.1em;
     color: rgba(220, 215, 210, 0.32);
     white-space: nowrap;
@@ -3314,7 +3927,7 @@
   }
   .preset-btn__lv {
     display: block;
-    font-size: clamp(0.36rem, 1.5vw, 0.44rem);
+    font-size: clamp(0.5rem, 1.5vw, 0.56rem);  /* 8px min，原 0.36rem */
     font-weight: 500;
     letter-spacing: 0.12em;
     color: rgba(150, 135, 125, 0.55);
@@ -3345,7 +3958,7 @@
     animation: hud-scramble-flicker .12s steps(1) infinite;
   }
   .deploy-panel__status.deploy-panel__status--seal {
-    font-size: clamp(0.38rem, 2.2vw, 0.48rem);
+    font-size: clamp(0.5rem, 2.2vw, 0.56rem);  /* 8px min */
     letter-spacing: 0.12em;
     line-height: 1.55;
     max-width: 100%;
@@ -3467,7 +4080,7 @@
   .deploy-panel__btn--decline {
     min-height: auto;
     padding: 0.52rem 0.5rem;
-    font-size: clamp(0.46rem, 1.9vw, 0.55rem);
+    font-size: clamp(0.5rem, 1.9vw, 0.58rem);  /* 8px min */
     letter-spacing: 0.1em;
     text-transform: none;
     color: rgba(130, 120, 115, 0.7);
@@ -4058,14 +4671,14 @@
     text-transform: uppercase;
   }
   .metal-btn__sub {
-    font-size: clamp(0.32rem, 1.5vw, 0.4rem);
-    letter-spacing: 0.12em;
+    font-size: clamp(0.5rem, 1.5vw, 0.56rem);  /* 8px min，原 0.32rem */
+    letter-spacing: 0.1em;
     opacity: 0.45;
     margin-top: 0.15em;
     text-transform: uppercase;
   }
   .metal-btn__label--compact {
-    font-size: clamp(0.36rem, 1.85vw, 0.5rem);
+    font-size: clamp(0.5rem, 1.85vw, 0.58rem);  /* 8px min，原 0.36rem */
     letter-spacing: 0.06em;
     line-height: 1.15;
     text-align: center;
@@ -4740,7 +5353,7 @@
   .passenger__label {
     position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
     font-family: "Courier New", monospace;
-    font-size: .42rem; letter-spacing: .18em; text-transform: uppercase;
+    font-size: .5rem; letter-spacing: .14em; text-transform: uppercase;  /* 8px min */
     padding: .15rem .5rem; white-space: nowrap;
     border: 1px solid; opacity: 0;
     transition: opacity .35s ease;
@@ -4889,7 +5502,7 @@
       --hud-readout-main-size: clamp(1.1rem, 5.4vw, 1.48rem);
     }
     .hud__readout-label {
-      font-size: clamp(0.4rem, 1.85vw, 0.54rem);
+      font-size: clamp(0.5rem, 1.85vw, 0.56rem);  /* 8px min */
     }
     #asset-counter.hud__asset-counter {
       max-width: none;
@@ -4907,10 +5520,10 @@
       gap: 0.3rem;
     }
     .corruption-meter__label {
-      font-size: clamp(0.38rem, 2.2vw, 0.48rem);
+      font-size: clamp(0.5rem, 2.2vw, 0.56rem);  /* 8px min */
     }
     .corruption-meter__value {
-      font-size: clamp(0.42rem, 2.4vw, 0.52rem);
+      font-size: clamp(0.5rem, 2.4vw, 0.58rem);  /* 8px min */
     }
 
     /* ── 标题栏 ── */
@@ -4923,7 +5536,7 @@
       letter-spacing: 0.15em;
     }
     .stage__subtitle {
-      font-size: clamp(0.36rem, 2.1vw, 0.46rem);
+      font-size: clamp(0.5rem, 2.1vw, 0.58rem);  /* 8px min */
     }
 
     /* ── 井道占满竖向空间 ── */
@@ -4952,10 +5565,10 @@
       right: var(--car-core-inset-x);
     }
     .metal-btn__label {
-      font-size: clamp(0.46rem, 2.8vw, 0.58rem);
+      font-size: clamp(0.48rem, 2.8vw, 0.6rem);
     }
     .metal-btn__sub {
-      font-size: clamp(0.3rem, 1.8vw, 0.38rem);
+      font-size: clamp(0.5rem, 1.8vw, 0.56rem);  /* 8px min */
     }
 
     /* ── 委员会低语条 ── */
@@ -4965,10 +5578,10 @@
       margin-top: 0.15rem;
     }
     .committee-bar__prefix {
-      font-size: clamp(0.36rem, 2vw, 0.44rem);
+      font-size: clamp(0.5rem, 2vw, 0.54rem);  /* 8px min */
     }
     .committee-bar__text {
-      font-size: clamp(0.42rem, 2.6vw, 0.54rem);
+      font-size: clamp(0.5rem, 2.6vw, 0.58rem);  /* 8px min */
     }
 
     /* ── 结果文本适配 ── */
@@ -5019,7 +5632,7 @@
       min-height: 44px;
     }
     .result-overlay__footer {
-      font-size: clamp(0.32rem, 1.5vw, 0.4rem);
+      font-size: clamp(0.5rem, 1.5vw, 0.56rem);  /* 8px min */
     }
 
     /* ── 授权面板（移动端触控目标 ≥44px，安全区由外层已处理） ── */
@@ -5087,7 +5700,7 @@
 
     /* ── 乘客标签 ── */
     .passenger__label {
-      font-size: clamp(0.34rem, 2.2vw, 0.42rem);
+      font-size: clamp(0.5rem, 2.2vw, 0.58rem);  /* 8px min */
     }
 
     /* ── 状态坞 ── */
@@ -5128,7 +5741,7 @@
       font-size: clamp(0.54rem, 3.05vw, 0.72rem);
     }
     .metal-btn__sub {
-      font-size: clamp(0.34rem, 2vw, 0.44rem);
+      font-size: clamp(0.5rem, 2vw, 0.56rem);  /* 8px min */
     }
     .deploy-panel__title {
       font-size: clamp(0.82rem, 4.6vw, 1.05rem);
@@ -5543,7 +6156,7 @@
 <div id="flash-overlay" aria-hidden="true"></div>
 
 <!-- 背景音乐：与 AudioEngine.ASSET_PATHS.BGM_MAIN_LOOP 同路径；循环播，首次授权时开始 -->
-<audio id="theme-bgm" src="assets/audio/bgm/main-loop.mp3" loop preload="auto" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none" aria-hidden="true"></audio>
+<audio id="theme-bgm" src="assets/audio/bgm/main-loop3.mp3" loop preload="auto" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none" aria-hidden="true"></audio>
 
 <!--
   全局主要操作入口（与首次访问说明、无障碍标签对应）：
@@ -5595,12 +6208,124 @@
   </div>
 </div>
 
-<!-- ===== 卡牌选取界面 ===== -->
-<div id="card-selection-overlay" aria-hidden="true">
-  <div class="card-figure card-figure--placeholder" id="card-figure" aria-label="灵异人物"></div>
-  <div class="card-prompt">选一张身份卡</div>
-  <div class="card-hand" id="card-hand"></div>
-  <div class="card-result-bar" id="card-result-bar"></div>
+<!-- ===== 封存货舱选盘界面 ===== -->
+<div id="locker-selection-overlay" aria-hidden="true" role="dialog" aria-label="选择货舱">
+  <span class="locker-overlay__classification" id="locker-overlay-classification">FBC · 封存货舱 · 待开启</span>
+  <h2 class="locker-overlay__title" id="locker-overlay-title">选一只货舱开启</h2>
+  <p class="locker-overlay__subtitle" id="locker-overlay-subtitle">超时未选 · 由委员会代决议自动开柜</p>
+  <div class="locker-overlay__hint" id="locker-overlay-hint" aria-live="polite"></div>
+  <div class="locker-grid" id="locker-grid"></div>
+  <div class="locker-countdown" id="locker-countdown">
+    <div class="locker-countdown__bar"><div class="locker-countdown__fill" id="locker-countdown-fill"></div></div>
+    <div class="locker-countdown__label" id="locker-countdown-label">FBC · 倒计时</div>
+  </div>
+</div>
+
+<!-- ===== 货舱清点全屏翻页 ===== -->
+<div id="manifest-reveal-overlay" class="manifest-reveal-overlay" aria-hidden="true" role="dialog" aria-label="货舱清点">
+  <div class="manifest-reveal-overlay__head">
+    <span class="manifest-reveal-overlay__class">FBC · 货舱清点</span>
+    <span class="manifest-reveal-overlay__lot"  id="manifest-reveal-lot">LOT —</span>
+    <span class="manifest-reveal-overlay__page" id="manifest-reveal-page">01 / 03</span>
+  </div>
+  <div class="manifest-reveal-stage">
+    <div class="manifest-card" id="manifest-card" data-polarity="neutral">
+      <div class="manifest-card__shell">
+        <span class="manifest-card__corner manifest-card__corner--tl" aria-hidden="true"></span>
+        <span class="manifest-card__corner manifest-card__corner--tr" aria-hidden="true"></span>
+        <span class="manifest-card__corner manifest-card__corner--bl" aria-hidden="true"></span>
+        <span class="manifest-card__corner manifest-card__corner--br" aria-hidden="true"></span>
+        <div class="manifest-card__crate" aria-hidden="true">
+          <!--
+            占位位图：assets/manifest/crate-placeholder.png（图3 金条货箱）。
+            后期补充 polarity 专属位图时，可替换为：
+              gain    -> assets/manifest/crate-gain.png
+              loss    -> assets/manifest/crate-loss.png
+              neutral -> assets/manifest/crate-neutral.png
+            JS 会按 manifestCardEl.dataset.polarity 切换 src（见 runManifestReveal）。
+          -->
+          <img class="manifest-card__crate-img" id="manifest-card-img"
+               src="assets/manifest/crate-placeholder.png" alt="">
+          <div class="manifest-card__crate-glow"></div>
+        </div>
+        <div class="manifest-card__meta">
+          <span class="manifest-card__tag"  id="manifest-card-tag">FBC-—</span>
+          <span class="manifest-card__name" id="manifest-card-name">未登记物品</span>
+        </div>
+        <div class="manifest-card__delta" id="manifest-card-delta">—</div>
+      </div>
+    </div>
+  </div>
+  <!-- "清点中..." 提示属于自明信息，已移除；overlay 自带 class 标头已足够 -->
+</div>
+
+<!-- ===== FBC · 规则 / 战绩 菜单弹窗 ===== -->
+<div id="fbc-menu-overlay" class="fbc-menu-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="fbc-menu-title">
+  <div class="fbc-menu-panel" role="document">
+    <span class="fbc-menu-panel__corner fbc-menu-panel__corner--tl" aria-hidden="true"></span>
+    <span class="fbc-menu-panel__corner fbc-menu-panel__corner--tr" aria-hidden="true"></span>
+    <span class="fbc-menu-panel__corner fbc-menu-panel__corner--bl" aria-hidden="true"></span>
+    <span class="fbc-menu-panel__corner fbc-menu-panel__corner--br" aria-hidden="true"></span>
+
+    <div class="fbc-menu-panel__header">
+      <span class="fbc-menu-panel__class" id="fbc-menu-title">FBC · 探测员手册</span>
+      <button type="button" class="fbc-menu-panel__close" id="fbc-menu-close" aria-label="关闭菜单">×</button>
+    </div>
+
+    <div class="fbc-menu-panel__tabs" role="tablist">
+      <button type="button" class="fbc-menu-tab" id="fbc-menu-tab-rules"  role="tab" aria-selected="true"  aria-controls="fbc-menu-page-rules">规则</button>
+      <button type="button" class="fbc-menu-tab" id="fbc-menu-tab-career" role="tab" aria-selected="false" aria-controls="fbc-menu-page-career">战绩</button>
+    </div>
+
+    <div class="fbc-menu-panel__body">
+      <!-- 规则页 -->
+      <section class="fbc-menu-page active" id="fbc-menu-page-rules" role="tabpanel" aria-labelledby="fbc-menu-tab-rules">
+        <div class="fbc-rules-section">
+          <h3 class="fbc-rules-section__title">核心循环</h3>
+          <p class="fbc-rules-section__body">
+            按 <strong>启动电梯</strong> 上行，每层从 2~4 只 <strong>封存货舱</strong> 中
+            <strong>限时选一只开启</strong>，结算账面变动；倒计时归零未选则由
+            <em>FBC 委员会代决议</em>，账面按折扣留存并加记<em>偏移指数</em>。
+          </p>
+        </div>
+        <div class="fbc-rules-section">
+          <h3 class="fbc-rules-section__title">货舱选择</h3>
+          <p class="fbc-rules-section__body">
+            柜门编号随机；<strong>情报员</strong>上车后会标记一只「<span style="color:#4ade80">INTEL ✓</span>」或
+            「<span style="color:#ff5a5a">WARN !</span>」柜门，<em>但情报员可能撒谎</em>。
+            <strong>清扫员</strong>会抹去本层一半痕迹；<strong>VIP</strong> 加快决策；
+            <strong>研究员 / 希斯实体</strong> 让读数发抖。
+          </p>
+        </div>
+        <div class="fbc-rules-section">
+          <h3 class="fbc-rules-section__title">货舱清点</h3>
+          <p class="fbc-rules-section__body">
+            选中柜门后，本层结算会被拆成 <strong>3 件子产物</strong> 逐张登记；
+            金黄发光为正向、红光为损失、灰白为中性。看清楚最末一张的总账面变动。
+          </p>
+        </div>
+        <div class="fbc-rules-section">
+          <h3 class="fbc-rules-section__title">偏移指数 / 破产</h3>
+          <p class="fbc-rules-section__body">
+            <em>偏移指数 ≥ 60%</em> 进入临界呼吸，触发概率倍增；满档则<em>本趟破产</em>，
+            历史档案永久写入。撤离前请尽量降偏移、确保账面达配额。
+          </p>
+        </div>
+        <div class="fbc-rules-section">
+          <h3 class="fbc-rules-section__title">音频 / 操作</h3>
+          <p class="fbc-rules-section__body">
+            右上角 <strong>♪ 切换</strong> 可静默 BGM（事件 SFX 始终保留）。
+            倒计时危急时面板会进入<em>恐慌色</em>。键盘可用 <strong>Space</strong> 撤离。
+          </p>
+        </div>
+      </section>
+
+      <!-- 战绩页 -->
+      <section class="fbc-menu-page" id="fbc-menu-page-career" role="tabpanel" aria-labelledby="fbc-menu-tab-career" hidden>
+        <div id="fbc-career-content"><!-- JS 渲染 --></div>
+      </section>
+    </div>
+  </div>
 </div>
 
 <!-- ===== BOSS 质询弹窗 ===== -->
@@ -5676,7 +6401,12 @@
     <h1 class="stage__title">暴富电梯</h1>
     <div class="stage__header-right">
       <p class="stage__subtitle">关门再涨价 · 联邦控制局计价规程</p>
-      <button id="bgm-toggle-btn" class="bgm-toggle" aria-label="BGM 降维开关" aria-pressed="false" title="BGM 降维"></button>
+      <button id="bgm-toggle-btn" class="bgm-toggle" aria-label="背景音：开启" aria-pressed="false" title="背景音：开启（点击关闭背景音乐，事件音效照常）" data-bgm-mode="on"></button>
+      <button id="fbc-menu-btn" class="fbc-menu-btn" aria-label="打开规则与战绩菜单" title="规则 / 战绩档案" aria-haspopup="dialog" aria-expanded="false">
+        <span class="fbc-menu-btn__bar" aria-hidden="true"></span>
+        <span class="fbc-menu-btn__bar" aria-hidden="true"></span>
+        <span class="fbc-menu-btn__bar" aria-hidden="true"></span>
+      </button>
     </div>
   </header>
 
@@ -5751,18 +6481,17 @@
           <span class="deploy-panel__badge" id="deploy-panel-badge">FBC · 计价规程 · ASCENT 0</span>
           <hr class="deploy-panel__divider">
           <span class="deploy-panel__title" id="deploy-panel-title">联邦资产上行计价许可 [A-092]</span>
-          <p class="risk-auth-panel__onboarding-lead" id="deploy-onboarding-lead" aria-hidden="true">
-            先到配额线，再选撤离或上行。金额可随时改。
-          </p>
+          <p class="risk-auth-panel__onboarding-lead" id="deploy-onboarding-lead" aria-hidden="true">到配额可撤离，每层选柜开箱。</p>
 
-          <details class="risk-auth-panel__expand" id="deploy-protocol-details" open>
-            <summary class="risk-auth-panel__expand-sum" id="deploy-protocol-summary">规程要点（垫付 · 目标 · 风险） <span class="risk-auth-panel__expand-hint">点展全文</span></summary>
+          <!-- 规程详情默认折叠，首屏专注于核心按钮；点 summary 展开查阅 -->
+          <details class="risk-auth-panel__expand" id="deploy-protocol-details">
+            <summary class="risk-auth-panel__expand-sum" id="deploy-protocol-summary">规程要点 <span class="risk-auth-panel__expand-hint">点展</span></summary>
             <div class="risk-auth-panel__terms-block">
               <div class="risk-auth-panel__terms-row">
                 <span class="risk-auth-panel__terms-key">注资</span>
                 <span class="risk-auth-panel__terms-val risk-auth-panel__terms-val--leverage">
                   ¥ <span id="protocol-leverage-val">200</span>
-                  <span class="risk-auth-panel__val-note" id="deploy-leverage-note">局方垫付作杠杆</span>
+                  <span class="risk-auth-panel__val-note" id="deploy-leverage-note">局方垫付</span>
                 </span>
               </div>
               <div class="risk-auth-panel__terms-row">
@@ -5773,13 +6502,12 @@
               </div>
               <div class="risk-auth-panel__terms-row">
                 <span class="risk-auth-panel__terms-key">增益</span>
-                <span class="risk-auth-panel__terms-val--opportunity" id="deploy-term-gain">过配额后，<strong>100%</strong> 超额净利归您。</span>
+                <span class="risk-auth-panel__terms-val--opportunity" id="deploy-term-gain"><strong>100%</strong> 超额净利归您</span>
               </div>
               <div class="risk-auth-panel__terms-row risk-auth-panel__terms-row--risk-legal">
                 <span class="risk-auth-panel__terms-key">风险</span>
-                <span class="risk-auth-panel__terms-val--risk-dark">中止或破产清算时，差额按《失信协议》扣<strong>等级分与局内特权</strong>。</span>
+                <span class="risk-auth-panel__terms-val--risk-dark">破产差额将按协议从局内特权扣除</span>
               </div>
-              <p class="risk-auth-panel__clause">＊ 确认即接受风险；未偿债务可触发信用折偿顺位（局内规则）。</p>
             </div>
           </details>
 
@@ -5821,6 +6549,7 @@
           <span class="door-result-frame__sep" aria-hidden="true"></span>
           <span class="door-result-frame__brief" id="drf-brief"></span>
         </div>
+        <div class="manifest-strip" id="manifest-strip" aria-hidden="true"></div>
         <button type="button" class="door-result-frame__link" id="drf-archive-btn" hidden>
           📄 查阅异动档案
         </button>
@@ -5980,8 +6709,8 @@
   </div>
 </main>
 
-<script src="js/game-controller.js"></script>
-<script src="js/audio-engine.js"></script>
+<script src="js/game-controller.js?v=20260426"></script>
+<script src="js/audio-engine.js?v=20260426"></script>
 <script>
 (function () {
   'use strict';
@@ -6025,9 +6754,11 @@
   var EVACUATION_DIRECTIVE =
     '带走已到手的账面。';
   var PASSENGER_COMMITTEE = {
-    VIP:     '审计在场：决策加快。',
-    SCAMMER: '观测员入场：读数不稳。',
-    DANGER:  '共振偏高：谨慎直视。'
+    VIP:      '审计在场：决策加快。',
+    SCAMMER:  '观测员入场：读数不稳。',
+    DANGER:   '共振偏高：谨慎直视。',
+    INFORMER: '线人入场：货舱档案已抄送。',
+    CLEANER:  '清扫员到位：现场痕迹半数被抹。'
   };
 
   var _motionReduce = typeof window.matchMedia === 'function' &&
@@ -6073,13 +6804,6 @@
     var t = Math.min(4, Math.max(1, tier));
     var fall = [1.32, 1.58, 1.98, 2.45];
     return pace('gainFlashHoldMultTier' + t, fall[t - 1]);
-  }
-
-  function cardRewardHoldMult(tier) {
-    if (!tier || tier < 1) return 1;
-    var t = Math.min(4, Math.max(1, tier));
-    var fall = [1.22, 1.45, 1.72, 2.02];
-    return pace('cardRewardResultMultTier' + t, fall[t - 1]);
   }
 
   /**
@@ -7061,9 +7785,11 @@
    * =========================================================== */
 
   var IDENTITY_LABELS = {
-    VIP:     '// 联邦审计员',
-    SCAMMER: '// 研究员',
-    DANGER:  '// 希斯实体'
+    VIP:      '// 联邦审计员',
+    SCAMMER:  '// 研究员',
+    DANGER:   '// 希斯实体',
+    INFORMER: '// 内线情报员',
+    CLEANER:  '// 清扫员'
   };
 
   var _passengerCommitteeTimer = null;
@@ -7551,6 +8277,7 @@
     if (!drfEl) return;
     drfEl.classList.remove('active');
     drfEl.setAttribute('aria-hidden', 'true');
+    if (typeof hideManifestStrip === 'function') hideManifestStrip();
   }
 
   /** 进入 DECIDING 后呈现次级入口按钮（仅在有 lore 时） */
@@ -8241,8 +8968,8 @@
     sceneContentEl.classList.remove('scene-content--delta-only');
     /* 档案系统重置 */
     hideReceiptSystem();
-    removeElevatorGhost();
-    _currentGhostFigure = null;
+    hideLockerOverlay();
+    hideManifestStrip();
     screenEl.classList.remove(
       'liquidation-shock', 'liquidation-shock--mitigated', 'open', 'coin-rain-glow', 'ascending',
       'braking', 'door-slam', 'corrupted', 'hiss-breach',
@@ -8452,62 +9179,33 @@
     /* 由 triggerPassengerScan 处理视觉 */
   });
 
-  game.onReroll(function (newOutcome) {
-    sceneEl.className = 'scene ' + biomeClass(game.floor);
-    var snap = game._floorCreditsBefore != null ? Math.floor(game._floorCreditsBefore) : Math.floor(game.credits);
-    var deltaR = Math.floor(game.credits) - snap;
-    var rrTier = deltaR > 0 ? computeGainVisualTier(deltaR, snap, newOutcome) : 0;
-    var rrHold = deltaR > 0
-      ? Math.round(pace('deltaFlashMs', 1120) * gainFlashHoldMultForTier(rrTier))
-      : pace('rerollSceneClearMs', 1050);
-    sceneContentEl.classList.add('scene-content--delta-only');
-    var narR = formatOutcomeNarrativeHTML(newOutcome, rrTier);
-    sceneContentEl.innerHTML = formatDeltaFlashHTML(deltaR, rrTier) + (narR || '');
-    setTimeout(function () {
-      sceneContentEl.innerHTML = '';
-      sceneContentEl.classList.remove('scene-content--delta-only');
-    }, rrHold);
-    if (newOutcome.kind === 'LIQUIDATION') {
-      runMoneyOdometer(snap, Math.floor(game.credits), function () { syncUI(); });
-      syncUI();
-      screenEl.classList.add('liquidation-shock');
-      triggerLiquidationShock();
-      var _rerollLiqDebt = game._liquidationDebtAmount;
-      var _rerollLiqQuota = game.quota;
-      var _rerollLiqFloor = game.floor;
-      var _rerollLiqCor = game.corruptionRatio;
-      setTimeout(function () {
-        showResult('liquidation', { floor: _rerollLiqFloor, corruption: _rerollLiqCor, debt: _rerollLiqDebt, quota: _rerollLiqQuota }, function () {
-          game.acknowledgeGameOver(); resetVisual(); syncUI();
-        });
-      }, pace('liquidationPanelDelayMs', 780));
-    } else {
-      consecutiveWins = (newOutcome.kind === 'POSITIVE' || newOutcome.kind === 'DOUBLE')
-        ? consecutiveWins + 1 : 0;
-      var rg = deltaR > 0 ? rrTier : 0;
-      if (deltaR > 0 && newOutcome.kind !== 'LIQUIDATION') {
-        screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
-        screenEl.classList.add('asset-gain-aura', 'asset-gain-aura--t' + Math.max(1, rg));
-        setTimeout(function () {
-          screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
-        }, 820 + rg * 400);
-      }
-      if (newOutcome.kind === 'DOUBLE') {
-        screenEl.classList.add('wealth-burst', 'wealth-burst--mega');
-        setTimeout(function () {
-          screenEl.classList.remove('wealth-burst', 'wealth-burst--mega');
-        }, 2000 + rg * 200);
-      } else if (newOutcome.kind === 'POSITIVE' && newOutcome.creditsMultiplier >= 1.16) {
-        screenEl.classList.add('wealth-burst');
-        setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1400 + rg * 180);
-      } else if (newOutcome.kind === 'POSITIVE' && rg >= 3) {
-        screenEl.classList.add('wealth-burst');
-        setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1180 + rg * 150);
-      }
-      var odG = deltaR > 0 ? computeGainVisualTier(deltaR, snap, newOutcome) : 0;
-      runMoneyOdometer(snap, Math.floor(game.credits), function () { syncUI(); }, { gainTier: odG });
-      syncUI();
+  /* 选盘事件 → 驱动揭露与结算（运行于 LOCKER_SELECTING → REVEALING 切换之后） */
+  game.onLockerSelected(function (payload) {
+    var ctx = _pendingRevealCtx;
+    _pendingRevealCtx = null;
+    hideLockerOverlay();
+    /* FBC 代决议：附加叙事提示（短闪 banner） */
+    if (payload.committeeOverride) {
+      var msg = GameController.cfg('fbcOverride.banner',
+        'FBC · 委员会代决议 · 已强制开启 LOT-{{lot}}');
+      var banner = msg.replace('{{lot}}',
+        payload.lockerNumber != null
+          ? (payload.lockerNumber < 10 ? '0' + payload.lockerNumber : '' + payload.lockerNumber)
+          : '??');
+      flashCommitteePassengerDirective(banner);
     }
+    /* 给一帧让 FBC 提示可见，再进入揭露 */
+    setTimeout(function () { runResultReveal(payload, ctx); }, payload.committeeOverride ? 280 : 120);
+  });
+
+  game.onLockerHand(function (payload) {
+    /* 由 runAscendSequence 在适当时机调用 showLockerOverlay；这里仅做兜底 */
+    /* 例如：开发期间外部脚本直接 processAscendComplete 时也能浮层 */
+  });
+
+  game.onLockerHint(function (hint) {
+    /* lockerHand 已携带 hint，这里仅做日志 */
+    if (hint && hint.text) console.log('[locker hint]', hint.text);
   });
 
   function updatePhaseDim(state) {
@@ -8648,8 +9346,8 @@
       var done = game.processAscendComplete();
       if (!done.ok) return;
 
-      var moneyAfter = Math.floor(game.credits);
-      var deltaMoney = moneyAfter - moneyBefore;
+      /* 基线增长后、未开柜门的"中点账面"。SAFE_NODE 例外：直接是结算后的账面。 */
+      var moneyAfterBaseline = Math.floor(game.credits);
 
       if (done.passengerDeparted && done.passengerDeparted.length) {
         var di, dep, idx;
@@ -8664,8 +9362,6 @@
         updateStatusDock();
         syncPassengerSubjectArt();
       }, pace('passengerResyncDelayMs', 520));
-
-      var o = done.outcome, surprise = done.surprise;
 
       screenEl.classList.remove('ascending', 'door-slam');
       stopScrambleSettleFloorOnly(game.floor, moneyBefore);
@@ -8688,13 +9384,15 @@
         setTimeout(function () { screenEl.classList.remove('door-slam'); }, 180);
 
         syncUI();
-        var _odGainTier = moneyAfter > moneyBefore ? computeGainVisualTier(moneyAfter - moneyBefore, moneyBefore, o) : 0;
+        /* 基线增长 odometer：仅展示从入梯到当前楼层的基线累积 */
+        var _baselineGainTier = moneyAfterBaseline > moneyBefore
+          ? computeGainVisualTier(moneyAfterBaseline - moneyBefore, moneyBefore, null) : 0;
         setTimeout(function () {
-          runMoneyOdometer(moneyBefore, moneyAfter, function () { syncUI(); }, { gainTier: _odGainTier });
+          runMoneyOdometer(moneyBefore, moneyAfterBaseline, function () { syncUI(); }, { gainTier: _baselineGainTier });
         }, pace('odometerDelayAfterOpenMs', 160));
 
-        /* 安全屋：跳过金额闪烁，直接进入 finishReveal */
-        if (o.kind === 'SAFE_NODE') {
+        /* 安全屋：跳过开柜流程，直接进入 finishReveal */
+        if (done.outcome && done.outcome.kind === 'SAFE_NODE') {
           setTimeout(function () {
             var fr = game.finishReveal();
             /* SAFE_NODE → onStateChange 里 showSafeNodeOverlay 接管 */
@@ -8703,134 +9401,142 @@
           return;
         }
 
-        /* 叙事悬念：先显覆层文案，再出金额 + 特效（避免与场景内叙事重复） */
-        var narrative = typeof GameController.getOutcomeNarrative === 'function'
-          ? GameController.getOutcomeNarrative(o) : null;
-        var isPenalty = (o.kind === 'NEGATIVE' || o.kind === 'LIQUIDATION');
-
-        function _showAmountAndEffects() {
-          /* 保存本层 lore，供档案模态框使用 */
-          _pendingReceiptData = (narrative && narrative.lore && o.kind !== 'LIQUIDATION') ? {
-            tag:   narrative.tag,
-            lore:  narrative.lore,
-            delta: deltaMoney,
-            floor: game.floor
-          } : null;
-
-          var gainTier = deltaMoney > 0 ? computeGainVisualTier(Math.floor(deltaMoney), moneyBefore, o) : 0;
-          var vizTier  = Math.max(gainTier, surprise ? 2 : 0);
-          var holdMs, revealSettleMs;
-
-          if (o.kind !== 'LIQUIDATION') {
-            /* ── 三位一体展示框：tag + brief + 档案入口，同步淡入 ── */
-            var frameTag = (narrative && narrative.tag) ? narrative.tag : '';
-            showDoorResultFrame(frameTag, deltaMoney, !!_pendingReceiptData);
-            holdMs = 0;
-            revealSettleMs = pace('doorRevealSettleMs', 900);
-          } else {
-            /* 清算：保留原有大字金额闪现（随后进入清算弹窗） */
-            holdMs = flashCreditsDeltaInScene(deltaMoney, o, {
-              skipInSceneNarrative: true,
-              basisCredits: moneyBefore
-            });
-            revealSettleMs = holdMs + pace('afterDeltaHoldMs', 420);
-          }
-
-          syncUI();
-
-          if (o.kind === 'LIQUIDATION') {
-            if (o.mitigated) {
-              screenEl.classList.add('liquidation-shock', 'liquidation-shock--mitigated');
-              triggerLiquidationShock({ full: false, hidePassengers: false });
-            } else {
-              screenEl.classList.add('liquidation-shock');
-              triggerLiquidationShock({ full: true, hidePassengers: true });
-              consecutiveWins = 0;
-            }
-          } else {
-            consecutiveWins = (o.kind === 'POSITIVE' || o.kind === 'DOUBLE')
-              ? consecutiveWins + 1 : 0;
-          }
-
-          if (gainTier >= 1 && o.kind !== 'LIQUIDATION') {
-            screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
-            screenEl.classList.add('asset-gain-aura', 'asset-gain-aura--t' + gainTier);
-            setTimeout(function () {
-              screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
-            }, 880 + gainTier * 420);
-          }
-
-          if (o.kind === 'DOUBLE') {
-            spawnPapers(45);
-            screenEl.classList.add('wealth-burst', 'wealth-burst--mega');
-            setTimeout(function () {
-              screenEl.classList.remove('wealth-burst', 'wealth-burst--mega');
-            }, 1980 + gainTier * 220);
-          } else if (o.kind === 'POSITIVE' && (o._effectiveMultiplier >= 1.16 || o.creditsMultiplier >= 1.16)) {
-            screenEl.classList.add('wealth-burst');
-            setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1380 + gainTier * 200);
-          } else if (o.kind === 'POSITIVE' && gainTier >= 3) {
-            screenEl.classList.add('wealth-burst');
-            setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1150 + gainTier * 160);
-          }
-
-          if (surprise) {
-            setTimeout(function () {
-              applySurpriseVisual(surprise, vizTier);
-              syncUI();
-            }, pace('surpriseAfterDeltaMs', 300));
-          }
-
+        /* 选盘流程：保留上下文，展示选柜浮层；resolveLockerOpening 在 onLockerSelected 中触发 */
+        if (done.lockerHand) {
+          _pendingRevealCtx = {
+            preCredits: moneyAfterBaseline,
+            floor:      game.floor
+          };
           setTimeout(function () {
-            if (game.state === GameController.STATES.CARD_SELECTION) {
-              syncUI();
-              var ghost = pickGhostFigure();
-              spawnElevatorGhost(ghost);
-              var cardDelayMs = GameController.cfg('cardSelection.preShowDelayMs', 3200);
-              setTimeout(function () {
-                if (_pendingCardHand && _pendingCardHand.length && game.state === GameController.STATES.CARD_SELECTION) {
-                  showCardSelection(_pendingCardHand);
-                  _pendingCardHand = null;
-                } else if (game.state === GameController.STATES.CARD_SELECTION) {
-                  _pendingCardHand = null;
-                  if (game.skipEmptyCardSelection && game.skipEmptyCardSelection().ok) {
-                    hideCardSelection();
-                    handlePostCardReveal();
-                  }
-                }
-              }, cardDelayMs);
-              return;
+            if (game.state === GameController.STATES.LOCKER_SELECTING) {
+              showLockerOverlay(done.lockerHand);
             }
-
-            var fr = game.finishReveal();
-            if (!fr.ok) return;
-
-            if (fr.gameOver) {
-              var _fgLiqDebt  = game._liquidationDebtAmount;
-              var _fgLiqQuota = game.quota;
-              var _fgLiqFloor = game.floor;
-              var _fgLiqCor   = game.corruptionRatio;
-              var liqPanelMs = pace('liquidationPanelDelayMs', 720);
-              setTimeout(function () {
-                showResult('liquidation', { floor: _fgLiqFloor, corruption: _fgLiqCor, debt: _fgLiqDebt, quota: _fgLiqQuota }, function () {
-                  game.acknowledgeGameOver(); resetVisual(); syncUI();
-                });
-              }, liqPanelMs);
-              return;
-            }
-
-            if (fr.safeNode) return;
-            if (fr.breach) showBreach(game._breachDeadline);
-            syncUI();
-            /* 进入 DECIDING 且无入侵：持久档案入口（2s 展示框消隐后的备用通道） */
-            if (!fr.breach) showReceiptTrigger();
-          }, revealSettleMs);
+          }, pace('lockerOverlayShowDelayMs', 360));
+          return;
         }
 
-        /* 三位一体：无需前置叙事预闪，直接同步展示 */
-        _showAmountAndEffects();
+        /* 兜底：理论上不应到达此分支 */
+        console.warn('[ascend] no outcome and no lockerHand');
       }, BRAKE_MS);
     }, ASCEND_MS);
+  }
+
+  /* ===========================================================
+   * 选盘后的揭露与结算流程：由 onLockerSelected 事件触发
+   * =========================================================== */
+  var _pendingRevealCtx = null;
+
+  function runResultReveal(payload, ctx) {
+    var o = payload.outcome;
+    var surprise = payload.surprise;
+    var preCredits = ctx ? ctx.preCredits : Math.floor(game.credits);
+    var postCredits = Math.floor(game.credits);
+    var deltaMoney = postCredits - preCredits;
+
+    /* 选柜后揭露：先跑 outcome odometer */
+    var _outcomeGainTier = deltaMoney > 0 ? computeGainVisualTier(deltaMoney, preCredits, o) : 0;
+    setTimeout(function () {
+      runMoneyOdometer(preCredits, postCredits, function () { syncUI(); }, { gainTier: _outcomeGainTier });
+    }, pace('odometerDelayAfterLockerMs', 160));
+
+    var narrative = typeof GameController.getOutcomeNarrative === 'function'
+      ? GameController.getOutcomeNarrative(o) : null;
+
+    /* 保存本层 lore，供档案模态框使用 */
+    _pendingReceiptData = (narrative && narrative.lore && o.kind !== 'LIQUIDATION') ? {
+      tag:   narrative.tag,
+      lore:  narrative.lore,
+      delta: deltaMoney,
+      floor: game.floor
+    } : null;
+
+    var gainTier = deltaMoney > 0 ? computeGainVisualTier(Math.floor(deltaMoney), preCredits, o) : 0;
+    var vizTier  = Math.max(gainTier, surprise ? 2 : 0);
+    var holdMs, revealSettleMs;
+
+    if (o.kind !== 'LIQUIDATION') {
+      var frameTag = (narrative && narrative.tag) ? narrative.tag : '';
+      showDoorResultFrame(frameTag, deltaMoney, !!_pendingReceiptData);
+      /* 货舱清点 3 件子产物逐步揭露：在结果框淡入后顺次铺开 */
+      var manifestMs = runManifestReveal(o, deltaMoney, _biomeOfFloor(game.floor), payload.lockerNumber);
+      holdMs = 0;
+      revealSettleMs = pace('doorRevealSettleMs', 900) + manifestMs;
+    } else {
+      holdMs = flashCreditsDeltaInScene(deltaMoney, o, {
+        skipInSceneNarrative: true,
+        basisCredits: preCredits
+      });
+      revealSettleMs = holdMs + pace('afterDeltaHoldMs', 420);
+    }
+
+    syncUI();
+
+    if (o.kind === 'LIQUIDATION') {
+      if (o.mitigated) {
+        screenEl.classList.add('liquidation-shock', 'liquidation-shock--mitigated');
+        triggerLiquidationShock({ full: false, hidePassengers: false });
+      } else {
+        screenEl.classList.add('liquidation-shock');
+        triggerLiquidationShock({ full: true, hidePassengers: true });
+        consecutiveWins = 0;
+      }
+    } else {
+      consecutiveWins = (o.kind === 'POSITIVE' || o.kind === 'DOUBLE')
+        ? consecutiveWins + 1 : 0;
+    }
+
+    if (gainTier >= 1 && o.kind !== 'LIQUIDATION') {
+      screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
+      screenEl.classList.add('asset-gain-aura', 'asset-gain-aura--t' + gainTier);
+      setTimeout(function () {
+        screenEl.classList.remove('asset-gain-aura', 'asset-gain-aura--t1', 'asset-gain-aura--t2', 'asset-gain-aura--t3', 'asset-gain-aura--t4');
+      }, 880 + gainTier * 420);
+    }
+
+    if (o.kind === 'DOUBLE') {
+      spawnPapers(45);
+      screenEl.classList.add('wealth-burst', 'wealth-burst--mega');
+      setTimeout(function () {
+        screenEl.classList.remove('wealth-burst', 'wealth-burst--mega');
+      }, 1980 + gainTier * 220);
+    } else if (o.kind === 'POSITIVE' && (o._effectiveMultiplier >= 1.16 || o.creditsMultiplier >= 1.16)) {
+      screenEl.classList.add('wealth-burst');
+      setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1380 + gainTier * 200);
+    } else if (o.kind === 'POSITIVE' && gainTier >= 3) {
+      screenEl.classList.add('wealth-burst');
+      setTimeout(function () { screenEl.classList.remove('wealth-burst'); }, 1150 + gainTier * 160);
+    }
+
+    if (surprise) {
+      setTimeout(function () {
+        applySurpriseVisual(surprise, vizTier);
+        syncUI();
+      }, pace('surpriseAfterDeltaMs', 300));
+    }
+
+    setTimeout(function () {
+      var fr = game.finishReveal();
+      if (!fr.ok) return;
+
+      if (fr.gameOver) {
+        var _fgLiqDebt  = game._liquidationDebtAmount;
+        var _fgLiqQuota = game.quota;
+        var _fgLiqFloor = game.floor;
+        var _fgLiqCor   = game.corruptionRatio;
+        var liqPanelMs = pace('liquidationPanelDelayMs', 720);
+        setTimeout(function () {
+          showResult('liquidation', { floor: _fgLiqFloor, corruption: _fgLiqCor, debt: _fgLiqDebt, quota: _fgLiqQuota }, function () {
+            game.acknowledgeGameOver(); resetVisual(); syncUI();
+          });
+        }, liqPanelMs);
+        return;
+      }
+
+      if (fr.safeNode) return;
+      if (fr.breach) showBreach(game._breachDeadline);
+      syncUI();
+      if (!fr.breach) showReceiptTrigger();
+    }, revealSettleMs);
   }
 
   function attemptGoUp() {
@@ -9107,250 +9813,658 @@
   }
 
   /* ===========================================================
-   * 卡牌选取 UI
+   * 封存货舱 / 选盘 UI
    * =========================================================== */
-  var cardOverlayEl  = document.getElementById('card-selection-overlay');
-  var cardHandEl     = document.getElementById('card-hand');
-  var cardFigureEl   = document.getElementById('card-figure');
-  var cardResultBarEl = document.getElementById('card-result-bar');
+  var lockerOverlayEl       = document.getElementById('locker-selection-overlay');
+  var lockerGridEl          = document.getElementById('locker-grid');
+  var lockerHintEl          = document.getElementById('locker-overlay-hint');
+  var lockerCountdownEl     = document.getElementById('locker-countdown');
+  var lockerCountdownFillEl = document.getElementById('locker-countdown-fill');
+  var lockerCountdownLabel  = document.getElementById('locker-countdown-label');
+  var lockerOverlaySubtitle = document.getElementById('locker-overlay-subtitle');
+  var lockerOverlayTitle    = document.getElementById('locker-overlay-title');
 
-  /* ── 从配置加载鬼影图片列表，按权重随机选取 ── */
-  function pickGhostFigure() {
-    var figures = GameController.cfg('cardSelection.ghostFigures', []);
-    if (!figures.length) return null;
-    var totalW = 0, i;
-    for (i = 0; i < figures.length; i++) totalW += (figures[i].weight || 1);
-    var r = Math.random() * totalW, acc = 0;
-    for (i = 0; i < figures.length; i++) {
-      acc += (figures[i].weight || 1);
-      if (r < acc) return figures[i];
-    }
-    return figures[figures.length - 1];
+  /* 倒计时句柄与上下文 */
+  var _lockerCountdownTimer = null;
+  var _lockerCountdownStart = 0;
+  var _lockerCountdownTotal = 0;
+  var _lockerLockedForSelect = false;
+
+  function _formatLockerNumberUI(n) {
+    if (n == null) return '??';
+    return (n < 10 ? '0' : '') + n;
   }
 
-  var _currentGhostFigure = null;
+  function showLockerOverlay(payload) {
+    if (!lockerOverlayEl || !lockerGridEl || !payload) return;
+    var candidates = payload.candidates || [];
+    var countdownMs = payload.countdownMs || 6000;
 
-  function spawnElevatorGhost(ghostInfo) {
-    removeElevatorGhost();
-    if (!ghostInfo || !ghostInfo.src) return;
-    _currentGhostFigure = ghostInfo;
-    var img = document.createElement('img');
-    img.className = 'elevator-ghost';
-    img.src = ghostInfo.src;
-    img.alt = ghostInfo.name || '';
-    img.draggable = false;
-    screenEl.appendChild(img);
-    setTimeout(function () { img.classList.add('ghost-idle'); }, 850);
-  }
+    /* 情报员命中柜的索引与极性（payload.hint 来自 game.generateLockerHand） */
+    var hint = payload.hint || null;
+    var hintIdx = (hint && typeof hint.targetIdx === 'number') ? hint.targetIdx : -1;
+    var hintPolarity = hint ? hint.polarity : '';
 
-  function removeElevatorGhost() {
-    var old = screenEl.querySelectorAll('.elevator-ghost');
-    for (var i = 0; i < old.length; i++) old[i].parentNode.removeChild(old[i]);
-  }
-
-  function applyGhostToOverlay(ghostInfo) {
-    if (!cardFigureEl) return;
-    cardFigureEl.innerHTML = '';
-    cardFigureEl.classList.remove('card-figure--placeholder');
-    if (ghostInfo && ghostInfo.src) {
-      var img = document.createElement('img');
-      img.src = ghostInfo.src;
-      img.alt = ghostInfo.name || '';
-      img.draggable = false;
-      cardFigureEl.appendChild(img);
-    } else {
-      cardFigureEl.classList.add('card-figure--placeholder');
-    }
-  }
-
-  function showCardSelection(cards) {
-    if (!cardOverlayEl || !cardHandEl) return;
-    if (!cards || !cards.length) {
-      if (game.skipEmptyCardSelection && game.skipEmptyCardSelection().ok) {
-        hideCardSelection();
-        handlePostCardReveal();
-      }
-      return;
-    }
-
-    applyGhostToOverlay(_currentGhostFigure);
-
-    cardHandEl.innerHTML = '';
-    cardResultBarEl.textContent = '';
-    cardResultBarEl.className = 'card-result-bar';
-
-    for (var i = 0; i < cards.length; i++) {
-      (function (card, idx) {
+    /* 渲染柜门 */
+    lockerGridEl.innerHTML = '';
+    for (var i = 0; i < candidates.length; i++) {
+      (function (cand, idx) {
         var slot = document.createElement('div');
-        slot.className = 'card-slot';
+        slot.className = 'locker-slot';
         slot.dataset.idx = idx;
+        slot.setAttribute('role', 'button');
+        slot.setAttribute('tabindex', '0');
 
-        var front = document.createElement('div');
-        front.className = 'card-face card-front';
-        front.innerHTML =
-          '<span class="card-front__glyph">' + card.identity.glyph + '</span>' +
-          '<span class="card-front__name">' + card.identity.name + '</span>' +
-          '<span class="card-front__hint">CLICK TO REVEAL</span>';
-
-        var backClass = card.type === 'reward' ? 'card-back--reward' : 'card-back--bust';
-        var icon = card.type === 'reward' ? '✦' : '☠';
-        var deltaText = card.type === 'reward'
-          ? '+' + Math.round((card.event.creditsBonusRatio || 0) * 100) + '% 资产'
-          : '-' + Math.round((card.event.creditsLossRatio || 0) * 100) + '% 资产';
-        var corText = '';
-        if (card.event.corruptionDelta) {
-          var cd = card.event.corruptionDelta;
-          corText = ' · 偏移' + (cd > 0 ? '+' : '') + cd.toFixed(2);
+        var isHinted   = (idx === hintIdx);
+        var statusText = 'SEALED';
+        var ariaSuffix = '';
+        if (isHinted) {
+          if (hintPolarity === 'good') {
+            slot.classList.add('tagged-good');
+            statusText = 'INTEL ✓';
+            ariaSuffix = ' · 情报员标记可下注';
+          } else if (hintPolarity === 'bad') {
+            slot.classList.add('tagged-bad');
+            statusText = 'WARN !';
+            ariaSuffix = ' · 情报员标记疑似套子';
+          }
         }
+        slot.setAttribute('aria-label', '货舱 ' + _formatLockerNumberUI(cand.lockerNumber) + ariaSuffix);
 
-        var back = document.createElement('div');
-        back.className = 'card-face card-back ' + backClass;
-        back.innerHTML =
-          '<span class="card-back__icon">' + icon + '</span>' +
-          '<span class="card-back__name">' + card.event.name + '</span>' +
-          '<span class="card-back__desc">' + card.event.description + '</span>' +
-          '<span class="card-back__delta">' + deltaText + corText + '</span>';
+        slot.innerHTML =
+          '<span class="locker-slot__label">LOT</span>' +
+          '<span class="locker-slot__id">' + _formatLockerNumberUI(cand.lockerNumber) + '</span>' +
+          '<span class="locker-slot__status">' + statusText + '</span>';
 
-        slot.appendChild(front);
-        slot.appendChild(back);
-
-        slot.addEventListener('click', function () {
-          if (slot.classList.contains('flipped') || slot.classList.contains('disabled')) return;
-
-          var siblings = cardHandEl.querySelectorAll('.card-slot');
-          for (var s = 0; s < siblings.length; s++) {
-            if (siblings[s] !== slot) siblings[s].classList.add('disabled');
-          }
-          slot.classList.add('flipped');
-
-          var result = game.selectCard(idx);
-          if (result.ok) {
-            var r = result.result;
-            var sign = r.creditsDelta >= 0 ? '+' : '';
-            cardResultBarEl.textContent = r.card.event.name + ' ' + sign + '¥' + Math.abs(r.creditsDelta) + ' · 余¥' + r.creditsAfter;
-            cardResultBarEl.className = 'card-result-bar';
-            var cTier = r.creditsDelta > 0
-              ? computeGainVisualTier(r.creditsDelta, r.creditsAfter - r.creditsDelta, null)
-              : 0;
-            if (cTier >= 1) cardResultBarEl.classList.add('card-result-bar--reward-tier-' + cTier);
-            cardResultBarEl.classList.add('active');
-
-            /* 300ms 内触发结算并与翻牌动画并行；玩家意志优先，禁止序列化等待 */
-            setTimeout(function () {
-              hideCardSelection();
-              handlePostCardReveal();
-            }, 300);
+        slot.addEventListener('click', function () { handleLockerClick(idx, slot); });
+        slot.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            handleLockerClick(idx, slot);
           }
         });
-
-        cardHandEl.appendChild(slot);
-      })(cards[i], i);
+        lockerGridEl.appendChild(slot);
+      })(candidates[i], i);
     }
 
-    removeElevatorGhost();
-    cardOverlayEl.classList.add('active');
-    cardOverlayEl.setAttribute('aria-hidden', 'false');
+    /* 提示条 */
+    if (lockerHintEl) {
+      if (hint && hint.text) {
+        lockerHintEl.textContent = hint.text;
+        lockerHintEl.classList.add('visible');
+      } else {
+        lockerHintEl.textContent = '';
+        lockerHintEl.classList.remove('visible');
+      }
+    }
+
+    if (lockerOverlaySubtitle) {
+      var subTpl = GameController.cfg('lockerSelection.subtitleTemplate',
+        '超时未选 · 委员会代决议（{{ratio}} 折）');
+      var clamp = GameController.cfg('fbcOverride.creditsClampRatio', 0.55);
+      lockerOverlaySubtitle.textContent = subTpl
+        .replace('{{ratio}}', Math.round(clamp * 100) + '%');
+    }
+
+    _lockerLockedForSelect = false;
+    lockerOverlayEl.classList.add('active');
+    lockerOverlayEl.setAttribute('aria-hidden', 'false');
+
+    if (typeof audioEngine !== 'undefined' && typeof audioEngine.playLockerSelectionEnter === 'function') {
+      audioEngine.playLockerSelectionEnter();
+    }
+
+    startLockerCountdown(countdownMs);
   }
 
-  function hideCardSelection() {
-    if (!cardOverlayEl) return;
-    cardOverlayEl.classList.remove('active');
-    cardOverlayEl.setAttribute('aria-hidden', 'true');
-    _currentGhostFigure = null;
+  function startLockerCountdown(totalMs) {
+    if (!lockerCountdownEl || !lockerCountdownFillEl) return;
+    _lockerCountdownTotal = totalMs;
+    _lockerCountdownStart = Date.now();
+    lockerCountdownEl.classList.remove('panic');
+    lockerCountdownFillEl.style.transform = 'scaleX(1)';
+
+    if (_lockerCountdownTimer) {
+      clearInterval(_lockerCountdownTimer);
+      _lockerCountdownTimer = null;
+    }
+    var panicTriggered = false;
+    _lockerCountdownTimer = setInterval(function () {
+      var elapsed = Date.now() - _lockerCountdownStart;
+      var remain  = Math.max(0, _lockerCountdownTotal - elapsed);
+      var ratio   = remain / _lockerCountdownTotal;
+      lockerCountdownFillEl.style.transform = 'scaleX(' + ratio + ')';
+      if (ratio <= 0.3) {
+        lockerCountdownEl.classList.add('panic');
+        if (!panicTriggered) {
+          panicTriggered = true;
+          if (typeof audioEngine !== 'undefined' && typeof audioEngine.playLockerPanic === 'function') {
+            audioEngine.playLockerPanic();
+          }
+        }
+      }
+
+      if (remain <= 0) {
+        clearInterval(_lockerCountdownTimer);
+        _lockerCountdownTimer = null;
+        if (game.state === GameController.STATES.LOCKER_SELECTING && !_lockerLockedForSelect) {
+          _lockerLockedForSelect = true;
+          /* FBC 代决议：随机柜门高亮 + 盖章音效 */
+          var slots = lockerGridEl.querySelectorAll('.locker-slot');
+          var pickIdx = Math.floor(Math.random() * slots.length);
+          if (slots[pickIdx]) slots[pickIdx].classList.add('fbc-override');
+          if (typeof audioEngine !== 'undefined' && typeof audioEngine.playFbcOverrideStamp === 'function') {
+            audioEngine.playFbcOverrideStamp();
+          }
+          setTimeout(function () { game.autoSelectLocker(); }, 240);
+        }
+      }
+    }, 80);
   }
 
-  function handlePostCardReveal() {
-    syncUI();
-
-    var fin = game.finishReveal();
-    if (!fin.ok) { syncUI(); return; }
-
-    if (fin.gameOver) {
-      var liqFloor = game.floor;
-      var liqCor   = game.corruptionRatio;
-      var liqDebt  = game._liquidationDebtAmount;
-      var liqQuota = game.quota;
-      triggerFlash('rgba(139,0,0,.9)', FLASH_MS);
-      screenEl.classList.add('liquidation-shock');
-      triggerLiquidationShock({ full: true, hidePassengers: true });
-      consecutiveWins = 0;
-      var liqPanelMs = pace('liquidationPanelDelayMs', 780);
-      setTimeout(function () {
-        screenEl.classList.remove('liquidation-shock');
-        showResult('liquidation', { floor: liqFloor, corruption: liqCor, debt: liqDebt, quota: liqQuota }, function () {
-          game.acknowledgeGameOver();
-          resetVisual();
-          syncUI();
-        });
-      }, liqPanelMs);
-      return;
+  function stopLockerCountdown() {
+    if (_lockerCountdownTimer) {
+      clearInterval(_lockerCountdownTimer);
+      _lockerCountdownTimer = null;
     }
-
-    if (fin.safeNode) {
-      syncUI();
-      return;
-    }
-
-    if (fin.breach) {
-      setTimeout(function () {
-        showBreach(game._breachDeadline);
-      }, pace('postCardToBreachMs', 240));
-      return;
-    }
-
-    syncUI();
-    /* 卡牌结算后同样进入 DECIDING：显示次级档案入口 */
-    showReceiptTrigger();
+    if (lockerCountdownEl) lockerCountdownEl.classList.remove('panic');
   }
 
-  var _pendingCardHand = null;
+  function handleLockerClick(idx, slotEl) {
+    if (_lockerLockedForSelect) return;
+    if (game.state !== GameController.STATES.LOCKER_SELECTING) return;
+    _lockerLockedForSelect = true;
+    if (slotEl) slotEl.classList.add('opening');
+    /* 禁用其他柜门 */
+    var slots = lockerGridEl.querySelectorAll('.locker-slot');
+    for (var s = 0; s < slots.length; s++) {
+      if (slots[s] !== slotEl) slots[s].classList.add('disabled');
+    }
+    stopLockerCountdown();
+    if (typeof audioEngine !== 'undefined' && typeof audioEngine.playLockerOpen === 'function') {
+      audioEngine.playLockerOpen();
+    }
+    setTimeout(function () { game.selectLocker(idx); }, 220);
+  }
 
-  game.onCardHand(function (cards) {
-    _pendingCardHand = cards;
-  });
+  function hideLockerOverlay() {
+    if (!lockerOverlayEl) return;
+    lockerOverlayEl.classList.remove('active');
+    lockerOverlayEl.setAttribute('aria-hidden', 'true');
+    stopLockerCountdown();
+    _lockerLockedForSelect = false;
+  }
 
   /* ===========================================================
-   * BGM 降维开关
+   * 货舱清点：3 件子产物逐步揭露（全屏翻页 overlay）
+   * =========================================================== */
+  var manifestStripEl    = document.getElementById('manifest-strip');
+  var manifestRevealEl   = document.getElementById('manifest-reveal-overlay');
+  var manifestCardEl     = document.getElementById('manifest-card');
+  var manifestCardTagEl  = document.getElementById('manifest-card-tag');
+  var manifestCardNameEl = document.getElementById('manifest-card-name');
+  var manifestCardDeltaEl= document.getElementById('manifest-card-delta');
+  var manifestCardImgEl  = document.getElementById('manifest-card-img');
+  var manifestRevealLot  = document.getElementById('manifest-reveal-lot');
+  var manifestRevealPage = document.getElementById('manifest-reveal-page');
+  var manifestRevealHint = document.getElementById('manifest-reveal-hint');
+  var _manifestTimers    = [];
+
+  /* polarity → 货箱位图 src 映射；后期补充资产时只改这张表 */
+  var MANIFEST_CRATE_SRC = {
+    gain:    'assets/manifest/crate-placeholder.png',
+    loss:    'assets/manifest/crate-placeholder.png',
+    neutral: 'assets/manifest/crate-placeholder.png'
+  };
+
+  function _clearManifestTimers() {
+    for (var t = 0; t < _manifestTimers.length; t++) clearTimeout(_manifestTimers[t]);
+    _manifestTimers = [];
+  }
+  function _qManifest(fn, delay) {
+    _manifestTimers.push(setTimeout(fn, delay));
+  }
+  function _formatLockerForReveal(n) {
+    if (n == null) return '—';
+    return (n < 10 ? '0' : '') + n;
+  }
+
+  function _biomeOfFloor(floor) {
+    if (floor <= 5) return 'admin';
+    if (floor <= 10) return 'maintenance';
+    return 'supernatural';
+  }
+
+  function _pickManifestItem(biome, polarity, taken) {
+    var pool = GameController.cfg('manifestPool.' + biome + '.' + polarity, []);
+    if (!pool || !pool.length) {
+      pool = GameController.cfg('manifestPool.admin.' + polarity, []);
+    }
+    if (!pool.length) return { id: 'unknown', name: '未登记物品', tag: 'FBC-UNK' };
+    var pickable = [];
+    for (var i = 0; i < pool.length; i++) {
+      if (!taken[pool[i].id]) pickable.push(pool[i]);
+    }
+    if (!pickable.length) pickable = pool.slice();
+    var totalW = 0, j;
+    for (j = 0; j < pickable.length; j++) totalW += (pickable[j].weight || 1);
+    var r = Math.random() * totalW, acc = 0;
+    for (j = 0; j < pickable.length; j++) {
+      acc += (pickable[j].weight || 1);
+      if (r < acc) {
+        taken[pickable[j].id] = true;
+        return pickable[j];
+      }
+    }
+    return pickable[pickable.length - 1];
+  }
+
+  function _resolveSplitPattern(kind) {
+    var sp = GameController.cfg('manifestReveal.splitPattern.' + kind, null);
+    if (!sp || !sp.length) sp = GameController.cfg('manifestReveal.fallbackSplit', [0.33, 0.33, 0.34]);
+    return sp;
+  }
+
+  /**
+   * 渲染并依次揭露 3 件子产物（v0.06：全屏翻页 overlay）。
+   * 节拍：背板入场 → 卡 1（入 + 停 + 出）→ 卡 2 → 卡 3 → 背板出场
+   * @returns {number} 总揭露时长（ms），调用方据此延后 finishReveal。
+   */
+  function runManifestReveal(o, deltaMoney, biome, lockerNumber) {
+    if (!manifestRevealEl || !manifestCardEl) return 0;
+    if (!GameController.cfg('manifestReveal.enabled', true)) return 0;
+    if (o.kind === 'LIQUIDATION' || o.kind === 'SAFE_NODE') return 0;
+
+    biome = biome || _biomeOfFloor(game.floor);
+    var pattern = _resolveSplitPattern(o.kind);
+    var rows = pattern.length;
+    var taken = {};
+
+    var splits = [];
+    for (var s = 0; s < rows; s++) {
+      var portion = pattern[s];
+      var dV = Math.round(deltaMoney * portion);
+      var pol = (dV === 0) ? 'neutral' : (dV > 0 ? 'positive' : 'negative');
+      splits.push({ delta: dV, polarity: pol });
+    }
+    /* 修正合计差额：把误差累加到最后一项 */
+    var sum = 0;
+    for (var k = 0; k < splits.length - 1; k++) sum += splits[k].delta;
+    splits[splits.length - 1].delta = deltaMoney - sum;
+
+    /* 抽取实际显示内容 */
+    var items = [];
+    for (var i = 0; i < splits.length; i++) {
+      var item = _pickManifestItem(biome, splits[i].polarity, taken);
+      var dataPolarity = (splits[i].delta > 0) ? 'gain'
+                       : (splits[i].delta < 0) ? 'loss' : 'neutral';
+      var sign = splits[i].delta >= 0 ? '+' : '−';
+      var amt  = Math.abs(splits[i].delta);
+      items.push({
+        name:        item.name,
+        tag:         item.tag,
+        deltaText:   splits[i].delta === 0 ? '—' : (sign + '¥' + amt),
+        polarity:    splits[i].polarity,
+        dataPolarity: dataPolarity,
+        delta:       splits[i].delta
+      });
+    }
+
+    /* 节拍（v0.06：放慢一档，留出阅读 / 思考时间） */
+    var bgInMs       = pace('manifestBgInMs',     240);
+    var cardInMs     = pace('manifestCardInMs',   380);
+    var cardHold     = pace('manifestItemRevealMs', 1100);  /* 原 620 → 1100 */
+    var cardOutMs    = pace('manifestCardOutMs',  280);
+    var bgOutMs      = pace('manifestBgOutMs',    320);
+    var lastExtraMs  = pace('manifestLastExtraHoldMs', 480);  /* 末件再多停 0.48s */
+
+    /* 重置 */
+    _clearManifestTimers();
+    manifestCardEl.classList.remove('entering', 'exiting');
+    manifestCardEl.setAttribute('data-polarity', 'neutral');
+
+    /* 标头 LOT / 极性提示 */
+    if (manifestRevealLot) {
+      manifestRevealLot.textContent = 'LOT ' + _formatLockerForReveal(lockerNumber);
+    }
+
+    /* 显示背板 */
+    manifestRevealEl.classList.add('active');
+    manifestRevealEl.setAttribute('aria-hidden', 'false');
+
+    var t0 = bgInMs;
+    for (var ci = 0; ci < items.length; ci++) {
+      (function (it, idx) {
+        var inAt   = t0 + idx * (cardInMs + cardHold + cardOutMs);
+        var holdAt = inAt + cardInMs;
+        var outAt  = holdAt + cardHold;
+        /* 末件多停 lastExtraMs，让玩家盯住数字消化 */
+        if (idx === items.length - 1) outAt += lastExtraMs;
+        /* 卡片入场：填内容 + 加 entering */
+        _qManifest(function () {
+          if (manifestCardTagEl)   manifestCardTagEl.textContent   = it.tag;
+          if (manifestCardNameEl)  manifestCardNameEl.textContent  = it.name;
+          if (manifestCardDeltaEl) manifestCardDeltaEl.textContent = it.deltaText;
+          if (manifestRevealPage)  manifestRevealPage.textContent  =
+            (idx + 1 < 10 ? '0' : '') + (idx + 1) + ' / ' +
+            (items.length < 10 ? '0' : '') + items.length;
+          if (manifestRevealHint)  manifestRevealHint.textContent  =
+            idx === 0 ? '清点中…'
+            : (idx === items.length - 1 ? '末件登记中…' : '继续清点…');
+
+          manifestCardEl.setAttribute('data-polarity', it.dataPolarity);
+          /* 切换位图 src（占位阶段三态指向同一张图，后期可分别替换） */
+          if (manifestCardImgEl && MANIFEST_CRATE_SRC[it.dataPolarity]) {
+            var nextSrc = MANIFEST_CRATE_SRC[it.dataPolarity];
+            if (manifestCardImgEl.getAttribute('src') !== nextSrc) {
+              manifestCardImgEl.setAttribute('src', nextSrc);
+            }
+          }
+          /* 触发 reflow 让 transform/opacity 重置 */
+          manifestCardEl.classList.remove('entering', 'exiting');
+          /* eslint-disable no-unused-expressions */
+          void manifestCardEl.offsetWidth;
+          /* eslint-enable no-unused-expressions */
+          manifestCardEl.classList.add('entering');
+          if (typeof audioEngine !== 'undefined' && typeof audioEngine.playManifestRevealItem === 'function') {
+            audioEngine.playManifestRevealItem(
+              it.delta > 0 ? 'gain' : (it.delta < 0 ? 'loss' : 'neutral')
+            );
+          }
+        }, inAt);
+        /* 最后一张不退出，留给背板淡出统一处理 */
+        if (idx < items.length - 1) {
+          _qManifest(function () {
+            manifestCardEl.classList.remove('entering');
+            manifestCardEl.classList.add('exiting');
+          }, outAt);
+        }
+      })(items[ci], ci);
+    }
+
+    /* 末件持续时间相对加长 = cardHold + lastExtraMs + bgOutMs */
+    var totalMs = bgInMs + items.length * cardInMs
+                + (items.length - 1) * (cardHold + cardOutMs)
+                + cardHold + lastExtraMs + bgOutMs;
+    /* 自动淡出：在末件 hold 结束时让背板退出（让位 door-result-frame 与档案按钮） */
+    var hideAt = totalMs - bgOutMs;
+    _qManifest(function () {
+      if (manifestRevealEl) {
+        manifestRevealEl.classList.remove('active');
+        manifestRevealEl.setAttribute('aria-hidden', 'true');
+      }
+      if (manifestCardEl) {
+        manifestCardEl.classList.add('exiting');
+      }
+    }, hideAt);
+    return totalMs;
+  }
+
+  function hideManifestStrip() {
+    /* 兼容旧调用：同时关闭新 overlay 与遗留 strip 容器 */
+    _clearManifestTimers();
+    if (manifestRevealEl) {
+      manifestRevealEl.classList.remove('active');
+      manifestRevealEl.setAttribute('aria-hidden', 'true');
+    }
+    if (manifestCardEl) {
+      manifestCardEl.classList.remove('entering', 'exiting');
+      manifestCardEl.setAttribute('data-polarity', 'neutral');
+    }
+    if (manifestStripEl) {
+      manifestStripEl.innerHTML = '';
+      manifestStripEl.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  /* ===========================================================
+   * 音频模式三态开关：常规 → 降维 → 关闭 → 常规
+   *
+   * 开启 on  ：BGM 正常播放
+   * 关闭 off ：BGM 完全静默；事件、操作的 SFX 一律保留
    * =========================================================== */
   (function () {
-    var STORAGE_KEY = 'fbc_bgm_dimmed_v1';
+    var STORAGE_KEY = 'fbc_bgm_mode_v1';
+    var LEGACY_DIMMED_KEY = 'fbc_bgm_dimmed_v1';
 
-    /* 常规：双声波弧线（全频喇叭） */
-    var SVG_NORMAL = [
-      '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">',
+    var MODES = ['on', 'off'];
+
+    /* 开启：双声波弧线（全频喇叭） */
+    var SVG_ON = [
+      '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">',
         '<path d="M1 5.5h3l4-3.5v12l-4-3.5H1z"/>',
         '<path d="M11.5 5.5c1.2 0.9 1.8 2.2 1.8 2.5s-0.6 1.6-1.8 2.5"/>',
         '<path d="M13.5 3.5c2 1.6 2.8 3.2 2.8 4.5s-0.8 2.9-2.8 4.5"/>',
       '</svg>'
     ].join('');
 
-    /* 降维：单弧低频波 + 虚线遮断高频 */
-    var SVG_DIMMED = [
-      '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">',
+    /* 关闭：喇叭 + 红色叉号 */
+    var SVG_OFF = [
+      '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">',
         '<path d="M1 5.5h3l4-3.5v12l-4-3.5H1z"/>',
-        '<path d="M11 8.5q2-3 4 0" stroke-width="1.8"/>',
-        '<line x1="11.2" y1="5.5" x2="14.8" y2="5.5" stroke-width="1.2" stroke-dasharray="1 1.2"/>',
+        '<line class="bgm-toggle__mute-x" x1="10.5" y1="5" x2="15"   y2="9.5"/>',
+        '<line class="bgm-toggle__mute-x" x1="15"   y1="5" x2="10.5" y2="9.5"/>',
       '</svg>'
     ].join('');
+
+    var SVG_BY_MODE = { on: SVG_ON, off: SVG_OFF };
+    var LABEL_BY_MODE = {
+      on:  { aria: '背景音：开启', title: '背景音：开启（点击关闭背景音乐，事件音效照常）' },
+      off: { aria: '背景音：关闭', title: '背景音：关闭（点击恢复背景音乐，事件音效照常）' }
+    };
+
+    function readStoredMode() {
+      try {
+        var v = localStorage.getItem(STORAGE_KEY);
+        if (v === 'on' || v === 'off') return v;
+        /* 旧版三态：normal/dimmed → on，muted → off */
+        if (v === 'normal' || v === 'dimmed') return 'on';
+        if (v === 'muted') return 'off';
+        var legacy = localStorage.getItem(LEGACY_DIMMED_KEY);
+        return legacy === '1' ? 'on' : 'on';
+      } catch (e) { return 'on'; }
+    }
+
+    function persistMode(mode) {
+      try {
+        localStorage.setItem(STORAGE_KEY, mode);
+        /* 同步移除旧版 dimmed 标志，避免下次启动误判 */
+        localStorage.removeItem(LEGACY_DIMMED_KEY);
+      } catch (e) {}
+    }
+
+    /* BGM 标准音量（与 tryStartThemeBgm 保持一致） */
+    var BGM_VOL_NORMAL = 0.38;
+
+    function applyEngineMode(mode) {
+      /* ── 1. Web Audio API 路由 ──
+       *   只静音 BGM 总线；master 恒常打开，所有 SFX 一律保留 */
+      if (typeof audioEngine !== 'undefined') {
+        /* 兜底：如果之前残留过 master 静音，强制恢复 */
+        if (typeof audioEngine.setMasterMuted === 'function' && audioEngine.isMasterMuted && audioEngine.isMasterMuted()) {
+          audioEngine.setMasterMuted(false);
+        }
+        /* 兜底：移除可能残留的 BGM 降维 */
+        if (typeof audioEngine.setBgmDimmed === 'function' && audioEngine.isBgmDimmed && audioEngine.isBgmDimmed()) {
+          audioEngine.setBgmDimmed(false);
+        }
+        if (typeof audioEngine.setBgmMuted === 'function') {
+          audioEngine.setBgmMuted(mode === 'off');
+        }
+      }
+
+      /* ── 2. 原生 <audio> BGM 元素（theme-bgm）──
+       *    实际播放背景音乐的元素，必须单独控制音量 */
+      if (!themeBgmEl) return;
+      if (mode === 'off') {
+        themeBgmEl.volume = 0;
+        try { themeBgmEl.pause(); } catch (e) {}
+      } else {
+        themeBgmEl.volume = BGM_VOL_NORMAL;
+        if (themeBgmEl.paused && themeBgmEl.dataset.started === '1') {
+          themeBgmEl.play().catch(function () {});
+        }
+      }
+    }
 
     var btn = document.getElementById('bgm-toggle-btn');
     if (!btn) return;
 
-    var dimmed = localStorage.getItem(STORAGE_KEY) === '1';
+    var mode = readStoredMode();
 
-    function applyDimmed(d) {
-      dimmed = d;
-      localStorage.setItem(STORAGE_KEY, dimmed ? '1' : '0');
-      btn.innerHTML = dimmed ? SVG_DIMMED : SVG_NORMAL;
-      btn.setAttribute('aria-pressed', dimmed ? 'true' : 'false');
-      if (typeof audioEngine !== 'undefined' && typeof audioEngine.setBgmDimmed === 'function') {
-        audioEngine.setBgmDimmed(dimmed);
+    function applyMode(next) {
+      mode = MODES.indexOf(next) >= 0 ? next : 'on';
+      btn.innerHTML = SVG_BY_MODE[mode];
+      btn.dataset.bgmMode = mode;
+      btn.setAttribute('aria-label', LABEL_BY_MODE[mode].aria);
+      btn.setAttribute('title',      LABEL_BY_MODE[mode].title);
+      btn.setAttribute('aria-pressed', mode === 'off' ? 'true' : 'false');
+      persistMode(mode);
+      applyEngineMode(mode);
+    }
+
+    function nextMode() {
+      return mode === 'on' ? 'off' : 'on';
+    }
+
+    btn.addEventListener('click', function () {
+      if (typeof audioEngine !== 'undefined' && typeof audioEngine.resumeIfNeeded === 'function') {
+        audioEngine.resumeIfNeeded();
+      }
+      applyMode(nextMode());
+    });
+
+    applyMode(mode);
+  }());
+
+  /* ===========================================================
+   * FBC · 规则 / 战绩 菜单弹窗
+   * =========================================================== */
+  (function () {
+    var btn       = document.getElementById('fbc-menu-btn');
+    var overlay   = document.getElementById('fbc-menu-overlay');
+    var closeBtn  = document.getElementById('fbc-menu-close');
+    var tabRules  = document.getElementById('fbc-menu-tab-rules');
+    var tabCareer = document.getElementById('fbc-menu-tab-career');
+    var pageRules = document.getElementById('fbc-menu-page-rules');
+    var pageCareer= document.getElementById('fbc-menu-page-career');
+    var careerCt  = document.getElementById('fbc-career-content');
+    if (!btn || !overlay) return;
+
+    function setActiveTab(which) {
+      var rules = which === 'rules';
+      tabRules.setAttribute('aria-selected',  rules ? 'true' : 'false');
+      tabCareer.setAttribute('aria-selected', rules ? 'false' : 'true');
+      pageRules.classList.toggle('active', rules);
+      pageCareer.classList.toggle('active', !rules);
+      pageRules.hidden  = !rules;
+      pageCareer.hidden = rules;
+      if (!rules) renderCareer();
+    }
+
+    function _evalText(c) {
+      if (c.total_liquidations >= 3) {
+        return '// 评估：数据轨迹偏向破产惯性，建议复诊偏移指数曲线。';
+      }
+      if (c.total_credits_collected >= 5000) {
+        return '// 评估：账面表现优良，列入 Tier-A 探测员候补名单。';
+      }
+      if (c.max_floor_reached >= 25) {
+        return '// 评估：深度记录已破常规边界，注意精神共振值。';
+      }
+      if (c.total_floors_climbed === 0) {
+        return '// 评估：尚无作业记录，请尽快进行首趟上行。';
+      }
+      return '// 评估：作业稳定，继续累积探测员信用度。';
+    }
+
+    function renderCareer() {
+      if (!careerCt) return;
+      var c = (typeof GameController !== 'undefined' && GameController.careerLoad)
+        ? GameController.careerLoad()
+        : { total_credits_collected: 0, total_floors_climbed: 0, max_floor_reached: 0, total_liquidations: 0, total_committee_overrides: 0 };
+
+      var hasAny = c.total_credits_collected > 0 || c.total_floors_climbed > 0 ||
+                   c.total_liquidations > 0 || c.total_committee_overrides > 0;
+
+      if (!hasAny) {
+        careerCt.innerHTML =
+          '<div class="fbc-career-empty">// 暂无作业记录 · 上行后自动归档</div>' +
+          '<div class="fbc-rules-section__body" style="margin-top:14px;line-height:1.7;">' +
+          '档案库会在每趟上行 / 撤离 / 破产后自动留痕，包含累计资产、最高深度、破产次数与代决议次数。' +
+          '</div>';
+        return;
+      }
+
+      var fmt = function (n) { return (n || 0).toLocaleString('zh-Hans-CN'); };
+      var html = '';
+      html += '<div class="fbc-career-grid">';
+      html +=   '<div class="fbc-career-cell fbc-career-cell--accent">' +
+                  '<span class="fbc-career-cell__label">累计核销资产</span>' +
+                  '<span class="fbc-career-cell__value">¥' + fmt(c.total_credits_collected) + '</span>' +
+                '</div>';
+      html +=   '<div class="fbc-career-cell">' +
+                  '<span class="fbc-career-cell__label">历史最高深度</span>' +
+                  '<span class="fbc-career-cell__value">B' + (c.max_floor_reached || 0) + '</span>' +
+                '</div>';
+      html +=   '<div class="fbc-career-cell">' +
+                  '<span class="fbc-career-cell__label">累计上行楼层</span>' +
+                  '<span class="fbc-career-cell__value">' + fmt(c.total_floors_climbed) + '</span>' +
+                '</div>';
+      html +=   '<div class="fbc-career-cell ' + (c.total_liquidations >= 3 ? 'fbc-career-cell--warn' : '') + '">' +
+                  '<span class="fbc-career-cell__label">破产记录</span>' +
+                  '<span class="fbc-career-cell__value">' + (c.total_liquidations || 0) + '</span>' +
+                '</div>';
+      html +=   '<div class="fbc-career-cell" style="grid-column:1 / -1;">' +
+                  '<span class="fbc-career-cell__label">FBC 委员会代决议次数</span>' +
+                  '<span class="fbc-career-cell__value">' + (c.total_committee_overrides || 0) + '</span>' +
+                '</div>';
+      html += '</div>';
+      html += '<div class="fbc-career-eval">' + _evalText(c) + '</div>';
+      html += '<button type="button" class="fbc-career-reset" id="fbc-career-reset-btn">清空个人档案</button>';
+      careerCt.innerHTML = html;
+
+      var resetBtn = document.getElementById('fbc-career-reset-btn');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+          if (!confirm('确认清空 FBC 个人战绩档案？此操作不可撤销。')) return;
+          try {
+            if (typeof localStorage !== 'undefined') {
+              localStorage.removeItem('fbc_career_v1');
+            }
+          } catch (e) { void e; }
+          renderCareer();
+        });
       }
     }
 
-    btn.addEventListener('click', function () { applyDimmed(!dimmed); });
-    applyDimmed(dimmed);
-  }());
+    function open() {
+      overlay.classList.add('active');
+      overlay.setAttribute('aria-hidden', 'false');
+      btn.setAttribute('aria-expanded', 'true');
+      setActiveTab('rules');
+    }
+    function close() {
+      overlay.classList.remove('active');
+      overlay.setAttribute('aria-hidden', 'true');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+    function isOpen() { return overlay.classList.contains('active'); }
+
+    btn.addEventListener('click', function () {
+      if (isOpen()) close(); else open();
+    });
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', function (e) {
+      /* 点空白关 */
+      if (e.target === overlay) close();
+    });
+    tabRules.addEventListener('click',  function () { setActiveTab('rules'); });
+    tabCareer.addEventListener('click', function () { setActiveTab('career'); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && isOpen()) close();
+    });
+  })();
 
   /* ===========================================================
    * 初始化

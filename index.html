@@ -752,11 +752,16 @@
     --door-dur-open:    0.62s;
     --glow-r: 90; --glow-g: 160; --glow-b: 210;
     /* 与 HUD 主读数一致（资产余额 #money / 开门 ±¥ 闪动共用） */
-    --hud-readout: #f8a59b;
+    --hud-readout: rgba(248, 165, 155, 1);
     --hud-readout-glow: rgba(248, 165, 155, 0.5);
     --hud-readout-main-size: clamp(1.28rem, 5.2vw, 1.72rem);
   }
 
+  /* =======================================================
+   * 字号规范（全局）
+   *   交互文字（button / tab / 可点击文本）：最小 0.75rem（12px）
+   *   辅助信息（状态标签 / 角落装饰文字）：可低至 0.5rem（8px）
+   * ======================================================= */
   *, *::before, *::after { box-sizing: border-box; }
 
   body {
@@ -1116,7 +1121,7 @@
     border: none;
     cursor: pointer;
     font-family: 'Courier New', monospace;
-    font-size: .56rem;
+    font-size: 0.75rem;   /* interactive text ≥ 12px */
     color: #6b7580;
     letter-spacing: .2em;
     text-transform: uppercase;
@@ -1231,7 +1236,7 @@
 
   @media (max-width: 460px) {
     .fbc-menu-panel { width: 94vw; }
-    .fbc-menu-tab { font-size: .5rem; padding: 9px 4px; letter-spacing: .14em; }
+    .fbc-menu-tab { font-size: 0.75rem; padding: 9px 4px; letter-spacing: .14em; }
     .fbc-rules-section__body, .fbc-career-cell__label { font-size: .52rem; }
   }
 
@@ -3031,7 +3036,7 @@
     padding: 0.82rem 0.75rem;
     cursor: pointer;
     font-family: Inter, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
-    font-size: clamp(0.58rem, 2.5vw, 0.68rem);
+    font-size: clamp(0.75rem, 2.5vw, 0.88rem);  /* interactive ≥ 12px */
     font-weight: 700;
     letter-spacing: 0.14em;
     color: #f2f2f2;
@@ -3975,7 +3980,7 @@
     border: 1px solid rgba(100, 80, 70, 0.3);
     color: rgba(200, 195, 188, 0.85);
     font-family: "Courier New", monospace;
-    font-size: clamp(0.62rem, 2.6vw, 0.78rem);
+    font-size: clamp(0.75rem, 2.6vw, 0.88rem);  /* interactive ≥ 12px */
     letter-spacing: 0.16em;
     text-transform: uppercase;
     font-weight: bold;
@@ -4080,7 +4085,7 @@
   .deploy-panel__btn--decline {
     min-height: auto;
     padding: 0.52rem 0.5rem;
-    font-size: clamp(0.5rem, 1.9vw, 0.58rem);  /* 8px min */
+    font-size: clamp(0.75rem, 1.9vw, 0.82rem);  /* interactive ≥ 12px */
     letter-spacing: 0.1em;
     text-transform: none;
     color: rgba(130, 120, 115, 0.7);
@@ -4972,7 +4977,7 @@
     background: rgba(0, 0, 0, 0.55);
     color: rgba(220, 225, 232, 0.92);
     font-family: "Courier New", monospace;
-    font-size: clamp(0.5rem, 2.8vw, 0.62rem);
+    font-size: clamp(0.75rem, 2.8vw, 0.88rem);  /* interactive ≥ 12px */
     letter-spacing: 0.14em;
     text-transform: uppercase;
     cursor: pointer;
@@ -5076,7 +5081,7 @@
     background: transparent;
     color: rgba(230, 232, 238, 0.95);
     font-family: "Courier New", monospace;
-    font-size: 0.52rem;
+    font-size: 0.75rem;  /* interactive ≥ 12px */
     letter-spacing: 0.16em;
     text-transform: uppercase;
     text-align: left;
@@ -5628,7 +5633,7 @@
     }
     .result-overlay__confirm {
       padding: clamp(0.62rem, 2.2vh, 0.85rem);
-      font-size: clamp(0.52rem, 3vw, 0.64rem);
+      font-size: clamp(0.75rem, 3vw, 0.88rem);  /* interactive ≥ 12px */
       min-height: 44px;
     }
     .result-overlay__footer {
@@ -5667,7 +5672,7 @@
     }
     .deploy-panel__btn {
       padding: clamp(0.52rem, 1.8vh, 0.72rem) 0.65rem;
-      font-size: clamp(0.52rem, 3.2vw, 0.68rem);
+      font-size: clamp(0.75rem, 3.2vw, 0.88rem);  /* interactive ≥ 12px */
       min-height: 48px;
     }
 
@@ -5677,7 +5682,7 @@
       height: min(260px, 78vw);
     }
     .radial-disk__seg {
-      font-size: clamp(0.42rem, 3.2vw, 0.58rem);
+      font-size: clamp(0.75rem, 3.2vw, 0.88rem);  /* interactive ≥ 12px */
       min-height: 44px;
       min-width: 44px;
     }
@@ -5781,10 +5786,10 @@
       font-size: clamp(0.68rem, 3.4vw, 0.84rem);
     }
     .radial-disk__seg {
-      font-size: clamp(0.52rem, 3.65vw, 0.7rem);
+      font-size: clamp(0.75rem, 3.65vw, 0.92rem);  /* interactive ≥ 12px */
     }
     .radial-disk__center {
-      font-size: clamp(0.5rem, 3.25vw, 0.64rem);
+      font-size: clamp(0.75rem, 3.25vw, 0.88rem);  /* interactive ≥ 12px */
     }
     .breach-overlay__label {
       font-size: clamp(0.72rem, 4.2vw, 0.95rem);
@@ -5796,7 +5801,7 @@
       font-size: clamp(0.9rem, 3.85vw, 1.22rem);
     }
     .inspection-menu__btn {
-      font-size: clamp(0.62rem, 3.1vw, 0.78rem);
+      font-size: clamp(0.75rem, 3.1vw, 0.88rem);  /* interactive ≥ 12px */
     }
     .scene-content-big-label {
       font-size: clamp(0.85rem, 4.5vw, 1.12rem) !important;
@@ -5971,28 +5976,34 @@
     left: 50%;
     transform: translateX(-50%);
     z-index: 22;
-    background: transparent;
-    border: none;
-    padding: 4px 10px;
+    background: rgba(130, 35, 25, 0.08);
+    border: 1px solid rgba(200, 100, 85, 0.28);
+    border-radius: 2px;
+    padding: 6px 16px 6px 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 7px;
     white-space: nowrap;
     font-family: 'Courier New', monospace;
-    font-size: 0.56rem;
-    color: rgba(175, 105, 95, 0.6);
-    letter-spacing: 0.14em;
-    transition: color 0.2s ease;
+    font-size: 0.75rem;
+    color: rgba(210, 130, 115, 0.82);
+    letter-spacing: 0.16em;
+    transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
   }
   .receipt-trigger-btn[hidden] { display: none; }
-  .receipt-trigger-btn:hover  { color: rgba(220, 140, 125, 0.9); }
+  .receipt-trigger-btn:hover {
+    color: rgba(248, 165, 155, 1);
+    background: rgba(130, 35, 25, 0.18);
+    border-color: rgba(220, 130, 110, 0.52);
+  }
   .receipt-trigger-btn__blink {
     display: inline-block;
-    width: 3px;
-    height: 3px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-    background: rgba(200, 100, 85, 0.7);
+    background: rgba(220, 120, 100, 0.85);
+    box-shadow: 0 0 5px rgba(220, 100, 85, 0.5);
     flex-shrink: 0;
     animation: rcpt-blink 2s step-end infinite;
   }

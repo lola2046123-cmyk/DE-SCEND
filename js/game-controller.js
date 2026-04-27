@@ -52,11 +52,15 @@
 
   function _careerBlank() {
     return {
-      total_credits_collected:    0,
+      total_buy_in:               0,   /* v0.06：累计建仓投入（玩家每局开局的 initialBet 之和） */
+      total_credits_collected:    0,   /* 累计核销资产（成功撤离到账之和） */
+      total_credits_lost:         0,   /* v0.06：累计清算损失（清算时该局的 buy-in 之和；用于直观对账） */
       total_floors_climbed:       0,
       max_floor_reached:          0,
       total_liquidations:         0,
-      total_committee_overrides:  0
+      total_committee_overrides:  0,
+      total_quota_crossings:      0,   /* v0.06：累计配额过线次数（每局至多 +1） */
+      total_debt_cashouts:        0    /* v0.06：累计未达配额触发的债务撤离次数 */
     };
   }
 
@@ -68,11 +72,15 @@
       if (raw) {
         var d = JSON.parse(raw);
         return {
+          total_buy_in:               d.total_buy_in               || 0,
           total_credits_collected:    d.total_credits_collected    || 0,
+          total_credits_lost:         d.total_credits_lost         || 0,
           total_floors_climbed:       d.total_floors_climbed       || 0,
           max_floor_reached:          d.max_floor_reached          || 0,
           total_liquidations:         d.total_liquidations         || 0,
-          total_committee_overrides:  d.total_committee_overrides  || 0
+          total_committee_overrides:  d.total_committee_overrides  || 0,
+          total_quota_crossings:      d.total_quota_crossings      || 0,
+          total_debt_cashouts:        d.total_debt_cashouts        || 0
         };
       }
     } catch (e) {}
@@ -86,13 +94,25 @@
     } catch (e) {}
   }
 
+  /**
+   * 原子化合并：所有新增字段与旧字段共用同一 key，向后兼容。
+   * 支持的 delta：
+   *   - buyIn:           累加到 total_buy_in（玩家每次"建仓"在 deploy 入口调用）
+   *   - creditsCollected:累加到 total_credits_collected（成功撤离）
+   *   - creditsLost:     累加到 total_credits_lost（清算时显式记录损失金额；通常 = 该局 buy-in）
+   *   - floorsClimbed / floorReached / liquidation / committeeOverride: 同 0.05
+   */
   function careerMerge(delta) {
     var a = careerLoad();
-    if (delta.creditsCollected)    a.total_credits_collected   += Math.floor(delta.creditsCollected);
+    if (delta.buyIn)               a.total_buy_in              += Math.max(0, Math.floor(delta.buyIn));
+    if (delta.creditsCollected)    a.total_credits_collected   += Math.max(0, Math.floor(delta.creditsCollected));
+    if (delta.creditsLost)         a.total_credits_lost        += Math.max(0, Math.floor(delta.creditsLost));
     if (delta.floorsClimbed)       a.total_floors_climbed      += delta.floorsClimbed;
     if (delta.floorReached)        a.max_floor_reached          = Math.max(a.max_floor_reached, delta.floorReached);
     if (delta.liquidation)         a.total_liquidations        += 1;
     if (delta.committeeOverride)   a.total_committee_overrides += 1;
+    if (delta.quotaCrossing)       a.total_quota_crossings     += 1;
+    if (delta.debtCashout)         a.total_debt_cashouts       += 1;
     _careerSave(a);
     return a;
   }
@@ -174,6 +194,63 @@
 
   var BASELINE_GROWTH = cfg('baselineGrowth.multiplier', 1.1);
 
+  /* baselineGrowth.tiers — 按 stakeRatio = credits/quota 分段的衰减曲线。
+     越富越缓，逼迫高资产玩家在"守"与"再赌一层"之间做真实决策。 */
+  var BASELINE_GROWTH_TIERS = (function () {
+    var raw = cfg('baselineGrowth.tiers', null);
+    if (!raw || !raw.length) return null;
+    var list = [];
+    for (var i = 0; i < raw.length; i++) {
+      var t = raw[i] || {};
+      var s = Number(t.stakeRatio);
+      var m = Number(t.multiplier);
+      if (!isFinite(s) || s <= 0 || !isFinite(m) || m <= 0) continue;
+      list.push({ stakeRatio: s, multiplier: m, label: t.label || '' });
+    }
+    list.sort(function (a, b) { return a.stakeRatio - b.stakeRatio; });
+    return list.length ? list : null;
+  })();
+
+  function pickBaselineGrowthTier(credits, quota) {
+    if (!BASELINE_GROWTH_TIERS) return { multiplier: BASELINE_GROWTH, label: 'flat', stakeRatio: 0 };
+    var qSafe = quota > 0 ? quota : 1;
+    var ratio = credits / qSafe;
+    for (var i = 0; i < BASELINE_GROWTH_TIERS.length; i++) {
+      if (ratio < BASELINE_GROWTH_TIERS[i].stakeRatio) {
+        return { multiplier: BASELINE_GROWTH_TIERS[i].multiplier, label: BASELINE_GROWTH_TIERS[i].label, stakeRatio: ratio };
+      }
+    }
+    var last = BASELINE_GROWTH_TIERS[BASELINE_GROWTH_TIERS.length - 1];
+    return { multiplier: last.multiplier, label: last.label, stakeRatio: ratio };
+  }
+
+  /* FBC 流通损耗（House Edge）。仅对 delta > 0 抽水；
+     抽水时机在 speculator/blindConfidence 等正向乘子之后，
+     语义为"无论你怎么赢，FBC 都先切一片"。 */
+  var FBC_EDGE_CFG = (function () {
+    var enabled = cfg('fbcEdge.enabled', true);
+    var rates   = cfg('fbcEdge.rates', null) || {};
+    var label   = cfg('fbcEdge.label', '联邦资产流通损耗');
+    return {
+      enabled: !!enabled,
+      label:   String(label),
+      rates: {
+        POSITIVE:    Number(rates.POSITIVE)    || 0,
+        DOUBLE:      Number(rates.DOUBLE)      || 0,
+        GOLDEN:      Number(rates.GOLDEN)      || 0,
+        NEGATIVE:    Number(rates.NEGATIVE)    || 0,
+        LIQUIDATION: Number(rates.LIQUIDATION) || 0
+      }
+    };
+  })();
+
+  function pickFbcEdgeRate(outcome) {
+    if (!FBC_EDGE_CFG.enabled || !outcome) return 0;
+    if (outcome.kind === 'POSITIVE' && outcome.goldenFloor) return FBC_EDGE_CFG.rates.GOLDEN || 0;
+    var r = FBC_EDGE_CFG.rates[outcome.kind];
+    return (typeof r === 'number' && r > 0) ? Math.min(r, 0.5) : 0;
+  }
+
   var FLOORS_JUMPED_MIN = cfg('floorsJumped.min', 1);
   var FLOORS_JUMPED_MAX = cfg('floorsJumped.max', 8);
 
@@ -182,8 +259,45 @@
     pressureMaxShift: cfg('quota.pressureMaxShift',     0.065),
     pressureLinear:   cfg('quota.pressureLinearFactor', 0.075),
     nearRange:        cfg('quota.nearQuotaRange',       0.2),
-    nearPeak:         cfg('quota.nearQuotaPeakShift',   0.038)
+    nearPeak:         cfg('quota.nearQuotaPeakShift',   0.038),
+    minQuota:         cfg('quota.minQuota',             500),
+    crossedBonusMs:   cfg('quota.crossedBonusCountdownMs', 1000),
+    crossedBonusOnce: cfg('quota.crossedBonusOnce',     true)
   };
+
+  var QUOTA_TIERS = (function () {
+    var raw = cfg('quota.tiers', []);
+    if (!Array.isArray(raw) || !raw.length) return [];
+    return raw
+      .map(function (t) {
+        return {
+          buyInMax:   typeof t.buyInMax === 'number' ? t.buyInMax : Infinity,
+          multiplier: typeof t.multiplier === 'number' ? t.multiplier : 1,
+          label:      t.label || ''
+        };
+      })
+      .sort(function (a, b) { return a.buyInMax - b.buyInMax; });
+  }());
+
+  /**
+   * 根据 buy-in 选择 quota 档位。
+   * 缺省 / 配置缺失时回退到 QUOTA_CFG.target，保证旧档案兼容。
+   */
+  function pickQuotaForBuyIn(buyIn) {
+    var stake = (typeof buyIn === 'number' && buyIn > 0) ? buyIn : 0;
+    if (!QUOTA_TIERS.length || stake <= 0) {
+      return { value: QUOTA_CFG.target, multiplier: null, label: 'static' };
+    }
+    var tier = null;
+    for (var i = 0; i < QUOTA_TIERS.length; i++) {
+      if (stake <= QUOTA_TIERS[i].buyInMax) { tier = QUOTA_TIERS[i]; break; }
+    }
+    if (!tier) tier = QUOTA_TIERS[QUOTA_TIERS.length - 1];
+    var raw = stake * tier.multiplier;
+    var rounded = Math.round(raw / 50) * 50;
+    var floored = Math.max(QUOTA_CFG.minQuota, rounded);
+    return { value: floored, multiplier: tier.multiplier, label: tier.label };
+  }
 
   var SPECULATOR_CFG = {
     enabled:        cfg('speculatorProtocol.enabled', true),
@@ -769,7 +883,8 @@
       playQuotaReached:    function () {},
       playLockerOpen:      function () {},
       playLockerSelect:    function () {},
-      playCommitteeOverride: function () {}
+      playCommitteeOverride: function () {},
+      playMetalTap:        function () {}
     };
   }
 
@@ -787,7 +902,8 @@
       corruption: [], breach: [],
       passengerBoard: [], passengerLeave: [], passengerReveal: [],
       envEvent: [], passengerStack: [], uiWarning: [],
-      lockerHand: [], lockerSelected: [], lockerHint: []
+      lockerHand: [], lockerSelected: [], lockerHint: [],
+      quotaCrossed: []
     };
     this._breachTimer    = null;
     this._breachDeadline = 0;
@@ -822,13 +938,19 @@
   GameController.biomeForFloor              = biomeForFloor;
   GameController.cfg                        = cfg;
   GameController.careerLoad                 = careerLoad;
+  GameController.careerMerge                = careerMerge;
+  GameController.pickQuotaForBuyIn          = pickQuotaForBuyIn;
 
   /* ---- 重置 ---- */
   GameController.prototype.reset = function () {
     this.floor                  = 1;
     this.credits                = this.initialBet;
     this.corruption             = 0;
-    this.quota                  = QUOTA_CFG.target;
+    var quotaPick               = pickQuotaForBuyIn(this.initialBet);
+    this.quota                  = quotaPick.value;
+    this._quotaTierLabel        = quotaPick.label;
+    this._quotaMultiplier       = quotaPick.multiplier;
+    this._quotaBonusPendingMs   = 0;
     this.inventory              = [{ id: 'floppy-disk', count: FLOPPY_INIT_COUNT }];
     this.passengers             = [];
     this.activeEnvEvent         = null;
@@ -916,6 +1038,7 @@
   GameController.prototype.onLockerHand        = function (fn) { this._listeners.lockerHand.push(fn); };
   GameController.prototype.onLockerSelected    = function (fn) { this._listeners.lockerSelected.push(fn); };
   GameController.prototype.onLockerHint        = function (fn) { this._listeners.lockerHint.push(fn); };
+  GameController.prototype.onQuotaCrossed      = function (fn) { this._listeners.quotaCrossed.push(fn); };
 
   /* ---- 事件派发 ---- */
   GameController.prototype._emitState = function (next, prev) {
@@ -1188,7 +1311,8 @@
       creditsMultiplier: 0, autoLiquidate: true
     };
     this._emitOutcome(this.lastOutcome);
-    careerMerge({ liquidation: true });
+    /* v0.06：清算同时把该局建仓投入计入累计损失，用于赢/亏对账 */
+    careerMerge({ liquidation: true, creditsLost: this.initialBet });
     this._setState(STATES.GAME_OVER);
   };
 
@@ -1234,7 +1358,9 @@
   };
 
   GameController.prototype._applyBaselineGrowth = function () {
-    this.credits *= BASELINE_GROWTH;
+    var tier = pickBaselineGrowthTier(this.credits, this.quota);
+    this.credits *= tier.multiplier;
+    this._lastBaselineTier = tier;
     this._updatePeakCredits();
   };
 
@@ -1257,6 +1383,21 @@
     if (delta > 0 && this._blindConfidenceActive) {
       delta = Math.round(delta * COMBO_BLIND_CFG.gainMult);
     }
+
+    /* FBC 流通损耗：仅对正向 delta 抽水。
+       税基为已叠加 speculator/blindConfidence 的最终增益，
+       语义为"FBC 对所有渠道的正面收益统一切片"。 */
+    var edgeRate   = (delta > 0) ? pickFbcEdgeRate(outcome) : 0;
+    var edgeAmount = 0;
+    if (edgeRate > 0) {
+      edgeAmount = Math.round(delta * edgeRate);
+      if (edgeAmount > 0) {
+        delta -= edgeAmount;
+      }
+    }
+    outcome._fbcEdgeRate   = edgeRate;
+    outcome._fbcEdgeAmount = edgeAmount;
+
     this.credits = Math.max(0, this.credits + delta);
     outcome._effectiveDelta      = delta;
     outcome._effectiveMultiplier = stake > 0 ? (this.credits / stake) : 1;
@@ -1356,14 +1497,24 @@
     var hand = generateLockerHand(this, lockerCount, quotaShift);
     var countdownMs = _resolveLockerCountdown(lockerCount);
 
+    var quotaBonusApplied = 0;
+    if (this._quotaBonusPendingMs > 0) {
+      quotaBonusApplied = this._quotaBonusPendingMs;
+      countdownMs = countdownMs + quotaBonusApplied;
+      if (QUOTA_CFG.crossedBonusOnce) {
+        this._quotaBonusPendingMs = 0;
+      }
+    }
+
     this._lockerHand            = hand.candidates;
     this._lockerHandMeta = {
-      biome:         biome,
-      floorsJumped:  floorsJumped,
-      envRoll:       envRoll,
-      paxEvents:     pEvents,
-      quotaShift:    quotaShift,
-      countdownMs:   countdownMs
+      biome:             biome,
+      floorsJumped:      floorsJumped,
+      envRoll:           envRoll,
+      paxEvents:         pEvents,
+      quotaShift:        quotaShift,
+      countdownMs:       countdownMs,
+      quotaBonusApplied: quotaBonusApplied
     };
     this._lockerCountdownDeadline = Date.now() + countdownMs;
 
@@ -1544,6 +1695,26 @@
         if (typeof this.audio.playQuotaReached === 'function') {
           this.audio.playQuotaReached();
         }
+
+        var bonusMs = QUOTA_CFG.crossedBonusMs > 0 ? QUOTA_CFG.crossedBonusMs : 0;
+        if (bonusMs > 0) this._quotaBonusPendingMs = bonusMs;
+
+        var quotaCrossedPayload = {
+          floor:           this.floor,
+          credits:         this.credits,
+          quota:           this.quota,
+          tierLabel:       this._quotaTierLabel || 'static',
+          multiplier:      this._quotaMultiplier || null,
+          bonusCountdownMs: bonusMs,
+          surplus:         Math.max(0, this.credits - this.quota)
+        };
+
+        try { careerMerge({ quotaCrossing: true }); } catch (eMerge) { /* swallow */ }
+
+        for (var qi = 0; qi < this._listeners.quotaCrossed.length; qi++) {
+          try { this._listeners.quotaCrossed[qi](quotaCrossedPayload, this); }
+          catch (eCb) { console.error(eCb); }
+        }
       }
     }
 
@@ -1630,7 +1801,8 @@
     if (this.state !== STATES.REVEALING) return { ok: false, reason: 'not_revealing' };
 
     if (this.lastOutcome && this.lastOutcome.kind === 'LIQUIDATION' && !this.lastOutcome.mitigated) {
-      careerMerge({ liquidation: true });
+      /* v0.06：清算同时把该局建仓投入计入累计损失，用于赢/亏对账 */
+      careerMerge({ liquidation: true, creditsLost: this.initialBet });
       this._setState(STATES.GAME_OVER);
       return { ok: true, gameOver: true, breach: false };
     }
@@ -1697,6 +1869,13 @@
     var payout = Math.floor(this.credits);
     var debt   = Math.floor(this.getDebt());
     this.lastPayout = payout;
+
+    /* v0.06 C-1：债务撤离也要"入账"，否则 NET P&L 缺口会被永久隐藏。
+       - payout（玩家被 FBC 提扣后剩余取回额）记入 total_credits_collected。
+       - 不计 liquidation / creditsLost：损失体现在 buy_in - payout 自然差。
+       - 单独计 total_debt_cashouts，便于"未达配额"事件单独审计。 */
+    careerMerge({ creditsCollected: payout, debtCashout: true });
+
     this._setState(STATES.DEBT_CASHOUT);
     for (var i = 0; i < this._listeners.cashOut.length; i++) {
       try { this._listeners.cashOut[i](payout, this, { debtForced: true, debt: debt }); } catch (e) { console.error(e); }

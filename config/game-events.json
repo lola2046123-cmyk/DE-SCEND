@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "version": "0.05",
-    "description": "《暴富电梯》事件概率与数值配置表（局内计价规程）。修改此文件即可调整游戏平衡，无需改动代码。v0.05：删卡牌/连环爆雷/资产冻结/软盘重掷买断；新增封存货舱选盘 + 货舱清点逐项揭露 + FBC 代决议。",
-    "lastUpdated": "2026-04-26"
+    "version": "0.06",
+    "description": "《暴富电梯》事件概率与数值配置表（局内计价规程）。修改此文件即可调整游戏平衡，无需改动代码。v0.06：动态配额 + FBC 边际抽佣 + 配额过线庆贺 + 局长生涯档案（核销/亏损/净 P&L）+ 货舱清点中文本土化（户口·学区房·茅台·安宫牛黄丸·田黄石·P2P 暴雷·BB 机·共享单车押金 等）+ 三件清点 hold 节拍延长（让玩家读完中文物品名 + tag + 金额）+ 委员会低语 / 边缘碎闪 / 撤离指令 / 启动屏 Slogan / Boot 幕布 / 情报员话术 全面注入中国情结（恭喜发财 / 落袋为安 / 闷声发大财 / 韭菜 / 鸡蛋分篮 / 加杠杆）。",
+    "lastUpdated": "2026-04-27"
   },
 
   "thresholds": {
@@ -53,8 +53,27 @@
   },
 
   "baselineGrowth": {
-    "_comment": "每升一层的基线资产增长倍率",
-    "multiplier": 1.1
+    "_comment": "每升一层的基线资产增长倍率。tiers 为按 stakeRatio = credits/quota 分段的衰减曲线；缺省回退 multiplier。",
+    "multiplier": 1.1,
+    "tiers": [
+      { "stakeRatio": 1.5,   "multiplier": 1.10, "label": "incentive" },
+      { "stakeRatio": 3.0,   "multiplier": 1.06, "label": "throttle"  },
+      { "stakeRatio": 6.0,   "multiplier": 1.03, "label": "freeze"    },
+      { "stakeRatio": 999.0, "multiplier": 1.015, "label": "millionaire-trap" }
+    ]
+  },
+
+  "fbcEdge": {
+    "_comment": "联邦资产流通损耗（House Edge）。对每次结算的正向 delta 按结果带分级抽水；亏损/清算不抽税。所有税额计入 outcome._fbcEdgeAmount 供 UI 显示。",
+    "enabled": true,
+    "rates": {
+      "POSITIVE":    0.04,
+      "DOUBLE":      0.08,
+      "GOLDEN":      0.12,
+      "NEGATIVE":    0.0,
+      "LIQUIDATION": 0.0
+    },
+    "label": "联邦资产流通损耗"
   },
 
   "floorsJumped": {
@@ -168,12 +187,21 @@
   },
 
   "quota": {
-    "_comment": "配额系统。玩家须积累资产超过此值才可正常撤离。",
+    "_comment": "配额系统。玩家须积累资产超过此值才可正常撤离。v0.06：tiers 动态量化按 buy-in 分段，让不同杠杆面对不同的'过线难度'；缺省时回退 target。",
     "target": 1000,
+    "tiers": [
+      { "buyInMax":  250,   "multiplier": 5.0, "label": "small-stake"  },
+      { "buyInMax":  600,   "multiplier": 4.0, "label": "standard"     },
+      { "buyInMax":  1500,  "multiplier": 3.0, "label": "leveraged"    },
+      { "buyInMax":  99999, "multiplier": 2.5, "label": "high-roller"  }
+    ],
+    "minQuota": 500,
     "pressureMaxShift": 0.065,
     "pressureLinearFactor": 0.075,
     "nearQuotaRange": 0.2,
-    "nearQuotaPeakShift": 0.038
+    "nearQuotaPeakShift": 0.038,
+    "crossedBonusCountdownMs": 1000,
+    "crossedBonusOnce": true
   },
 
   "speculatorProtocol": {
@@ -243,12 +271,20 @@
     "odometerDelayAfterOpenMs": 160,
     "passengerResyncDelayMs": 560,
     "liquidationPanelDelayMs": 780,
+    "doorRevealSettleMs": 200,
+    "_doorRevealSettleNote_v0_06_1": "v0.06.1：从兜底 900ms 压到 200ms。以前 manifest overlay 退场后还会再 settle 900ms 才让按钮可点，这段是无信息死等。lastExtraMs(1200) + bgOutMs(360) 已经为玩家留足消化时间，settle 只需保留极短 finishReveal 调度延迟。",
     "lockerOverlayShowMs": 360,
     "lockerSelectFlipMs": 520,
     "lockerToManifestMs": 320,
-    "manifestItemRevealMs": 620,
-    "manifestItemHoldMs": 540,
-    "manifestSettleMs": 480,
+    "manifestBgInMs": 260,
+    "manifestCardInMs": 360,
+    "manifestItemRevealMs": 1500,
+    "manifestCardOutMs": 280,
+    "manifestBgOutMs": 360,
+    "manifestLastExtraHoldMs": 1200,
+    "manifestItemHoldMs": 820,
+    "manifestSettleMs": 1600,
+    "_pacingNote_v0_06": "v0.06 中文物品名后阅读时长收紧：manifestItemRevealMs 兜底 1100→1500（每件 hold 多 ~0.4s），manifestLastExtraHoldMs 480→1200（末件再多停 ~0.72s 让玩家盯住总览/三件汇总）。runManifestReveal 实际通过 pace() 读取本节字段，manifestItemHoldMs / manifestSettleMs 仅作存档兼容。",
     "gainFlashHoldMultTier1": 1.32,
     "gainFlashHoldMultTier2": 1.58,
     "gainFlashHoldMultTier3": 1.98,
@@ -298,59 +334,80 @@
   },
 
   "manifestPool": {
-    "_comment": "货舱清点子产物文案池。按 Biome × 子产物极性(positive/negative/neutral) 分组；每件子产物从对应池中权重随机抽取。",
+    "_comment": "v0.06 中国本土化版：货舱清点子产物文案池。三个 Biome × 三种极性 (positive/negative/neutral)。物品引用中国驰名符号（户口/学区房/茅台/安宫牛黄丸/田黄石/P2P 暴雷/BB 机/共享单车押金 等），与原 FBC 行政命名（FBC-/MNT-/SUP-）形成『官僚档案 × 中国梦』反差。后期补图：name 字段对应 assets/manifest/{id}.png 占位。",
+
     "admin": {
+      "_localComment": "行政区 (F1–10): 体制内文档/凭证/证件/票据 — 中国硬通货",
       "positive": [
-        { "id": "stamped_voucher",  "name": "盖章凭证",   "tag": "FBC-A02", "weight": 35 },
-        { "id": "audit_chit",       "name": "审计余额票", "tag": "FBC-A07", "weight": 30 },
-        { "id": "ledger_dust",      "name": "账册余尘",   "tag": "FBC-A11", "weight": 25 },
-        { "id": "stamp_kit",        "name": "三联印章",   "tag": "FBC-A18", "weight": 10 }
+        { "id": "beijing_hukou",        "name": "北京户口指标",     "tag": "FBC-A02", "weight": 18 },
+        { "id": "school_district_deed", "name": "学区房房本",       "tag": "FBC-A07", "weight": 18 },
+        { "id": "monkey_stamp_1980",    "name": "1980 猴票全张",    "tag": "FBC-A11", "weight": 14 },
+        { "id": "moutai_vintage",       "name": "飞天茅台陈酿",     "tag": "FBC-A18", "weight": 16 },
+        { "id": "gold_bar_999",         "name": "千足金金条",       "tag": "FBC-A23", "weight": 18 },
+        { "id": "shanghai_lao_yangfang","name": "上海老洋房房契",   "tag": "FBC-A29", "weight": 16 }
       ],
       "negative": [
-        { "id": "redaction_form",   "name": "涂改备案表", "tag": "FBC-D03", "weight": 35 },
-        { "id": "lost_chit",        "name": "走失餐补票", "tag": "FBC-D09", "weight": 30 },
-        { "id": "void_paperclip",   "name": "废止回形针", "tag": "FBC-D12", "weight": 25 },
-        { "id": "bad_carbon",       "name": "复写纸残角", "tag": "FBC-D17", "weight": 10 }
+        { "id": "p2p_blowup",        "name": "暴雷 P2P 合同",     "tag": "FBC-D03", "weight": 18 },
+        { "id": "mortgage_dunning",  "name": "房贷催收单",        "tag": "FBC-D09", "weight": 16 },
+        { "id": "danke_deposit",     "name": "长租公寓押金条",    "tag": "FBC-D12", "weight": 14 },
+        { "id": "cc_rollover",       "name": "信用卡利滚利账单",  "tag": "FBC-D17", "weight": 16 },
+        { "id": "bike_deposit",      "name": "共享单车押金回执",  "tag": "FBC-D21", "weight": 18 },
+        { "id": "kanyidao_link",     "name": "砍一刀链接残页",    "tag": "FBC-D27", "weight": 18 }
       ],
       "neutral": [
-        { "id": "blank_envelope",   "name": "空白档袋",   "tag": "FBC-N02", "weight": 50 },
-        { "id": "pencil_stub",      "name": "断头铅笔",   "tag": "FBC-N04", "weight": 50 }
+        { "id": "canteen_coupon",    "name": "单位食堂粮票",      "tag": "FBC-N02", "weight": 36 },
+        { "id": "expense_stub",      "name": "出差报销底联",      "tag": "FBC-N04", "weight": 32 },
+        { "id": "housing_fund_old",  "name": "公积金对账单",      "tag": "FBC-N08", "weight": 32 }
       ]
     },
+
     "maintenance": {
+      "_localComment": "维护区 (F11–25): 工业老物件 / 中国制造 / 老三件 / 八九十年代家庭硬件",
       "positive": [
-        { "id": "copper_coupler",   "name": "黄铜联轴节", "tag": "MNT-A04", "weight": 30 },
-        { "id": "calibrated_gauge", "name": "校准压力表", "tag": "MNT-A09", "weight": 25 },
-        { "id": "spare_relay",      "name": "备用继电器", "tag": "MNT-A12", "weight": 25 },
-        { "id": "sealed_solder",    "name": "封装锡条",   "tag": "MNT-A19", "weight": 20 }
+        { "id": "yongjiu_bike",      "name": "永久二八大杠",      "tag": "MNT-A04", "weight": 18 },
+        { "id": "butterfly_machine", "name": "蝴蝶牌缝纫机头",    "tag": "MNT-A09", "weight": 16 },
+        { "id": "shanghai_watch",    "name": "上海牌手表机芯",    "tag": "MNT-A12", "weight": 18 },
+        { "id": "redwood_stool",     "name": "老山红木条凳",      "tag": "MNT-A19", "weight": 16 },
+        { "id": "peony_camera",      "name": "牡丹牌胶卷相机",    "tag": "MNT-A23", "weight": 16 },
+        { "id": "mini_gold_fish",    "name": "千足金小金鱼",      "tag": "MNT-A29", "weight": 16 }
       ],
       "negative": [
-        { "id": "rusted_pin",       "name": "锈蚀销栓",   "tag": "MNT-D01", "weight": 30 },
-        { "id": "leaked_capacitor", "name": "漏液电容",   "tag": "MNT-D06", "weight": 25 },
-        { "id": "frayed_wire",      "name": "磨损导线",   "tag": "MNT-D11", "weight": 25 },
-        { "id": "cracked_bushing",  "name": "裂纹衬套",   "tag": "MNT-D15", "weight": 20 }
+        { "id": "scrap_ebike",       "name": "报废电动车",        "tag": "MNT-D01", "weight": 18 },
+        { "id": "demolish_plate",    "name": "拆迁旧门牌",        "tag": "MNT-D06", "weight": 16 },
+        { "id": "leaked_18650",      "name": "漏液 18650 电池",   "tag": "MNT-D11", "weight": 16 },
+        { "id": "bb_pager_shell",    "name": "BB 机外壳",         "tag": "MNT-D15", "weight": 16 },
+        { "id": "fake_charger",      "name": "山寨充电头",        "tag": "MNT-D21", "weight": 18 },
+        { "id": "cracked_helmet",    "name": "裂痕安全帽",        "tag": "MNT-D27", "weight": 16 }
       ],
       "neutral": [
-        { "id": "shop_rag",         "name": "工程抹布",   "tag": "MNT-N01", "weight": 50 },
-        { "id": "cable_tie",        "name": "尼龙扎带",   "tag": "MNT-N04", "weight": 50 }
+        { "id": "shop_rag",          "name": "工程抹布",          "tag": "MNT-N01", "weight": 36 },
+        { "id": "cable_tie",         "name": "尼龙扎带",          "tag": "MNT-N04", "weight": 32 },
+        { "id": "phoenix_bell",      "name": "凤凰单车铃",        "tag": "MNT-N08", "weight": 32 }
       ]
     },
+
     "supernatural": {
+      "_localComment": "超自然区 (F26+): 神药 / 古董 / 风水 — 中国式天价 + 玄学",
       "positive": [
-        { "id": "memetic_charm",    "name": "模因护符",   "tag": "SUP-A03", "weight": 25 },
-        { "id": "void_crystal",     "name": "虚空晶体",   "tag": "SUP-A07", "weight": 25 },
-        { "id": "redacted_relic",   "name": "涂黑遗物",   "tag": "SUP-A11", "weight": 25 },
-        { "id": "hiss_residue",     "name": "希斯凝液",   "tag": "SUP-A18", "weight": 25 }
+        { "id": "angong_niuhuang",   "name": "安宫牛黄丸（94 配方）", "tag": "SUP-A03", "weight": 18 },
+        { "id": "imperial_jade",     "name": "帝王绿翡翠手镯",       "tag": "SUP-A07", "weight": 16 },
+        { "id": "tianhuang_seal",    "name": "清代田黄石印",         "tag": "SUP-A11", "weight": 14 },
+        { "id": "chenghua_cup",      "name": "成化斗彩鸡缸杯片",     "tag": "SUP-A15", "weight": 14 },
+        { "id": "agarwood_carving",  "name": "千年沉香雕件",         "tag": "SUP-A19", "weight": 16 },
+        { "id": "dahongpao_cake",    "name": "大红袍母树茶饼",       "tag": "SUP-A23", "weight": 22 }
       ],
       "negative": [
-        { "id": "cursed_ledger",    "name": "诅咒账册",   "tag": "SUP-D02", "weight": 30 },
-        { "id": "hiss_whisper_jar", "name": "低语容器",   "tag": "SUP-D08", "weight": 25 },
-        { "id": "corrupted_token",  "name": "侵蚀通证",   "tag": "SUP-D13", "weight": 25 },
-        { "id": "echo_fragment",    "name": "回响残片",   "tag": "SUP-D17", "weight": 20 }
+        { "id": "fake_hetian",       "name": "伪和田玉手镯",         "tag": "SUP-D02", "weight": 18 },
+        { "id": "blessed_red_string","name": "大师开光红绳",         "tag": "SUP-D08", "weight": 18 },
+        { "id": "fake_tiger_balm",   "name": "贴牌虎骨膏",           "tag": "SUP-D13", "weight": 16 },
+        { "id": "fake_fengshui",     "name": "假风水镇宅符",         "tag": "SUP-D17", "weight": 16 },
+        { "id": "putian_dx",         "name": "民营医院神奇诊断书",   "tag": "SUP-D21", "weight": 16 },
+        { "id": "fortune_blank",     "name": "算命摊真伪卦",         "tag": "SUP-D27", "weight": 16 }
       ],
       "neutral": [
-        { "id": "blank_glyph",      "name": "空白符纸",   "tag": "SUP-N02", "weight": 50 },
-        { "id": "muted_bell",       "name": "失声铃舌",   "tag": "SUP-N05", "weight": 50 }
+        { "id": "muted_bell",        "name": "失声铜铃舌",           "tag": "SUP-N02", "weight": 36 },
+        { "id": "old_compass",       "name": "未磁化罗盘",           "tag": "SUP-N05", "weight": 32 },
+        { "id": "old_cushion",       "name": "师父旧蒲团",           "tag": "SUP-N08", "weight": 32 }
       ]
     }
   },
@@ -366,21 +423,29 @@
       "FBC 自动派发：${locker} 号——决策迟疑视同放弃异议。",
       "联邦垂直局已替您处理 ${locker} 号货舱。\n剩余收益按规章折扣留存。",
       "代决议执行：${locker} 号。\n请下次更果断地行使探测员裁量权。",
-      "${locker} 号已被委员会接管。\n您的犹豫已被记入信用档案。"
+      "${locker} 号已被委员会接管。\n您的犹豫已被记入信用档案。",
+      "组织上替您拿了主意：${locker} 号。\n剩余收益按规章折扣留存。",
+      "委员会代为表态：${locker} 号开柜。\n下次请独立思考。"
     ]
   },
 
   "lockerHintCopy": {
-    "_comment": "情报员/清扫员 等乘客上车后给出的柜号情报话术。${locker} 是柜号，${kind} 是情报极性（好/坏）。",
+    "_comment": "情报员/清扫员 等乘客上车后给出的柜号情报话术。${locker} 是柜号，${kind} 是情报极性（好/坏）。v0.06 中国本土化：加入老韭菜/赌徒/包工头口吻的『梭哈』『年终奖』『割肉』『闷声发大财』等中国式情绪词。",
     "good": [
       "情报员低声: \"${locker} 号有油水。\"",
       "情报员: \"赌一把 ${locker} 号，错不了。\"",
-      "清扫员瞥了眼 ${locker}: \"昨天那柜……重得很。\""
+      "清扫员瞥了眼 ${locker}: \"昨天那柜……重得很。\"",
+      "老韭菜耳语: \"${locker} 号——这把不割。\"",
+      "情报员压低声音: \"${locker} 号押对了，年终奖。\"",
+      "包工头叼着烟: \"${locker} 号？闷声发大财。\""
     ],
     "bad": [
       "情报员低声: \"${locker} 号别碰，里面不干净。\"",
       "情报员: \"听说 ${locker} 号是套子。\"",
-      "清扫员摇头: \"${locker} 号？我刚擦过血迹。\""
+      "清扫员摇头: \"${locker} 号？我刚擦过血迹。\"",
+      "情报员摇头: \"${locker} 号专坑新韭菜。\"",
+      "老股民冷笑: \"${locker} 号——上一波就割在这。\"",
+      "清扫员压低声音: \"${locker} 号别贪，止损要紧。\""
     ]
   }
 }

@@ -113,13 +113,264 @@
     position: fixed; inset: 0; z-index: 350;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    background: rgba(0,0,0,.88);
+    /* v0.06：原 rgba(0,0,0,.88) 被替换为「深邃黑底 + 极细近地反光带」
+       —— 让 .locker-stage 的透视布景能浮在背景之上 */
+    background:
+      radial-gradient(ellipse 120% 70% at 50% 100%,
+        rgba(15, 22, 30, 0.55) 0%,
+        rgba(0, 0, 0, 0.92) 60%,
+        rgba(0, 0, 0, 0.96) 100%),
+      #000;
     -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
     opacity: 0; pointer-events: none;
     transition: opacity .28s ease;
+    overflow: hidden;
   }
   #locker-selection-overlay.active {
     opacity: 1; pointer-events: all;
+  }
+
+  /* =======================================================
+   * v0.06：FBC 货舱档案库 · 微 3D 纵深布景层
+   *
+   *   - 灵感：Control 红走廊 / 布鲁塔尔混凝土厅；
+   *   - 透视消失点固定在画面中央偏上 (50%, 42%)；
+   *   - 全部装饰层 pointer-events: none，不影响 .locker-slot 点击；
+   *   - z-index: 0；内容包在 .locker-stage__content 中，z-index: 5。
+   * ======================================================= */
+  .locker-stage {
+    position: absolute; inset: 0; z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* 透视两侧墙（梯形 clip-path，向消失点收缩） */
+  .locker-stage__wall {
+    position: absolute; top: 0; bottom: 0;
+    width: clamp(60px, 14%, 180px);
+    pointer-events: none;
+  }
+  .locker-stage__wall--left {
+    left: 0;
+    background:
+      linear-gradient(90deg,
+        #04060a 0%,
+        #0a0f17 38%,
+        #131c28 72%,
+        #1a2532 100%);
+    box-shadow:
+      inset -3px 0 22px rgba(0, 0, 0, 0.78),
+      inset -1px 0 0 rgba(120, 180, 200, 0.04);
+    clip-path: polygon(0 0, 100% 6%, 100% 94%, 0 100%);
+  }
+  .locker-stage__wall--right {
+    right: 0;
+    background:
+      linear-gradient(-90deg,
+        #04060a 0%,
+        #0a0f17 38%,
+        #131c28 72%,
+        #1a2532 100%);
+    box-shadow:
+      inset 3px 0 22px rgba(0, 0, 0, 0.78),
+      inset 1px 0 0 rgba(120, 180, 200, 0.04);
+    clip-path: polygon(0 6%, 100% 0, 100% 100%, 0 94%);
+  }
+  /* 墙面竖向凹槽（参考图4 布鲁塔尔混凝土纹） */
+  .locker-stage__wall::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        transparent 0,
+        transparent 14px,
+        rgba(255, 255, 255, 0.018) 14px,
+        rgba(255, 255, 255, 0.018) 15px
+      );
+    pointer-events: none;
+  }
+  /* v0.06: 墙面靠内侧的边光由暖橙改为冷青（与全局 mint/red 二色规范一致） */
+  .locker-stage__wall::after {
+    content: '';
+    position: absolute; top: 12%; bottom: 12%;
+    width: 1px;
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(80, 200, 220, 0.16) 18%,
+      rgba(80, 200, 220, 0.30) 50%,
+      rgba(80, 200, 220, 0.16) 82%,
+      transparent 100%);
+    box-shadow: 0 0 8px rgba(80, 200, 220, 0.22);
+  }
+  .locker-stage__wall--left::after  { right: 0; }
+  .locker-stage__wall--right::after { left: 0; }
+
+  /* 顶部远景天井 + 长条吊灯阵列（图3 走廊吊灯） */
+  .locker-stage__ceiling {
+    position: absolute; top: 0;
+    left: clamp(60px, 14%, 180px);
+    right: clamp(60px, 14%, 180px);
+    height: 14%;
+    background: linear-gradient(180deg,
+      #060912 0%,
+      #04060c 60%,
+      transparent 100%);
+    clip-path: polygon(2% 0, 98% 0, 100% 100%, 0 100%);
+    overflow: hidden;
+  }
+  .locker-stage__lamp {
+    position: absolute;
+    border-radius: 1px;
+    background: linear-gradient(180deg,
+      rgba(230, 240, 250, 0.8) 0%,
+      rgba(180, 215, 235, 0.35) 60%,
+      rgba(120, 180, 215, 0.06) 100%);
+    box-shadow:
+      0 0 10px rgba(160, 210, 235, 0.55),
+      0 0 28px rgba(120, 180, 220, 0.32),
+      0 6px 28px rgba(120, 180, 220, 0.18);
+    filter: blur(0.3px);
+  }
+  /* 五盏 远→近→远 透视灯阵；中央最大最亮 */
+  .locker-stage__lamp--far-l   { top: 16%; left: 18%; width: 4.5%; height: 5%;  opacity: 0.42; }
+  .locker-stage__lamp--mid-l   { top: 18%; left: 30%; width: 6.5%; height: 6.5%; opacity: 0.62; }
+  .locker-stage__lamp--center  { top: 20%; left: 47%; width: 6%;   height: 8%;   opacity: 0.85;
+                                 animation: locker-stage-lamp-breath 4.2s ease-in-out infinite; }
+  .locker-stage__lamp--mid-r   { top: 18%; left: 63.5%; width: 6.5%; height: 6.5%; opacity: 0.62; }
+  .locker-stage__lamp--far-r   { top: 16%; left: 77.5%; width: 4.5%; height: 5%;  opacity: 0.42; }
+  @keyframes locker-stage-lamp-breath {
+    0%, 100% { opacity: 0.78; box-shadow:
+      0 0 10px rgba(160, 210, 235, 0.55),
+      0 0 24px rgba(120, 180, 220, 0.28),
+      0 6px 24px rgba(120, 180, 220, 0.16);
+    }
+    50%      { opacity: 0.95; box-shadow:
+      0 0 14px rgba(180, 220, 240, 0.7),
+      0 0 36px rgba(140, 200, 235, 0.4),
+      0 8px 38px rgba(140, 200, 235, 0.24);
+    }
+  }
+
+  /* 远处水平地平光带（图1 中央青色亮线） */
+  .locker-stage__horizon {
+    position: absolute;
+    top: 38%; left: 0; right: 0;
+    height: 1.5px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(60, 200, 215, 0.0) 6%,
+      rgba(60, 200, 215, 0.55) 50%,
+      rgba(60, 200, 215, 0.0) 94%,
+      transparent 100%);
+    filter: blur(0.5px);
+    box-shadow:
+      0 0 16px rgba(60, 200, 215, 0.32),
+      0 0 38px rgba(60, 200, 215, 0.16);
+    opacity: 0.78;
+  }
+
+  /* 地面 + 反光线 */
+  .locker-stage__floor {
+    position: absolute; bottom: 0;
+    left: clamp(60px, 14%, 180px);
+    right: clamp(60px, 14%, 180px);
+    height: 22%;
+    background: linear-gradient(0deg,
+      #03050a 0%,
+      #060911 50%,
+      transparent 100%);
+    clip-path: polygon(0 0, 100% 0, 98% 100%, 2% 100%);
+  }
+  .locker-stage__floor-glow {
+    position: absolute;
+    left: 6%; right: 6%; top: 30%;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent,
+      rgba(80, 200, 220, 0.42) 50%,
+      transparent);
+    filter: blur(0.6px);
+    box-shadow: 0 0 12px rgba(80, 200, 220, 0.28);
+    opacity: 0.7;
+  }
+
+  /* 左下暖橙 / 右下青色辉光团（图1 左右双光团） */
+  .locker-stage__rim {
+    position: absolute; pointer-events: none;
+    width: 55%; height: 70%;
+    border-radius: 50%;
+    filter: blur(56px);
+  }
+  /* v0.06: 双 rim 全面冷化 —— 参考 Control Abilities 界面的 mint/teal 双光团
+   *   - 旧 warm rim (橙红) 改为 mint
+   *   - cool rim 加深为更纯的青蓝
+   * 类名 *--warm 沿用，避免破坏 HTML 结构 */
+  .locker-stage__rim--warm {
+    left: -22%; bottom: -18%;
+    background: radial-gradient(circle,
+      rgba(74, 222, 128, 0.20) 0%,
+      rgba(34, 163, 86, 0.10) 28%,
+      rgba(20, 100, 60, 0.04) 55%,
+      transparent 75%);
+  }
+  .locker-stage__rim--cool {
+    right: -22%; bottom: -18%;
+    background: radial-gradient(circle,
+      rgba(80, 220, 220, 0.20) 0%,
+      rgba(40, 160, 190, 0.10) 30%,
+      rgba(20, 100, 130, 0.04) 58%,
+      transparent 78%);
+  }
+
+  /* 整体 vignette：让画面四角更深，强化舞台聚光感 */
+  .locker-stage__vignette {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 90% 75% at 50% 50%,
+        transparent 35%,
+        rgba(0, 0, 0, 0.35) 75%,
+        rgba(0, 0, 0, 0.7) 100%);
+  }
+
+  /* 内容容器（覆盖在装饰层之上） */
+  .locker-stage__content {
+    position: relative;
+    z-index: 5;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    width: 100%;
+    max-width: min(540px, 92%);
+    padding: 0 clamp(0.6rem, 3vw, 1.2rem);
+    text-align: center;
+  }
+
+  /* 移动端 / 窄屏：透视墙稍收，让中央内容区更宽；地平线略上移 */
+  @media (max-width: 480px) {
+    .locker-stage__wall {
+      width: clamp(40px, 11%, 90px);
+    }
+    .locker-stage__ceiling,
+    .locker-stage__floor {
+      left: clamp(40px, 11%, 90px);
+      right: clamp(40px, 11%, 90px);
+    }
+    .locker-stage__horizon { top: 34%; }
+    .locker-stage__lamp--far-l, .locker-stage__lamp--far-r { display: none; }
+    .locker-stage__rim { width: 60%; height: 55%; filter: blur(48px); }
+  }
+  /* 短屏：stage 整体压缩 padding，确保倒计时栏始终可见 */
+  @media (max-height: 640px) {
+    .locker-stage__content {
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+    .locker-overlay__subtitle { margin-bottom: 0.55rem; }
+    .locker-overlay__hint     { margin-bottom: 0.5rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .locker-stage__lamp--center { animation: none; }
   }
 
   .locker-overlay__classification {
@@ -167,58 +418,91 @@
 
   .locker-grid {
     display: flex;
-    gap: 16px;
+    gap: clamp(10px, 3vw, 18px);
     flex-wrap: wrap;
     justify-content: center;
     max-width: 480px;
-    padding: 0 1rem;
+    padding: 0 clamp(0.4rem, 2vw, 1rem);
     margin-bottom: 1rem;
   }
 
   .locker-slot {
-    width: 110px; height: 150px;
+    width: clamp(96px, 28vw, 118px);
+    height: clamp(132px, 38vw, 160px);
     position: relative;
     cursor: pointer;
-    background: linear-gradient(150deg, #2a2a2a 0%, #161616 100%);
-    border: 2px solid #4a4a4a;
+    /* v0.06：货架金属底
+     *   - 全局红/绿二色规范：暖橙环境光改为冷青反射
+     *   - 与场景天井灯/地平线的青色光带一致 */
+    background:
+      radial-gradient(ellipse 110% 60% at 50% 0%,
+        rgba(80, 200, 220, 0.05) 0%,
+        transparent 65%),
+      linear-gradient(165deg, #1f2026 0%, #15161b 45%, #0e0f13 100%);
+    border: 1px solid rgba(120, 130, 140, 0.40);
     border-radius: 4px;
-    box-shadow: inset 0 -8px 20px rgba(0,0,0,.6), 0 4px 18px rgba(0,0,0,.6);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      inset 0 -10px 22px rgba(0, 0, 0, 0.65),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+      0 4px 18px rgba(0, 0, 0, 0.65),
+      0 0 0 1px rgba(80, 200, 220, 0.06);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     transition: transform .25s cubic-bezier(.4,.0,.2,1),
                 border-color .25s ease,
                 box-shadow .25s ease;
     overflow: hidden;
   }
+  /* v0.06: 顶部金属横梁 — 由暖金高光改为冷白金属高光 */
   .locker-slot::before {
     content: "";
     position: absolute;
-    top: 12%; left: 8%; right: 8%;
-    height: 6px;
-    background: linear-gradient(90deg, transparent, #6b7580, transparent);
-    opacity: .6;
+    top: 9%; left: 8%; right: 8%;
+    height: 4px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(200, 215, 230, 0.10) 18%,
+      rgba(220, 235, 250, 0.48) 50%,
+      rgba(200, 215, 230, 0.10) 82%,
+      transparent 100%);
+    box-shadow: 0 0 6px rgba(200, 220, 240, 0.22);
+    opacity: .85;
   }
+  /* v0.06: 底部状态指示灯 — 由暖琥珀 LED 改为 mint 待机 LED（与"已激活"语义一致） */
   .locker-slot::after {
     content: "";
     position: absolute;
-    bottom: 12%; left: 50%; transform: translateX(-50%);
-    width: 14px; height: 14px;
-    background: radial-gradient(circle, #f5c800 0%, #5a4a1a 70%, #1a1a1a 100%);
+    bottom: 11%; left: 50%; transform: translateX(-50%);
+    width: 10px; height: 10px;
+    background: radial-gradient(circle,
+      rgba(110, 231, 167, 0.95) 0%,
+      rgba(34, 163, 86, 0.55) 50%,
+      rgba(10, 36, 22, 0.40) 90%);
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(245, 200, 0, .35);
-    opacity: .85;
+    box-shadow:
+      0 0 8px rgba(74, 222, 128, 0.50),
+      inset 0 0 2px rgba(0, 0, 0, 0.4);
+    opacity: .8;
   }
   .locker-slot:hover:not(.disabled):not(.opening) {
-    transform: translateY(-6px);
-    border-color: #f5c800;
-    box-shadow: inset 0 -8px 20px rgba(0,0,0,.6), 0 8px 28px rgba(245, 200, 0, .25);
+    transform: translateY(-5px);
+    border-color: rgba(110, 231, 167, 0.55);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      inset 0 -10px 22px rgba(0, 0, 0, 0.65),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+      0 10px 30px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(110, 231, 167, 0.18),
+      0 6px 24px rgba(74, 222, 128, 0.28);
   }
   .locker-slot.disabled {
     opacity: .35;
     pointer-events: none;
   }
+  /* v0.06: 打开瞬间 — 由"金色爆光"改为"mint 解锁辉光" */
   .locker-slot.opening {
     pointer-events: none;
-    border-color: #f5c800;
+    border-color: var(--ds-positive);
     animation: locker-flash .55s ease-out forwards;
   }
   .locker-slot.fbc-override {
@@ -227,8 +511,8 @@
   }
   @keyframes locker-flash {
     0%   { box-shadow: inset 0 -8px 20px rgba(0,0,0,.6), 0 4px 18px rgba(0,0,0,.6); transform: scale(1); }
-    40%  { box-shadow: inset 0 0 60px rgba(245, 200, 0, .8), 0 0 40px rgba(245, 200, 0, .55); transform: scale(1.05); }
-    100% { box-shadow: inset 0 0 30px rgba(245, 200, 0, .35), 0 0 18px rgba(245, 200, 0, .35); transform: scale(1); }
+    40%  { box-shadow: inset 0 0 60px rgba(74, 222, 128, .75), 0 0 40px rgba(74, 222, 128, .55); transform: scale(1.05); }
+    100% { box-shadow: inset 0 0 30px rgba(74, 222, 128, .32), 0 0 18px rgba(74, 222, 128, .32); transform: scale(1); }
   }
   @keyframes locker-fbc-stamp {
     0%   { box-shadow: inset 0 -8px 20px rgba(0,0,0,.6), 0 4px 18px rgba(0,0,0,.6); transform: scale(1); }
@@ -238,10 +522,13 @@
 
   .locker-slot__id {
     font-family: 'VT323', monospace;
-    font-size: 2.1rem;
-    color: #c8d0d8;
+    font-size: clamp(1.7rem, 7vw, 2.1rem);
+    color: rgba(220, 220, 215, 0.92);
     letter-spacing: .08em;
-    text-shadow: 0 0 6px rgba(0,0,0,.85);
+    /* v0.06: 暖橙微辉 → 冷青微辉 */
+    text-shadow:
+      0 0 6px rgba(0, 0, 0, 0.85),
+      0 0 14px rgba(80, 200, 220, 0.18);
   }
   .locker-slot__label {
     /* "LOT" 是纯装饰 —— 数字已足够表意；隐藏以聚焦核心 */
@@ -396,7 +683,8 @@
   }
   .locker-countdown__fill {
     height: 100%;
-    background: linear-gradient(90deg, #f5c800 0%, #c8d0d8 50%, #f5c800 100%);
+    /* v0.06: 黄→mint，与全局红/绿规范一致；panic 时仍用红 */
+    background: linear-gradient(90deg, var(--ds-positive) 0%, var(--ds-neutral-cool) 50%, var(--ds-positive) 100%);
     width: 100%;
     transform-origin: left center;
     transition: transform .12s linear;
@@ -469,44 +757,283 @@
   .manifest-row.loss .manifest-row__delta { color: #f87171; }
 
   /* =======================================================
-   * 货舱清点 · 全屏翻页 overlay
+   * 货舱清点 · 全屏翻页 overlay（FBC 官僚文书美学）
    * ======================================================= */
   .manifest-reveal-overlay {
     position: fixed; inset: 0; z-index: 360;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
+    /* v0.06：从 FBC 暗锈过渡到 Control 冷蓝灰底色，让顶部白光柱有照射对比 */
     background:
-      radial-gradient(ellipse 70% 60% at 50% 50%, rgba(60,40,10,.18) 0%, rgba(0,0,0,.92) 60%),
-      rgba(0,0,0,.94);
-    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+      radial-gradient(ellipse 110% 70% at 50% 0%,
+        rgba(28, 38, 50, 0.45) 0%,
+        rgba(10, 12, 16, 0.96) 55%,
+        rgba(4, 5, 8, 0.99) 100%),
+      linear-gradient(180deg, rgba(10, 12, 16, 0.97) 0%, rgba(4, 5, 8, 0.99) 100%);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
     opacity: 0; pointer-events: none;
-    transition: opacity .22s ease;
+    transition: opacity .28s ease;
+    overflow: hidden;
+    /* FBC 暗锈色竖向边框线 */
+    border-left: 1px solid rgba(110, 55, 48, 0.12);
+    border-right: 1px solid rgba(110, 55, 48, 0.12);
   }
   .manifest-reveal-overlay.active {
     opacity: 1; pointer-events: all;
   }
-  .manifest-reveal-overlay__head {
-    position: absolute; top: 6%; left: 0; right: 0;
-    display: flex; flex-direction: column; align-items: center;
-    gap: 4px;
-    font-family: 'Courier New', monospace;
+
+  /* =======================================================
+   * v0.06：FBC 物证检查室 · 微 3D 纵深布景层（紧贴电梯轿厢的 3D 语言）
+   *
+   *   - 灵感：图1 Control 巨石光门走廊 + 图2 顶光天井审讯台；
+   *   - 全部装饰层 pointer-events: none，不影响 manifest-card 翻页；
+   *   - z-index: 0；后续兄弟元素 (head / stage / foot) 默认覆盖在上。
+   * ======================================================= */
+  .manifest-stage-decor {
+    position: absolute; inset: 0; z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
   }
+
+  /* 左右巨石柱（带垂直凹槽混凝土纹，参考图1） */
+  .manifest-stage-decor__column {
+    position: absolute; top: 0; bottom: 0;
+    width: clamp(50px, 12%, 150px);
+    pointer-events: none;
+  }
+  .manifest-stage-decor__column--left {
+    left: 0;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.025) 0,
+        rgba(255, 255, 255, 0.025) 1px,
+        transparent 1px,
+        transparent 18px
+      ),
+      linear-gradient(90deg,
+        #04060a 0%,
+        #0a1018 35%,
+        #14202d 70%,
+        #1d2a3c 100%);
+    box-shadow:
+      inset -2px 0 18px rgba(0, 0, 0, 0.78),
+      inset -1px 0 0 rgba(180, 200, 220, 0.06);
+    clip-path: polygon(0 0, 100% 8%, 100% 92%, 0 100%);
+  }
+  .manifest-stage-decor__column--right {
+    right: 0;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.025) 0,
+        rgba(255, 255, 255, 0.025) 1px,
+        transparent 1px,
+        transparent 18px
+      ),
+      linear-gradient(-90deg,
+        #04060a 0%,
+        #0a1018 35%,
+        #14202d 70%,
+        #1d2a3c 100%);
+    box-shadow:
+      inset 2px 0 18px rgba(0, 0, 0, 0.78),
+      inset 1px 0 0 rgba(180, 200, 220, 0.06);
+    clip-path: polygon(0 8%, 100% 0, 100% 100%, 0 92%);
+  }
+  /* 巨石柱的内沿冷光（被顶光柱照亮的边缘） */
+  .manifest-stage-decor__column::after {
+    content: '';
+    position: absolute; top: 14%; bottom: 14%;
+    width: 1px;
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(190, 215, 235, 0.20) 22%,
+      rgba(210, 230, 245, 0.42) 50%,
+      rgba(190, 215, 235, 0.20) 78%,
+      transparent 100%);
+    box-shadow:
+      0 0 8px rgba(180, 210, 235, 0.28),
+      0 0 18px rgba(140, 190, 220, 0.14);
+  }
+  .manifest-stage-decor__column--left::after  { right: 0; }
+  .manifest-stage-decor__column--right::after { left: 0; }
+
+  /* 顶部光柱（图1 白光门 + 图2 天井，自上而下漫射） */
+  .manifest-stage-decor__lightshaft {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: clamp(220px, 42%, 420px);
+    height: 92%;
+    background:
+      linear-gradient(180deg,
+        rgba(225, 235, 248, 0.22) 0%,
+        rgba(215, 230, 245, 0.16) 18%,
+        rgba(200, 220, 240, 0.10) 38%,
+        rgba(180, 205, 230, 0.05) 60%,
+        transparent 100%);
+    /* 顶窄底宽：模拟光锥从天井向下散开 */
+    clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
+    filter: blur(3px);
+    mix-blend-mode: screen;
+  }
+  /* 顶部源头强光带（图2 天井四边的爆光） */
+  .manifest-stage-decor__lightshaft-bloom {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: clamp(180px, 32%, 320px);
+    height: clamp(28px, 6%, 56px);
+    background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(225, 240, 252, 0.28) 50%,
+      transparent 100%);
+    filter: blur(10px);
+    box-shadow:
+      0 0 60px rgba(225, 240, 252, 0.42),
+      0 0 120px rgba(180, 215, 240, 0.28);
+    mix-blend-mode: screen;
+  }
+
+  /* 中央审讯台（图2 中央灰白台座反光） */
+  .manifest-stage-decor__plinth-glow {
+    position: absolute;
+    bottom: clamp(14%, 18vh, 22%);
+    left: 50%; transform: translateX(-50%);
+    width: clamp(220px, 40%, 380px);
+    height: clamp(40px, 8vh, 80px);
+    background: radial-gradient(ellipse 100% 100% at 50% 100%,
+      rgba(220, 235, 250, 0.45) 0%,
+      rgba(180, 205, 230, 0.18) 35%,
+      rgba(140, 175, 205, 0.06) 65%,
+      transparent 85%);
+    filter: blur(8px);
+    mix-blend-mode: screen;
+  }
+  .manifest-stage-decor__plinth {
+    position: absolute;
+    bottom: clamp(14%, 18vh, 22%);
+    left: 50%; transform: translateX(-50%);
+    width: clamp(220px, 38%, 360px);
+    height: 6px;
+    background: linear-gradient(180deg,
+      rgba(180, 200, 220, 0.32) 0%,
+      rgba(80, 100, 120, 0.18) 60%,
+      transparent 100%);
+    border-top: 1px solid rgba(200, 220, 240, 0.42);
+    box-shadow:
+      0 6px 28px rgba(0, 0, 0, 0.55),
+      0 0 14px rgba(190, 215, 235, 0.22);
+    filter: blur(0.4px);
+  }
+
+  /* 远处地平线（暗冷蓝光带） */
+  .manifest-stage-decor__horizon {
+    position: absolute;
+    top: 42%; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(120, 170, 200, 0.18) 30%,
+      rgba(150, 195, 220, 0.42) 50%,
+      rgba(120, 170, 200, 0.18) 70%,
+      transparent 100%);
+    filter: blur(0.5px);
+    box-shadow: 0 0 14px rgba(140, 185, 215, 0.20);
+    opacity: 0.6;
+  }
+
+  /* 地面阴影区 */
+  .manifest-stage-decor__floor {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 22%;
+    background: linear-gradient(0deg,
+      rgba(2, 3, 5, 0.95) 0%,
+      rgba(6, 8, 12, 0.65) 55%,
+      transparent 100%);
+  }
+
+  /* 全局 vignette：四角更深，强化舞台聚光感 */
+  .manifest-stage-decor__vignette {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 85% 80% at 50% 38%,
+        transparent 28%,
+        rgba(0, 0, 0, 0.30) 65%,
+        rgba(0, 0, 0, 0.62) 100%);
+  }
+
+  /* 让 head / stage / foot 永远在装饰层之上 */
+  .manifest-reveal-overlay__head,
+  .manifest-reveal-stage,
+  .manifest-reveal-overlay__foot {
+    position: relative;
+    z-index: 5;
+  }
+  /* head 仍保留绝对定位（与 ::before 的 top 5.5% 对齐） */
+  .manifest-reveal-overlay__head {
+    position: absolute;
+    z-index: 5;
+  }
+  /* FBC 顶部分类横条 */
+  .manifest-reveal-overlay::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(140, 65, 55, 0.45) 20%,
+      rgba(160, 75, 60, 0.60) 50%,
+      rgba(140, 65, 55, 0.45) 80%,
+      transparent 100%);
+  }
+  /* v0.06.1：head 下移靠近 stage（原 top:5.5% → 计算后约 19% / 移动端 22%），
+     字号整体放大一档，对齐 locker-overlay 的视觉重量；`02 / 03` 改用横向单行
+     `LOT 66 · 02 / 03` 收拢成一根『档案条』，避免三行高/分散视觉中心。 */
+  .manifest-reveal-overlay__head {
+    position: absolute;
+    top: clamp(56px, 14%, 110px);  /* 原 5.5% → 14% (主流分辨率约 100px)，向下贴近 stage */
+    left: 0; right: 0;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px;
+    font-family: 'Courier New', monospace;
+    pointer-events: none;
+  }
+  /* 分类标签 */
   .manifest-reveal-overlay__class {
-    font-size: .58rem;
-    color: rgba(200, 140, 130, 0.9);
-    letter-spacing: .26em;
+    font-size: clamp(10px, 0.72rem, 12px);  /* 原 .58rem≈9.3px → ~11.5px，可读性达标 */
+    color: rgba(200, 140, 130, 0.88);
+    letter-spacing: .28em;
     text-transform: uppercase;
+    padding: 0.22rem 0.7rem;
+    border: 1px solid rgba(140, 65, 55, 0.30);
+    background: rgba(18, 10, 8, 0.62);
   }
   .manifest-reveal-overlay__lot {
-    font-family: 'VT323', monospace;
-    font-size: .92rem;
-    color: #c8d0d8;
-    letter-spacing: .14em;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(13px, 0.95rem, 16px);  /* 原 .68rem≈10.9px → ~15px，与 LOT 同视觉重量 */
+    color: rgba(220, 212, 204, 0.90);
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  }
+  /* v0.06.1：LOT 66 · 02 / 03 同一行『档案条』，让 head 总高更紧凑 */
+  .manifest-reveal-overlay__lot-row {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.55rem;
   }
   .manifest-reveal-overlay__page {
-    font-size: .5rem;   /* 8px min */
-    color: #6b7580;
-    letter-spacing: .22em;
+    font-size: clamp(11px, 0.72rem, 13px);  /* 原 .5rem≈8px（边界）→ ~11.5px，达 12px 易读阈 */
+    color: rgba(160, 155, 150, 0.78);
+    letter-spacing: .26em;
+  }
+  .manifest-reveal-overlay__page::before {
+    content: '·';
+    margin-right: 0.55rem;
+    color: rgba(120, 115, 108, 0.45);
   }
   .manifest-reveal-stage {
     perspective: 1200px;
@@ -537,14 +1064,20 @@
   .manifest-card__shell {
     position: relative;
     width: 100%; height: 100%;
+    /* v0.06：顶部加一道极细白色高光（卡牌顶边被白光照射的金属反射） */
     background:
-      linear-gradient(180deg, #1f1f1f 0%, #141414 50%, #0e0e0e 100%);
-    border: 1px solid #3d3d3d;
+      linear-gradient(180deg,
+        rgba(220, 235, 248, 0.18) 0%,
+        rgba(35, 30, 28, 0.6) 1.2%,
+        rgba(22, 18, 16, 0.98) 4%,
+        rgba(14, 11, 10, 0.99) 52%,
+        rgba(10, 8, 7, 1.0) 100%);
+    border: 1px solid rgba(100, 60, 50, 0.28);
     box-shadow:
-      inset 0 0 30px rgba(0,0,0,.65),
-      inset 0 0 0 2px rgba(0,0,0,.4),
-      0 0 22px rgba(248,165,155,.06),
-      0 16px 48px rgba(0,0,0,.6);
+      inset 0 0 40px rgba(0,0,0,.75),
+      inset 0 0 0 1px rgba(0,0,0,.5),
+      0 0 18px rgba(140, 65, 55, 0.08),
+      0 20px 56px rgba(0,0,0,.72);
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     padding: 30px 22px 26px;
     overflow: hidden;
@@ -552,13 +1085,30 @@
   .manifest-card__shell::before {
     content: "";
     position: absolute; inset: 6px;
-    border: 1px dashed rgba(200,130,115,.18);
+    border: 1px dashed rgba(140, 75, 62, 0.14);
     pointer-events: none;
   }
+  /* v0.06：顶部接光补光层 —— 模拟天井白光柱打在卡牌上半部分。
+     使用 mix-blend-mode: screen，只提亮，不遮挡子元素文字与货箱图。 */
+  .manifest-card__shell::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 55%;
+    background:
+      linear-gradient(180deg,
+        rgba(225, 240, 252, 0.20) 0%,
+        rgba(200, 220, 240, 0.10) 35%,
+        rgba(170, 195, 220, 0.04) 65%,
+        transparent 100%);
+    mix-blend-mode: screen;
+    pointer-events: none;
+    z-index: 0;
+  }
   .manifest-card__corner {
-    position: absolute; width: 14px; height: 14px;
-    border: 2px solid rgba(200, 130, 115, 0.7);
-    opacity: .85;
+    position: absolute; width: 12px; height: 12px;
+    border: 1.5px solid rgba(160, 90, 75, 0.55);
+    opacity: .9;
   }
   .manifest-card__corner--tl { top: 8px; left: 8px;  border-right: none; border-bottom: none; }
   .manifest-card__corner--tr { top: 8px; right: 8px; border-left: none;  border-bottom: none; }
@@ -585,7 +1135,7 @@
     object-position: center bottom;
     pointer-events: none;
     filter: drop-shadow(0 6px 14px rgba(0,0,0,.55))
-            drop-shadow(0 0 6px var(--card-glow-soft, rgba(245,200,0,.20)));
+            drop-shadow(0 0 6px var(--card-glow-soft, rgba(74,222,128,.20)));
     transition: filter .35s ease;
   }
   /* 色温 overlay：从位图中部向上散开，模拟开盖辉光 */
@@ -597,8 +1147,8 @@
     border-radius: 50% 50% 32% 32% / 60% 60% 30% 30%;
     background:
       radial-gradient(ellipse 78% 64% at 50% 38%,
-        var(--card-glow, rgba(245,200,0,.65)) 0%,
-        var(--card-glow-mid, rgba(245,200,0,.20)) 45%,
+        var(--card-glow, rgba(74,222,128,.65)) 0%,
+        var(--card-glow-mid, rgba(74,222,128,.20)) 45%,
         transparent 80%);
     filter: blur(4px);
     mix-blend-mode: screen;
@@ -611,50 +1161,68 @@
     50%      { opacity: 1;   transform: translateX(-50%) scale(1.06); }
   }
 
-  /* 极性着色 */
+  /* 极性着色 — v0.06：全局红/绿二色规范
+   * - gain  → 青绿 mint（与冷灯环境光相洽）
+   * - loss  → 锈红
+   * - neutral → 冷灯白
+   */
   .manifest-card[data-polarity="gain"] {
-    --card-glow:      rgba(255, 210, 80, .85);
-    --card-glow-mid:  rgba(255, 180, 40, .35);
-    --card-glow-soft: rgba(255, 200, 60, .30);
+    --card-glow:      rgba(74, 222, 128, .70);
+    --card-glow-mid:  rgba(74, 222, 128, .26);
+    --card-glow-soft: rgba(110, 231, 167, .24);
   }
   .manifest-card[data-polarity="gain"] .manifest-card__shell {
+    border-color: rgba(74, 222, 128, 0.35);
     box-shadow:
-      inset 0 0 32px rgba(245,200,0,.18),
-      inset 0 0 0 2px rgba(0,0,0,.4),
-      0 0 28px rgba(245,200,0,.30),
-      0 16px 48px rgba(0,0,0,.6);
+      inset 0 0 36px rgba(74, 222, 128, 0.12),
+      inset 0 0 0 1px rgba(0,0,0,.5),
+      0 0 22px rgba(74, 222, 128, 0.18),
+      0 20px 52px rgba(0,0,0,.7);
+  }
+  .manifest-card[data-polarity="gain"] .manifest-card__corner {
+    border-color: rgba(110, 231, 167, 0.65);
+  }
+  /* v0.06: 让原始暖金贴图也偏向 mint,与冷光环境一致 */
+  .manifest-card[data-polarity="gain"] .manifest-card__crate-img {
+    filter:
+      drop-shadow(0 6px 14px rgba(0,0,0,.6))
+      drop-shadow(0 0 7px rgba(74, 222, 128, .35))
+      hue-rotate(72deg)
+      saturate(.85);
   }
   .manifest-card[data-polarity="loss"] {
-    --card-glow:      rgba(255, 80, 80, .80);
-    --card-glow-mid:  rgba(212, 32, 32, .30);
-    --card-glow-soft: rgba(212, 32, 32, .35);
+    --card-glow:      rgba(190, 75, 65, .65);
+    --card-glow-mid:  rgba(160, 50, 42, .25);
+    --card-glow-soft: rgba(170, 60, 52, .28);
   }
   .manifest-card[data-polarity="loss"] .manifest-card__shell {
+    border-color: rgba(140, 58, 50, 0.40);
     box-shadow:
-      inset 0 0 32px rgba(212,32,32,.18),
-      inset 0 0 0 2px rgba(0,0,0,.4),
-      0 0 28px rgba(212,32,32,.30),
-      0 16px 48px rgba(0,0,0,.6);
+      inset 0 0 36px rgba(160,50,42,.16),
+      inset 0 0 0 1px rgba(0,0,0,.5),
+      0 0 20px rgba(160,50,42,.18),
+      0 20px 52px rgba(0,0,0,.7);
   }
-  .manifest-card[data-polarity="loss"] .manifest-card__corner { border-color: #ff4d4d; opacity: .85; }
-  /* 红色凶光：位图染上一层冷红光 */
+  .manifest-card[data-polarity="loss"] .manifest-card__corner {
+    border-color: rgba(200, 85, 72, 0.65); opacity: .88;
+  }
   .manifest-card[data-polarity="loss"] .manifest-card__crate-img {
     filter:
-      drop-shadow(0 6px 14px rgba(0,0,0,.55))
-      drop-shadow(0 0 8px rgba(212,32,32,.45))
-      hue-rotate(-22deg)
-      saturate(1.05);
+      drop-shadow(0 6px 14px rgba(0,0,0,.6))
+      drop-shadow(0 0 7px rgba(180,50,42,.35))
+      hue-rotate(-18deg)
+      saturate(.95);
   }
   .manifest-card[data-polarity="neutral"] {
-    --card-glow:      rgba(150, 170, 190, .55);
-    --card-glow-mid:  rgba(150, 170, 190, .18);
-    --card-glow-soft: rgba(150, 170, 190, .20);
+    --card-glow:      rgba(130, 140, 155, .40);
+    --card-glow-mid:  rgba(130, 140, 155, .14);
+    --card-glow-soft: rgba(130, 140, 155, .16);
   }
   .manifest-card[data-polarity="neutral"] .manifest-card__crate-img {
     filter:
-      drop-shadow(0 6px 14px rgba(0,0,0,.55))
-      drop-shadow(0 0 6px rgba(150,170,190,.20))
-      saturate(.55);
+      drop-shadow(0 6px 14px rgba(0,0,0,.6))
+      drop-shadow(0 0 5px rgba(130,140,155,.16))
+      saturate(.45);
   }
 
   .manifest-card__meta {
@@ -670,33 +1238,42 @@
     text-transform: uppercase;
   }
   .manifest-card__name {
-    font-family: 'VT323', monospace;
-    font-size: 1.12rem;
-    letter-spacing: .14em;
-    color: #c8d0d8;
-    text-shadow: 0 0 6px rgba(0,0,0,.85);
+    font-family: 'Courier New', monospace;
+    font-size: clamp(0.62rem, 2.8vw, 0.82rem);
+    letter-spacing: .12em;
+    color: rgba(215, 208, 200, 0.88);
+    text-shadow: none;
+    text-align: center;
   }
   .manifest-card__delta {
     margin-top: 14px;
-    font-family: 'VT323', monospace;
-    font-size: 1.84rem;
-    letter-spacing: .04em;
-    color: #c8d0d8;
-    text-shadow: 0 0 8px rgba(0,0,0,.85);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: clamp(1.55rem, 6.8vw, 1.9rem);
+    font-weight: 800;
+    letter-spacing: .03em;
+    color: rgba(215, 205, 195, 0.92);
+    text-shadow: none;
   }
-  .manifest-card[data-polarity="gain"] .manifest-card__delta { color: #ffd24d; text-shadow: 0 0 12px rgba(255,200,40,.55); }
-  .manifest-card[data-polarity="loss"] .manifest-card__delta { color: #ff5a5a; text-shadow: 0 0 12px rgba(212,32,32,.55); }
-  .manifest-card[data-polarity="neutral"] .manifest-card__delta { color: #a8b0b8; }
+  .manifest-card[data-polarity="gain"] .manifest-card__delta {
+    /* v0.06: 黄→mint */
+    color: rgba(110, 231, 167, 0.95);
+    text-shadow: 0 0 10px rgba(74, 222, 128, 0.35);
+  }
+  .manifest-card[data-polarity="loss"] .manifest-card__delta {
+    color: rgba(210, 115, 100, 0.95);
+    text-shadow: 0 0 10px rgba(180, 65, 52, 0.30);
+  }
+  .manifest-card[data-polarity="neutral"] .manifest-card__delta { color: rgba(165, 170, 178, 0.85); }
 
   .manifest-reveal-overlay__foot {
-    position: absolute; bottom: 7%; left: 0; right: 0;
-    display: flex; justify-content: center;
+    position: absolute; bottom: 6.5%; left: 0; right: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
   }
   .manifest-reveal-overlay__hint {
     font-family: 'Courier New', monospace;
     font-size: .5rem;
-    color: #6b7580;
-    letter-spacing: .26em;
+    color: rgba(110, 105, 98, 0.55);
+    letter-spacing: .28em;
     text-transform: uppercase;
   }
 
@@ -705,6 +1282,34 @@
     .manifest-card__crate  { width: 144px; height: 116px; }
     .manifest-card__name   { font-size: .96rem; }
     .manifest-card__delta  { font-size: 1.6rem; }
+
+    /* 窄屏：巨石柱稍收，光柱稍宽，让中央卡牌更突出 */
+    .manifest-stage-decor__column {
+      width: clamp(36px, 9%, 80px);
+    }
+    .manifest-stage-decor__lightshaft {
+      width: clamp(200px, 58%, 320px);
+      clip-path: polygon(36% 0, 64% 0, 100% 100%, 0 100%);
+    }
+    .manifest-stage-decor__lightshaft-bloom {
+      width: clamp(160px, 40%, 240px);
+    }
+    .manifest-stage-decor__plinth,
+    .manifest-stage-decor__plinth-glow {
+      width: clamp(200px, 60%, 300px);
+    }
+  }
+  /* 短屏（笔记本竖向不足）：审讯台座上移，确保 foot 可见 */
+  @media (max-height: 640px) {
+    .manifest-stage-decor__plinth,
+    .manifest-stage-decor__plinth-glow {
+      bottom: clamp(10%, 14vh, 16%);
+    }
+    .manifest-stage-decor__horizon { top: 36%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .manifest-stage-decor__lightshaft,
+    .manifest-stage-decor__lightshaft-bloom { animation: none; }
   }
 
   /* =======================================================
@@ -745,15 +1350,54 @@
     --bureau-white:     #c8d0d8;
     --bureau-white-hot: #e8eff5;
     --bureau-white-dim: #6b7580;
-    --warn-yellow:      #f5c800;
+
+    /* =======================================================
+     * v0.06 Design System · Color Tokens
+     *
+     *   全局仅使用 红 / 绿 二色 + 中性冷光,与 Control 官方 UI 一致：
+     *   - Positive  Mint    → 达标 / 增益 / 激活 / 已解锁
+     *   - Danger    Red     → 破产 / 警示 / 制动 / 故障
+     *   - Neutral   Cool    → 信息文字 / 边框 / 装饰
+     *   旧 token (warn-yellow) 重定向至 danger,以保证向后兼容。
+     * ======================================================= */
+    --ds-positive:        #4ade80;
+    --ds-positive-bright: #6ee7a7;
+    --ds-positive-soft:   rgba(74, 222, 128, 0.18);
+    --ds-positive-glow:   rgba(74, 222, 128, 0.55);
+    --ds-positive-deep:   #22a356;
+
+    --ds-danger:          #ff4d4d;
+    --ds-danger-bright:   #ff6b6b;
+    --ds-danger-soft:     rgba(255, 77, 77, 0.18);
+    --ds-danger-glow:     rgba(212, 32, 32, 0.55);
+    --ds-danger-deep:     #a01515;
+
+    --ds-neutral-cool:        #c8d0d8;
+    --ds-neutral-cool-bright: #e8eff5;
+    --ds-neutral-cool-mid:    #6b7580;
+    --ds-neutral-cool-dim:    #4a5560;
+
+    /* DEPRECATED：保留作为兼容,新代码请用 --ds-danger */
+    --warn-yellow:      var(--ds-danger);
+
     --door-ease-close:  cubic-bezier(0.7, 0, 0.3, 1);
     --door-ease-open:   cubic-bezier(0.34, 1.56, 0.64, 1);
     --door-dur-close:   0.52s;
     --door-dur-open:    0.62s;
     --glow-r: 90; --glow-g: 160; --glow-b: 210;
     /* 与 HUD 主读数一致（资产余额 #money / 开门 ±¥ 闪动共用） */
+    /* v0.06.3：LED 主色对调（v0.06.2 逆调）
+       - --hud-readout / --hud-readout-glow：HUD LED 主读数 + 场景层闪字 双线主色（暖珊瑚）
+         → 主读数（FLOOR / 楼层值 / ¥ / #money / 任务行）默认色，与场景层 credits-delta-flash 同源。
+       - --hud-led-readout / --hud-led-readout-glow：HUD 次级辅助冷白
+         → 仅用于"标签 / 配额副数字 / 净资产标签 / mission 标签"等"读数附属物"。
+       - 高亮替代：跳层闪光 / +¥ t1·t2 闪光中间帧用 #FFFFFF（红色不够亮时的备选高亮）
+       - mint 仅保留极端正反馈态：quota-cleared / gain pulse t3·t4 / wealth-burst */
     --hud-readout: rgba(248, 165, 155, 1);
     --hud-readout-glow: rgba(248, 165, 155, 0.5);
+    --hud-led-readout:       #F2F5F9;
+    --hud-led-readout-soft:  rgba(220, 232, 246, 0.62);
+    --hud-led-readout-glow:  rgba(220, 232, 246, 0.45);
     --hud-readout-main-size: clamp(1.28rem, 5.2vw, 1.72rem);
   }
 
@@ -987,30 +1631,34 @@
   .bgm-toggle[data-bgm-mode="off"]  { color: #b8635a; opacity: 0.78; }
   .bgm-toggle[data-bgm-mode="off"]:hover,
   .bgm-toggle[data-bgm-mode="off"]:focus-visible { opacity: 1; }
+  /* v0.06: 由线性 stroke 改为面性 fill —— 与 Control · Weapon Mods 实心剪影一致 */
   .bgm-toggle svg {
     display: block;
     width: 15px;
     height: 15px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.6;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+    fill: currentColor;
+    stroke: none;
     overflow: visible;
     shape-rendering: geometricPrecision;
   }
-  .bgm-toggle .bgm-toggle__mute-x { stroke-width: 1.8; }
+  /* OFF 态：喇叭仍 fill currentColor，红 X 单独着色 */
+  .bgm-toggle .bgm-toggle__mute-x {
+    fill: var(--ds-danger);
+  }
 
   /* =======================================================
    * 右上角菜单按钮（规则 / 战绩档案）
    * ======================================================= */
+  /* v0.06: 由"线性三横线"改为"面性 FBC 文件抽屉" —— 与 Control 实心剪影 icon 一致
+   *   - 三条 1.6px 细线 → 三块 14×3px 实心方块（filled glyph）
+   *   - 展开态依然变 X，但用更粗的实心方块旋转 */
   .fbc-menu-btn {
     --bar-color: #c4aea6;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 3px;
+    gap: 2.5px;
     width: 24px; height: 24px;
     padding: 0;
     background: none;
@@ -1028,19 +1676,22 @@
   .fbc-menu-btn[aria-expanded="true"] { opacity: 1; --bar-color: #f8a59b; }
   .fbc-menu-btn__bar {
     display: block;
-    width: 16px; height: 1.6px;
+    /* 实心抽屉条：宽 14px、高 3px、填色 fill */
+    width: 14px; height: 3px;
     background: var(--bar-color);
-    border-radius: 1px;
+    border-radius: 0;
     transition: background 0.16s ease, transform 0.18s ease, opacity 0.18s ease;
   }
+  /* 展开态：上下两块旋转成 X，中间隐藏 —— 仍保留实心方块语义 */
   .fbc-menu-btn[aria-expanded="true"] .fbc-menu-btn__bar:nth-child(1) {
-    transform: translateY(4.6px) rotate(45deg);
+    transform: translateY(5.5px) rotate(45deg);
   }
   .fbc-menu-btn[aria-expanded="true"] .fbc-menu-btn__bar:nth-child(2) {
     opacity: 0;
+    transform: scaleX(0.4);
   }
   .fbc-menu-btn[aria-expanded="true"] .fbc-menu-btn__bar:nth-child(3) {
-    transform: translateY(-4.6px) rotate(-45deg);
+    transform: translateY(-5.5px) rotate(-45deg);
   }
 
   /* =======================================================
@@ -1199,6 +1850,29 @@
   .fbc-career-cell--accent .fbc-career-cell__value { color: #f8a59b; }
   .fbc-career-cell--warn   .fbc-career-cell__value { color: #ff5a5a; }
 
+  /* v0.06：博彩对账三件套 — buy-in / cash-out / 净盈亏 */
+  .fbc-career-cell--debit  .fbc-career-cell__value { color: #c4b690; } /* 建仓投入：暗金 */
+  .fbc-career-cell--credit .fbc-career-cell__value { color: #f8a59b; } /* 核销资产：FBC 暖色 */
+  .fbc-career-cell--pnl {
+    background: rgba(40, 22, 18, 0.35);
+    border-color: rgba(120, 60, 50, 0.55);
+  }
+  .fbc-career-cell--pnl .fbc-career-cell__label {
+    color: rgba(200, 170, 155, 0.75);
+  }
+  .fbc-career-cell--pnl-gain .fbc-career-cell__value { color: #94d0a8; }
+  .fbc-career-cell--pnl-loss .fbc-career-cell__value { color: #db8778; }
+  .fbc-career-cell--pnl-flat .fbc-career-cell__value { color: #c8d0d8; }
+  .fbc-career-cell__sublabel {
+    display: block;
+    font-family: 'Courier New', monospace;
+    font-size: .48rem;
+    color: rgba(180, 150, 138, 0.5);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
   .fbc-career-eval {
     margin-top: 8px;
     padding: 10px 12px;
@@ -1338,18 +2012,20 @@
   }
   .hud__readout-label {
     font-family: "Inter", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-    font-size: clamp(0.48rem, 1.85vw, 0.62rem);
+    font-size: clamp(0.5rem, 1.85vw, 0.62rem);   /* min 8px */
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: none;
-    color: rgba(248, 165, 155, 0.42);
+    /* v0.06.2：原珊瑚红 0.42 → 冷白 0.55，常规态不再带"任何色相" */
+    color: rgba(220, 232, 246, 0.55);
     line-height: 1.35;
     margin-bottom: 0.14rem;
   }
   .hud__readout-col--asset .hud__readout-label {
     align-self: flex-end;
   }
-  /* 主读数：楼层与余额同一字号、同一字重、同一光晕 */
+  /* 主读数：楼层与余额同一字号、同一字重、同一光晕
+     v0.06.3：LED 主色色相对调 — 主读数回到暖珊瑚（默认主色），冷白降级为次级标签辅助 */
   .hud__readout-main {
     font-family: "Inter", system-ui, -apple-system, sans-serif;
     font-size: var(--hud-readout-main-size);
@@ -1357,11 +2033,11 @@
     line-height: 1.08;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--hud-readout);
+    color: var(--hud-readout);                              /* v0.06.3：冷白 → 珊瑚红（主色复位） */
     text-shadow:
       0 0 6px var(--hud-readout-glow),
-      0 0 20px rgba(248, 165, 155, 0.32),
-      0 0 40px rgba(248, 130, 120, 0.18);
+      0 0 20px rgba(248, 165, 155, 0.28),
+      0 0 40px rgba(220, 90, 80, 0.16);
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
@@ -1373,6 +2049,17 @@
   }
   .hud__readout-main--asset {
     justify-content: flex-end;
+    flex-wrap: wrap;             /* v0.06.1：允许大数字时整组配额换行 */
+    row-gap: 0.05em;             /* 换行后的纵向间距，紧凑 */
+    max-width: 100%;
+  }
+  /* v0.06.1：把"/ 250,000"包成一个 flex item，整组一起换行，不会被拆散 */
+  .hud__quota-group {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.18em;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
   .hud__readout-currency {
     font: inherit;
@@ -1385,6 +2072,26 @@
     display: flex;
     flex-direction: column;
     margin: 0;
+    /* pre-game 模式：标签与任务行水平并排（由 JS applyHudPhaseLayout 切换） */
+  }
+  #asset-counter.hud__asset-counter--pre-game {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+  }
+  #asset-counter.hud__asset-counter--pre-game .hud__readout-label {
+    align-self: auto;
+    margin-bottom: 0;
+  }
+  #asset-counter.hud__asset-counter--pre-game .hud__mission-wrap {
+    margin: 0;
+  }
+  /* 占位保留，避免影响游戏中样式 */
+  #asset-counter.hud__asset-counter--dummy {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
     padding: 0;
     border: none;
     background: transparent;
@@ -1393,7 +2100,9 @@
     max-width: none;
   }
   .hud__readout-label--mission {
-    color: rgba(245, 213, 71, 0.55);
+    /* v0.06.2：mission 标签也走中性冷白（不再 mint）
+       v0.06 曾改 mint，但与"绿色仅极端态"规范冲突 */
+    color: rgba(220, 232, 246, 0.55);
     letter-spacing: 0.14em;
   }
   .hud__mission-wrap {
@@ -1410,18 +2119,23 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     line-height: 1.45;
-    color: rgba(245, 213, 71, 0.92);
+    /* v0.06.3：任务行回到暖珊瑚软调（主色复位）
+       绿色仍仅保留给 quota-cleared 等"特殊事件态" */
+    color: rgba(248, 165, 155, 0.92);
     text-shadow:
-      0 0 8px rgba(245, 200, 60, 0.35),
-      0 0 20px rgba(200, 160, 40, 0.15);
+      0 0 8px rgba(248, 165, 155, 0.32),
+      0 0 18px rgba(220, 90, 80, 0.14);
     white-space: normal;
     text-align: right;
   }
   .hud__mission-bracket { opacity: 0.75; font-weight: 800; }
   .hud__mission-sep { opacity: 0.55; margin: 0 0.12em; }
   .hud__mission-gold {
-    color: #ffe566;
-    text-shadow: 0 0 10px rgba(255, 220, 100, 0.45);
+    /* v0.06.2 → v0.06.3：关键数字（目标/杠杆）保留纯白高亮
+       —— 即"红色不够亮时的高亮替代位"，与跳层 / +¥ 闪光高亮帧规则一致 */
+    color: #FFFFFF;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.55),
+                 0 0 18px rgba(248, 165, 155, 0.35);
   }
   .hud__mission-banner--hidden {
     display: none !important;
@@ -1432,6 +2146,7 @@
   .hud__net-asset--pre-hidden {
     display: none !important;
   }
+  /* v0.06.3：沉浸态资产读数与 LED 主读数同步切回暖珊瑚（主色复位） */
   .hud__live-credits-line {
     display: none;
     margin: 0;
@@ -1455,7 +2170,7 @@
     font-size: 0.42em;
     font-weight: 600;
     letter-spacing: 0.12em;
-    color: rgba(248, 165, 155, 0.5);
+    color: rgba(220, 232, 246, 0.55);
     margin-right: 0.2em;
   }
   .hud__net-asset--hidden {
@@ -1843,16 +2558,16 @@
   }
   @keyframes credits-delta-pop-gain-t2 {
     0%   { opacity: 0; transform: scale(0.48); filter: blur(7px); color: #9cf5c0; }
-    32%  { opacity: 1; transform: scale(1.14); filter: blur(0); color: #fff8e0;
-           text-shadow: 0 0 14px rgba(255, 220, 120, 0.55), 0 0 32px rgba(120, 220, 160, 0.35); }
+    32%  { opacity: 1; transform: scale(1.14); filter: blur(0); color: #e8fff0;
+           text-shadow: 0 0 14px rgba(110, 231, 167, 0.55), 0 0 32px rgba(120, 220, 160, 0.35); }
     58%  { transform: scale(1.08); }
     82%  { opacity: 1; transform: scale(1.04); }
     100% { opacity: 1; transform: scale(1); color: var(--hud-readout); }
   }
   @keyframes credits-delta-pop-gain-t3 {
     0%   { opacity: 0; transform: scale(0.42) rotate(-2deg); filter: blur(8px); color: #7af0a8; }
-    28%  { opacity: 1; transform: scale(1.2) rotate(0deg); filter: blur(0); color: #fffce8;
-           text-shadow: 0 0 18px rgba(255, 230, 100, 0.7), 0 0 48px rgba(80, 255, 180, 0.4); }
+    28%  { opacity: 1; transform: scale(1.2) rotate(0deg); filter: blur(0); color: #e8fff0;
+           text-shadow: 0 0 18px rgba(74, 222, 128, 0.7), 0 0 48px rgba(80, 255, 180, 0.4); }
     50%  { transform: scale(1.12); }
     75%  { opacity: 1; transform: scale(1.06); }
     100% { opacity: 1; transform: scale(1); color: var(--hud-readout); }
@@ -1860,7 +2575,7 @@
   @keyframes credits-delta-pop-gain-t4 {
     0%   { opacity: 0; transform: scale(0.38) rotate(-3deg); filter: blur(10px); color: #5cf598; }
     22%  { opacity: 1; transform: scale(1.28) rotate(1deg); filter: blur(0); color: #ffffff;
-           text-shadow: 0 0 22px rgba(255, 245, 160, 0.95), 0 0 60px rgba(255, 200, 60, 0.55), 0 0 90px rgba(100, 255, 200, 0.35); }
+           text-shadow: 0 0 22px rgba(170, 255, 210, 0.95), 0 0 60px rgba(74, 222, 128, 0.55), 0 0 90px rgba(100, 255, 200, 0.35); }
     45%  { transform: scale(1.18) rotate(0deg); }
     70%  { opacity: 1; transform: scale(1.1); }
     88%  { opacity: 1; transform: scale(1.05); }
@@ -1879,15 +2594,20 @@
   }
   @keyframes outcome-triumph-pulse {
     0%, 100% { opacity: 1; filter: brightness(1); }
-    50%      { opacity: 0.92; filter: brightness(1.18); text-shadow: 0 0 20px rgba(255, 210, 80, 0.5); }
+    50%      { opacity: 0.92; filter: brightness(1.18); text-shadow: 0 0 20px rgba(74, 222, 128, 0.5); }
   }
   #money.money-hud-gain-pulse {
     animation: money-hud-gain-pulse 0.95s cubic-bezier(0.2, 1.1, 0.3, 1) both;
   }
+  /* v0.06.3：常规增益（t1/t2）→ 高亮纯白 + 末帧继承 #money 暖珊瑚主色
+     - 35% 帧用纯白做"红色不够亮时的高亮替代位"
+     - 100% 不显式 color，继承父级 var(--hud-readout) 暖珊瑚（主色复位）
+     - 仅 t3/t4（动画名 -strong）保留 mint，作为"极端正反馈"信号 */
   @keyframes money-hud-gain-pulse {
     0%   { transform: scale(1); filter: brightness(1); }
-    35%  { transform: scale(1.06); filter: brightness(1.25); color: #fff8e4;
-           text-shadow: 0 0 12px rgba(255, 220, 120, 0.65), 0 0 28px rgba(100, 255, 180, 0.35); }
+    35%  { transform: scale(1.06); filter: brightness(1.3); color: #FFFFFF;
+           text-shadow: 0 0 12px rgba(255, 255, 255, 0.7),
+                        0 0 28px rgba(248, 165, 155, 0.45); }
     100% { transform: scale(1); filter: brightness(1); }
   }
   #money.money-hud-gain-pulse--t3,
@@ -1898,26 +2618,27 @@
   @keyframes money-hud-gain-pulse-strong {
     0%   { transform: scale(1); filter: brightness(1); }
     30%  { transform: scale(1.1); filter: brightness(1.38); color: #ffffff;
-           text-shadow: 0 0 16px rgba(255, 235, 150, 0.85), 0 0 40px rgba(255, 200, 80, 0.45); }
+           text-shadow: 0 0 16px rgba(170, 255, 210, 0.85), 0 0 40px rgba(74, 222, 128, 0.55); }
     100% { transform: scale(1); filter: brightness(1); }
   }
   .car.asset-gain-aura {
     transition: box-shadow 0.35s ease, filter 0.35s ease;
   }
+  /* v0.06: 车厢资产辉光 t1-t4 全部统一为 mint 阶梯（去全局黄） */
   .car.asset-gain-aura--t1 {
     box-shadow: inset 0 0 50px rgba(0,0,0,.72), 0 0 22px rgba(120, 220, 160, 0.22);
     filter: saturate(1.06) brightness(1.03);
   }
   .car.asset-gain-aura--t2 {
-    box-shadow: inset 0 0 48px rgba(0,0,0,.68), 0 0 32px rgba(255, 220, 100, 0.32);
+    box-shadow: inset 0 0 48px rgba(0,0,0,.68), 0 0 32px rgba(74, 222, 128, 0.32);
     filter: saturate(1.1) brightness(1.06);
   }
   .car.asset-gain-aura--t3 {
-    box-shadow: inset 0 0 42px rgba(40,30,10,.55), 0 0 42px rgba(255, 210, 80, 0.42);
+    box-shadow: inset 0 0 42px rgba(10,30,18,.55), 0 0 42px rgba(74, 222, 128, 0.42);
     filter: saturate(1.14) brightness(1.1);
   }
   .car.asset-gain-aura--t4 {
-    box-shadow: inset 0 0 38px rgba(60,45,10,.5), 0 0 52px rgba(255, 230, 120, 0.55), 0 0 88px rgba(255, 180, 40, 0.22);
+    box-shadow: inset 0 0 38px rgba(15,45,28,.5), 0 0 52px rgba(110, 231, 167, 0.55), 0 0 88px rgba(74, 222, 128, 0.22);
     filter: saturate(1.2) brightness(1.14);
   }
   @media (prefers-reduced-motion: reduce) {
@@ -1938,6 +2659,25 @@
   #money.money-odometer {
     font-variant-numeric: tabular-nums;
   }
+  /* 里程表：亏损 — 快速冷红收缩感 */
+  #money.money-odometer--loss {
+    color: rgba(210, 115, 100, 0.9) !important;
+    transition: color 0.08s ease;
+  }
+  /* 里程表：高层级增益 — v0.06 暖金 → mint 脉冲 */
+  #money.money-odometer--t3 {
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 12px rgba(74, 222, 128, 0.45), 0 0 6px var(--hud-readout-glow) !important;
+  }
+  #money.money-odometer--t4 {
+    letter-spacing: 0.07em;
+    text-shadow: 0 0 18px rgba(74, 222, 128, 0.65), 0 0 8px var(--hud-readout-glow) !important;
+    animation: odometer-swell-t4 0.14s ease-in-out infinite alternate;
+  }
+  @keyframes odometer-swell-t4 {
+    from { transform: scale(1);    }
+    to   { transform: scale(1.025); }
+  }
 
   /* 倍率主数字（预游戏等遗留场景；开门结果已不用 ×N） */
   .multiplier {
@@ -1956,13 +2696,13 @@
       -1px 0   rgba(60,200,255,.03);
   }
 
-  /* 1.5–2.0x：警示黄 + 琥珀烧屏 */
+  /* 1.5–2.0x：v0.06 改为浅红警示 + 暗红烧屏（与 high 形成深浅红色阶梯，去黄） */
   .multiplier--mid {
-    color: var(--warn-yellow);
+    color: var(--ds-danger-bright);
     text-shadow:
-      0 0 12px rgba(245,200,0,.55),
-      0 0 28px rgba(245,200,0,.2),
-      0 0 3px  rgba(255,140,0,.45),
+      0 0 12px rgba(255,77,77,.55),
+      0 0 28px rgba(255,77,77,.2),
+      0 0 3px  rgba(255,120,120,.45),
       2px 0    rgba(255,60,0,.1),
       -2px 0   rgba(60,200,255,.05);
   }
@@ -2317,16 +3057,24 @@
 
   .committee-bar__prefix {
     font-family: "Courier New", monospace;
-    font-size: .5rem; letter-spacing: .3em; text-transform: uppercase;
+    /* v0.06.1：原 .5rem ≈ 8px → 11–12.5px */
+    font-size: clamp(11px, 0.7rem, 12.5px);
+    letter-spacing: .26em; text-transform: uppercase;
     color: var(--hiss-red-hot); flex-shrink: 0; white-space: nowrap;
     text-shadow: 0 0 6px var(--hiss-red);
+    font-weight: 700;
   }
 
   .committee-bar__text {
     font-family: "Courier New", monospace;
-    font-size: .6rem; letter-spacing: .16em; text-transform: uppercase;
-    color: rgba(200,210,220,.5); font-style: italic;
-    animation: whisper-fade-in .25s ease-out;
+    /* v0.06.1：原 .6rem ≈ 9.6px → 12.5–14px；letter-spacing 收紧让中文不松散 */
+    font-size: clamp(12.5px, 0.82rem, 14px);
+    letter-spacing: 0.06em;
+    text-transform: none;                         /* 中文无大小写概念，去 uppercase 防止把英数标识也变形 */
+    color: rgba(220, 230, 240, 0.82);             /* v0.06.1 提亮 0.5→0.82 */
+    font-style: italic;
+    text-shadow: 0 0 6px rgba(120, 140, 165, 0.18);
+    animation: whisper-fade-in 0.55s ease-out;    /* 原 .25s → .55s 更稳的呼吸 */
   }
 
   @keyframes whisper-fade-in { from{ opacity:0; transform:translateY(3px); } to{ opacity:1; transform:none; } }
@@ -2345,29 +3093,36 @@
   }
 
   /* 委员会边缘碎闪（主舞台四角感）
-   * 纯氛围文字，不传递信息；提升到 8px 底线，仍保持低对比 */
+   * v0.06.1：从"纯氛围 + 看不清"改为"低频 + 可读叙事"——
+   *   - 字号 8–9.6px → 12–13.5px（中文最低 12px 可识别阈值）
+   *   - 颜色透明度 0.42 → 0.7（提亮但不抢戏）
+   *   - 动画总时长 1.35s → 2.8s（中段可读区从 ~0.5s 拉到 ~1.5s） */
   .committee-edge {
     position: absolute;
     z-index: 199;
-    max-width: 42%;
+    max-width: 46%;
     pointer-events: none;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.5rem, 2.2vw, 0.6rem);  /* 8px min */
-    line-height: 1.45;
-    letter-spacing: 0.1em;
-    color: rgba(255, 100, 90, 0.42);
-    text-shadow: 0 0 10px rgba(180, 30, 20, 0.25);
+    font-size: clamp(12px, 0.8rem, 13.5px);
+    line-height: 1.5;
+    letter-spacing: 0.08em;
+    color: rgba(255, 130, 118, 0.78);
+    text-shadow:
+      0 0 12px rgba(180, 30, 20, 0.32),
+      0 0 4px rgba(20, 8, 6, 0.55);
     opacity: 0;
     transition: opacity 0.08s linear;
   }
   .committee-edge.committee-edge--flash {
-    animation: committee-edge-glitch 1.35s ease-out forwards;
+    animation: committee-edge-glitch 2.8s ease-out forwards;
   }
   @keyframes committee-edge-glitch {
-    0%   { opacity: 0; transform: translate(1px, 0); filter: blur(3px); }
-    12%  { opacity: 0.92; filter: blur(0); }
-    55%  { opacity: 0.65; }
-    100% { opacity: 0; transform: translate(-1px, 0); filter: blur(1px); }
+    0%   { opacity: 0;    transform: translate(1px, 0); filter: blur(3px); }
+    8%   { opacity: 0.94; filter: blur(0); }
+    25%  { opacity: 0.92; }
+    62%  { opacity: 0.78; }                        /* 拉长可读区 */
+    85%  { opacity: 0.5; }
+    100% { opacity: 0;    transform: translate(-1px, 0); filter: blur(1px); }
   }
   #committee-edge-a {
     left: 0.35rem;
@@ -2433,12 +3188,12 @@
    * 配额进度 HUD 扩展
    * ======================================================= */
 
-  /* 配额分隔符与目标值（右侧主读数行内） */
+  /* 配额分隔符与目标值（右侧主读数行内 v0.06.2：默认色去珊瑚红） */
   .hud__quota-sep {
     font: inherit;
     font-weight: 400;
     font-size: 0.55em;
-    color: rgba(248, 165, 155, 0.28);
+    color: rgba(220, 232, 246, 0.32);                      /* 原珊瑚红 → 冷白 */
     letter-spacing: 0;
     vertical-align: baseline;
   }
@@ -2446,9 +3201,67 @@
     font: inherit;
     font-weight: 600;
     font-size: 0.62em;
-    color: rgba(248, 140, 125, 0.42);
+    color: rgba(220, 232, 246, 0.5);                       /* 原珊瑚红 0.42 → 冷白 0.5 */
     letter-spacing: 0.04em;
     vertical-align: baseline;
+    transition: color 280ms ease, text-shadow 280ms ease, transform 280ms ease;
+  }
+
+  /* v0.06.2 升级 B（精简版）：配额过线后 HUD 反馈
+     - 仅 quota 数字 / 分隔符 / #money 渐染 mint（极端正反馈态保留绿色）
+     - v0.06.1 的 // ALLOC_QUOTA · CLEARED 标签已移除（占用 LED 高度，属次级装饰）
+     - 场景层闪现 // FBC §3.1 — 配额已达成 仍保留 */
+  #asset-counter.hud__asset-counter--quota-cleared .hud__quota-target {
+    color: rgba(160, 230, 178, 0.94);
+    text-shadow: 0 0 6px rgba(74, 222, 128, 0.38);
+  }
+  #asset-counter.hud__asset-counter--quota-cleared .hud__quota-sep {
+    color: rgba(160, 230, 178, 0.6);
+  }
+  #asset-counter.hud__asset-counter--quota-cleared #money {
+    color: rgba(190, 245, 210, 0.98);
+    text-shadow: 0 0 6px rgba(74, 222, 128, 0.32);
+  }
+
+  /* 一次性扫光：过线瞬间从 quota 数字上扫过（v0.06.1 由暖琥珀改 mint） */
+  #asset-counter.hud__asset-counter--quota-flash .hud__quota-target {
+    animation: fbc-quota-flash 1100ms cubic-bezier(.22,.61,.36,1) 1;
+  }
+  @keyframes fbc-quota-flash {
+    0%   { transform: scale(1);    text-shadow: 0 0 0 rgba(74, 222, 128, 0); }
+    18%  { transform: scale(1.06); text-shadow: 0 0 14px rgba(74, 222, 128, 0.6); }
+    65%  { transform: scale(1.02); text-shadow: 0 0 8px rgba(74, 222, 128, 0.35); }
+    100% { transform: scale(1);    text-shadow: 0 0 6px rgba(74, 222, 128, 0.32); }
+  }
+
+  /* 场景层一次性旁注闪现：// FBC §3.1 — 配额已达成（v0.06.1 暖琥珀→mint） */
+  .quota-cleared-flash {
+    position: absolute;
+    top: 18%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    z-index: 60;
+    pointer-events: none;
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    color: rgba(160, 230, 178, 0.92);
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border: 1px solid rgba(74, 222, 128, 0.32);
+    background: rgba(10, 24, 16, 0.6);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    opacity: 0;
+    animation: quota-cleared-flash-in 2400ms cubic-bezier(.22,.61,.36,1) forwards;
+    text-shadow: 0 0 6px rgba(74, 222, 128, 0.32);
+    white-space: nowrap;
+  }
+  @keyframes quota-cleared-flash-in {
+    0%   { opacity: 0; transform: translate(-50%, -6px); }
+    14%  { opacity: 0.95; transform: translate(-50%, 0); }
+    72%  { opacity: 0.95; }
+    100% { opacity: 0; transform: translate(-50%, -2px); }
   }
 
   /* 净资产副行 */
@@ -2465,7 +3278,7 @@
     font-size: clamp(0.5rem, 1.5vw, 0.56rem);  /* 8px min */
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: rgba(248, 165, 155, 0.32);
+    color: rgba(220, 232, 246, 0.45);            /* v0.06.2：原珊瑚红 → 冷白 */
   }
   .hud__net-asset__value {
     font-family: "Courier New", monospace;
@@ -2555,15 +3368,16 @@
   }
   .debt-warning__header {
     background: transparent;
-    border-bottom: 1px solid rgba(140, 65, 55, 0.3);
-    color: rgba(200, 140, 130, 0.9);
+    border-bottom: 1px solid rgba(140, 65, 55, 0.32);
+    color: rgba(220, 158, 145, 0.96);                       /* v0.06.1 提亮 0.9→0.96 */
     font-family: "Courier New", monospace;
     font-weight: 700;
-    font-size: clamp(0.48rem, 2.4vw, 0.58rem);
-    letter-spacing: 0.28em;
+    font-size: clamp(12px, 0.84rem, 14.5px);              /* v0.06.1 原 .5–.6rem → 12–14.5px */
+    letter-spacing: 0.22em;                                 /* 原 .28em，大字号适当收紧 */
     text-transform: uppercase;
-    padding: 0.7rem 1.1rem;
+    padding: 0.85rem 1.1rem;
     position: relative;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
   }
   .debt-warning__header::before {
     content: '';
@@ -2579,23 +3393,23 @@
   }
   .debt-warning__stamp {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.5rem, 1.6vw, 0.58rem);  /* 8px min，原 0.34rem */
+    font-size: clamp(10px, 0.62rem, 11.5px);        /* v0.06.1 原 .5–.58rem ≈ 8–9.3px → 10–11.5px */
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(160, 120, 110, 0.4);
-    margin-bottom: 0.35rem;
+    color: rgba(170, 130, 122, 0.6);                  /* v0.06.1 提亮 0.4→0.6 */
+    margin-bottom: 0.45rem;
     display: block;
   }
   .debt-warning__text {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.56rem, 2.6vw, 0.68rem);
-    line-height: 1.7;
-    color: rgba(210, 205, 198, 0.88);
+    font-size: clamp(12.5px, 0.82rem, 14.5px);     /* v0.06.1 原 .56–.68rem ≈ 9–10.9px → 12.5–14.5px */
+    line-height: 1.78;
+    color: rgba(220, 215, 208, 0.94);                 /* v0.06.1 提亮 0.88→0.94 */
     margin: 0 0 0.6rem;
     white-space: pre-line;
   }
   .debt-warning__text strong {
-    color: rgba(220, 140, 125, 0.95);
+    color: rgba(232, 158, 142, 0.98);                 /* 提亮 */
     font-weight: 700;
   }
   .debt-warning__actions {
@@ -2607,11 +3421,11 @@
   }
   .debt-warning__btn {
     width: 100%;
-    padding: clamp(0.6rem, 2vh, 0.82rem) 0.8rem;
+    padding: clamp(0.6rem, 2vh, 0.85rem) 0.85rem;
     border: 1px solid;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.5rem, 2.4vw, 0.6rem);
-    font-weight: 600;
+    font-size: clamp(11.5px, 0.72rem, 13px);        /* v0.06.1 原 .5–.6rem ≈ 8–9.6px → 11.5–13px */
+    font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     cursor: pointer;
@@ -2620,23 +3434,23 @@
   }
   .debt-warning__btn--continue {
     background: transparent;
-    border-color: rgba(180, 178, 172, 0.3);
-    color: rgba(200, 198, 192, 0.82);
+    border-color: rgba(195, 192, 185, 0.42);              /* v0.06.1 提亮 */
+    color: rgba(220, 218, 212, 0.94);
   }
   .debt-warning__btn--continue:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(200, 198, 192, 0.6);
-    color: rgba(230, 228, 222, 0.95);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(220, 218, 212, 0.7);
+    color: rgba(240, 238, 232, 1);
   }
   .debt-warning__btn--force {
-    background: rgba(110, 35, 28, 0.25);
-    border-color: rgba(140, 60, 50, 0.5);
-    color: rgba(210, 155, 148, 0.88);
+    background: rgba(110, 35, 28, 0.32);
+    border-color: rgba(160, 70, 58, 0.6);
+    color: rgba(225, 168, 158, 0.95);
   }
   .debt-warning__btn--force:hover {
-    background: rgba(120, 40, 32, 0.4);
-    border-color: rgba(160, 75, 60, 0.7);
-    color: rgba(235, 195, 188, 0.95);
+    background: rgba(120, 40, 32, 0.45);
+    border-color: rgba(180, 90, 75, 0.8);
+    color: rgba(245, 200, 190, 1);
   }
 
   /* =======================================================
@@ -2757,29 +3571,36 @@
   }
 
   .boss-overlay__classification {
-    font-family: "Courier New", monospace; font-size: .5rem;
-    letter-spacing: .45em; text-transform: uppercase;
-    color: rgba(200, 130, 115, 0.85); border-bottom: 1px solid rgba(80, 55, 48, 0.25);
-    padding-bottom: .75rem; margin-bottom: 1.25rem; display: block;
-    text-shadow: none;
+    font-family: "Courier New", monospace;
+    font-size: clamp(11px, 0.7rem, 12.5px);            /* v0.06.1 原 .5rem ≈ 8px → 11–12.5px */
+    letter-spacing: .38em; text-transform: uppercase;
+    color: rgba(220, 158, 145, 0.96);                    /* v0.06.1 提亮 0.85→0.96 */
+    border-bottom: 1px solid rgba(80, 55, 48, 0.32);
+    padding-bottom: .8rem; margin-bottom: 1.3rem; display: block;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
     animation: overlay-text-flicker .5s ease-in-out infinite;
   }
 
   .boss-overlay__question {
-    font-size: 1.05rem; font-weight: bold; letter-spacing: .06em;
+    font-size: clamp(15px, 1.08rem, 19px);             /* v0.06.1 原 1.05rem ≈ 16.8px → 15–19px */
+    font-weight: 800; letter-spacing: .06em;
     color: var(--bureau-white-hot); line-height: 1.6;
     margin-bottom: 1rem;
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
   }
 
   .boss-overlay__stats {
-    font-family: "Courier New", monospace; font-size: .65rem;
-    letter-spacing: .16em; color: var(--bureau-white-dim);
-    border-left: 2px solid rgba(140, 65, 55, 0.4); padding-left: .75rem;
-    margin-bottom: 1.5rem; line-height: 1.8;
+    font-family: "Courier New", monospace;
+    font-size: clamp(12px, 0.78rem, 14px);             /* v0.06.1 原 .65rem ≈ 10.4px → 12–14px */
+    letter-spacing: .14em;
+    color: rgba(220, 215, 208, 0.88);                   /* 原 var(--bureau-white-dim) → 显式提亮 */
+    border-left: 2px solid rgba(140, 65, 55, 0.5);
+    padding-left: .85rem;
+    margin-bottom: 1.5rem; line-height: 1.85;
   }
 
   .boss-overlay__stats b {
-    color: var(--bureau-white); font-weight: bold;
+    color: rgba(245, 240, 232, 0.98); font-weight: 800;   /* 原 var(--bureau-white) → 显式提亮 */
   }
 
   .boss-overlay__actions {
@@ -2787,9 +3608,11 @@
   }
 
   .boss-overlay__actions button {
-    flex: 1; padding: .8rem .5rem; cursor: pointer;
-    font-family: "Courier New", monospace; font-size: .65rem;
-    letter-spacing: .18em; text-transform: uppercase; font-weight: bold;
+    flex: 1; padding: .85rem .5rem; cursor: pointer;
+    font-family: "Courier New", monospace;
+    font-size: clamp(11.5px, 0.72rem, 13px);          /* v0.06.1 原 .65rem ≈ 10.4px → 11.5–13px */
+    letter-spacing: .16em; text-transform: uppercase; font-weight: 800;
+    min-height: 44px;
     transition: transform .12s ease, filter .12s ease;
   }
 
@@ -2843,13 +3666,13 @@
   .result-overlay__badge {
     display: block;
     font-family: "Courier New", monospace;
-    font-size: 0.5rem;  /* 8px min */
-    letter-spacing: 0.28em;
+    font-size: clamp(10.5px, 0.66rem, 12px);            /* v0.06.1 原 .5rem ≈ 8px → 10.5–12px */
+    letter-spacing: 0.26em;
     text-transform: uppercase;
-    color: rgba(110, 118, 128, 0.75);
+    color: rgba(150, 158, 168, 0.92);                     /* v0.06.1 提亮 0.75→0.92 */
     text-align: center;
     margin-bottom: 1rem;
-    padding-bottom: 0.55rem;
+    padding-bottom: 0.6rem;
     border-bottom: 1px solid #1e1e1e;
   }
 
@@ -2904,7 +3727,7 @@
     margin: 0;
     text-align: center;
     font-family: Inter, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
-    font-size: clamp(0.78rem, 3.2vw, 0.92rem);
+    font-size: clamp(15px, 1.05rem, 18px);              /* v0.06.1 原 .78–.92rem → 15–18px */
     font-weight: 800;
     letter-spacing: 0.06em;
     line-height: 1.35;
@@ -2954,10 +3777,10 @@
     border: none;
     text-align: center;
     font-family: Inter, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
-    font-size: clamp(0.5rem, 2.35vw, 0.6rem);
-    line-height: 1.75;
+    font-size: clamp(12.5px, 0.82rem, 14.5px);          /* v0.06.1 原 .5–.6rem → 12.5–14.5px */
+    line-height: 1.78;
     letter-spacing: 0.04em;
-    color: rgba(175, 178, 186, 0.9);
+    color: rgba(205, 208, 215, 0.96);                     /* v0.06.1 提亮 0.9→0.96 */
   }
 
   .result-overlay__stat-sheet {
@@ -2975,9 +3798,9 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 1rem;
-    padding: 0.42rem 0;
+    padding: 0.5rem 0;
     font-family: Inter, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
-    font-size: clamp(0.52rem, 2.25vw, 0.62rem);
+    font-size: clamp(12.5px, 0.8rem, 14px);             /* v0.06.1 原 .52–.62rem → 12.5–14px */
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
   .result-overlay__stat-row:last-child {
@@ -2988,7 +3811,7 @@
     padding-top: 0;
   }
   .result-overlay__stat-key {
-    color: rgba(168, 172, 182, 0.82);
+    color: rgba(195, 198, 205, 0.92);                     /* v0.06.1 提亮 0.82→0.92 */
     font-weight: 500;
     flex-shrink: 0;
   }
@@ -2998,15 +3821,15 @@
     white-space: nowrap;
   }
   .result-overlay__stat-val--cor {
-    color: rgba(230, 210, 200, 0.9);
+    color: rgba(245, 220, 210, 0.96);                     /* v0.06.1 提亮 */
     text-shadow: none;
   }
   .result-overlay__stat-val--stable {
-    color: rgba(140, 200, 155, 0.88);
+    color: rgba(160, 215, 175, 0.96);                     /* v0.06.1 mint，对齐 ds-positive */
     text-shadow: none;
   }
   .result-overlay__stat-val--success {
-    color: rgba(180, 220, 190, 0.9);
+    color: rgba(190, 230, 200, 0.98);
     text-shadow: none;
   }
 
@@ -3016,12 +3839,12 @@
     align-items: flex-start;
     gap: 0.75rem;
     margin-top: 1.1rem;
-    padding-top: 0.65rem;
+    padding-top: 0.7rem;
     border-top: 1px solid #151515;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.5rem, 1.65vw, 0.56rem);  /* 8px min，原 0.34rem */
+    font-size: clamp(10.5px, 0.66rem, 12px);            /* v0.06.1 原 .5–.56rem ≈ 8–9px → 10.5–12px */
     letter-spacing: 0.04em;
-    color: rgba(82, 86, 92, 0.75);
+    color: rgba(125, 130, 138, 0.85);                     /* 提亮 0.75→0.85 */
   }
   .result-overlay__footer[hidden] {
     display: none !important;
@@ -3060,10 +3883,11 @@
   }
   #flash-overlay.active { opacity: 1; }
 
+  /* v0.06: FBC 控制币 — 由黄金币改为 mint 信用代币（去全局黄） */
   .coin {
     position: absolute; width: 13px; height: 13px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #fff4aa, #f5c800 55%, #9a7c00);
-    box-shadow: 0 0 8px rgba(255,215,0,.8), inset 0 -2px 3px rgba(0,0,0,.25);
+    background: radial-gradient(circle at 35% 30%, #d4ffe6, #4ade80 55%, #1f6e3c);
+    box-shadow: 0 0 8px rgba(74, 222, 128, .80), inset 0 -2px 3px rgba(0,0,0,.25);
     z-index: 2; pointer-events: none;
     animation: coin-fall linear forwards; top: -16px;
   }
@@ -3074,27 +3898,41 @@
   }
 
   #floor.skip-flash { animation: skip-counter-flash .65s ease-out forwards; }
+  /* v0.06.3：跳层闪光保持"高亮纯白 → 末帧回主色"模型，但末帧主色由冷白改回暖珊瑚
+     - 0% / 60% 仍纯白 #FFFFFF：作为"红色不够亮时的高亮替代位"（用户指定）
+     - 100% color: var(--hud-readout)：与 LED 主读数主色一致 */
   @keyframes skip-counter-flash {
-    0%{color:#ffe066;transform:scale(1.45);text-shadow:0 0 14px rgba(255,220,50,.9)}
-    60%{color:#ffe066;transform:scale(1.1)}
-    100%{color:#f8a59b;transform:scale(1);text-shadow:0 0 6px rgba(248,165,155,.5),0 0 20px rgba(248,165,155,.28)}
+    0%   { color: #FFFFFF; transform: scale(1.45);
+           text-shadow: 0 0 14px rgba(255, 255, 255, 0.85),
+                        0 0 32px rgba(248, 165, 155, 0.5); }
+    60%  { color: #FFFFFF; transform: scale(1.1);
+           text-shadow: 0 0 8px rgba(255, 255, 255, 0.55); }
+    100% { color: var(--hud-readout); transform: scale(1);
+           text-shadow: 0 0 6px var(--hud-readout-glow),
+                        0 0 20px rgba(248, 165, 155, 0.28); }
   }
 
+  /* 跳层时井道高光（v0.06.3：与 LED 主色一致 → 暖珊瑚冲光） */
   .shaft.skip-glow { animation: shaft-skip-glow .55s ease-out; }
   @keyframes shaft-skip-glow {
-    0%  {box-shadow:0 0 0 1px #000,0 24px 48px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.04)}
-    25% {box-shadow:0 0 0 2px #ffe066,0 0 35px rgba(255,220,50,.55),inset 0 1px 0 rgba(255,255,255,.06)}
-    100%{box-shadow:0 0 0 1px #000,0 24px 48px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.04)}
+    0%   { box-shadow: 0 0 0 1px #000, 0 24px 48px rgba(0,0,0,.85),
+                       inset 0 1px 0 rgba(255,255,255,.04); }
+    25%  { box-shadow: 0 0 0 2px rgba(248, 165, 155, 0.7),
+                       0 0 35px rgba(248, 165, 155, 0.42),
+                       inset 0 1px 0 rgba(255,255,255,.08); }
+    100% { box-shadow: 0 0 0 1px #000, 0 24px 48px rgba(0,0,0,.85),
+                       inset 0 1px 0 rgba(255,255,255,.04); }
   }
 
   .car.coin-rain-glow { animation: coin-rain-car-glow 1.6s ease-out; }
   @keyframes coin-rain-car-glow {
     0%{box-shadow:inset 0 0 80px rgba(0,0,0,.75)}
-    20%{box-shadow:inset 0 0 40px rgba(0,0,0,.4),0 0 30px rgba(255,215,0,.5)}
+    20%{box-shadow:inset 0 0 40px rgba(0,0,0,.4),0 0 30px rgba(74,222,128,.50)}
     100%{box-shadow:inset 0 0 80px rgba(0,0,0,.75)}
   }
 
-  /* 大额正面收益：金色爆闪（DOUBLE / 高倍 POSITIVE） */
+  /* 大额正面收益爆闪：v0.06 由"金色爆闪"改为"mint 大额激励爆闪"
+   * 类名 *-gold-* 沿用，避免破坏 JS class 操作；实际颜色已是 mint */
   .car.wealth-burst {
     animation: car-wealth-gold-burst 0.95s ease-out;
   }
@@ -3108,16 +3946,16 @@
     }
     22% {
       box-shadow:
-        inset 0 0 45px rgba(255, 210, 80, 0.42),
-        0 0 38px rgba(255, 200, 40, 0.65),
-        0 0 85px rgba(255, 235, 140, 0.35);
-      filter: brightness(1.2) saturate(1.28);
+        inset 0 0 45px rgba(74, 222, 128, 0.40),
+        0 0 38px rgba(74, 222, 128, 0.62),
+        0 0 85px rgba(170, 255, 210, 0.32);
+      filter: brightness(1.2) saturate(1.18);
     }
     48% {
       box-shadow:
-        inset 0 0 28px rgba(255, 230, 120, 0.3),
-        0 0 52px rgba(255, 185, 30, 0.5);
-      filter: brightness(1.12) saturate(1.18);
+        inset 0 0 28px rgba(110, 231, 167, 0.30),
+        0 0 52px rgba(34, 163, 86, 0.48);
+      filter: brightness(1.12) saturate(1.12);
     }
   }
   @keyframes car-wealth-gold-mega {
@@ -3127,16 +3965,16 @@
     }
     18%, 55% {
       box-shadow:
-        inset 0 0 55px rgba(255, 220, 100, 0.5),
-        0 0 48px rgba(255, 200, 50, 0.75),
-        0 0 110px rgba(255, 248, 200, 0.45);
-      filter: brightness(1.28) saturate(1.35);
+        inset 0 0 55px rgba(74, 222, 128, 0.48),
+        0 0 48px rgba(74, 222, 128, 0.72),
+        0 0 110px rgba(200, 255, 230, 0.42);
+      filter: brightness(1.28) saturate(1.22);
     }
     36% {
       box-shadow:
-        inset 0 0 40px rgba(255, 245, 180, 0.35),
-        0 0 70px rgba(255, 215, 0, 0.55);
-      filter: brightness(1.35) saturate(1.4);
+        inset 0 0 40px rgba(170, 255, 210, 0.34),
+        0 0 70px rgba(74, 222, 128, 0.55);
+      filter: brightness(1.35) saturate(1.28);
     }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -3157,8 +3995,9 @@
   .outcome-narrative__tag {
     display: block;
     font-weight: 800;
-    color: rgba(255, 220, 120, 0.92);
-    text-shadow: 0 0 14px rgba(255, 200, 60, 0.35);
+    /* v0.06: 黄→mint */
+    color: rgba(110, 231, 167, 0.92);
+    text-shadow: 0 0 14px rgba(74, 222, 128, 0.35);
   }
   .outcome-narrative__sub {
     display: block;
@@ -3190,7 +4029,7 @@
   .result-overlay__liq-hero-label {
     display: block;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.42rem, 1.9vw, 0.52rem);
+    font-size: clamp(0.5rem, 1.9vw, 0.56rem);   /* min 8px */
     letter-spacing: 0.22em;
     color: rgba(160, 90, 88, 0.85);
     margin-bottom: 0.2rem;
@@ -3249,7 +4088,7 @@
     background: rgba(20, 14, 12, 0.5);
     border-left: 2px solid rgba(120, 55, 48, 0.3);
     font-family: "Courier New", monospace;
-    font-size: clamp(0.46rem, 2.1vw, 0.55rem);
+    font-size: clamp(0.5rem, 2.1vw, 0.6rem);    /* min 8px */
     line-height: 1.85;
     letter-spacing: 0.04em;
     color: rgba(195, 188, 182, 0.78);
@@ -3293,9 +4132,10 @@
     font-size: clamp(0.9rem, 4.2vw, 1.25rem);
     font-weight: 800;
     letter-spacing: 0.18em;
-    color: #ffd060;
-    text-shadow: 0 0 22px rgba(255, 210, 60, 0.55),
-                 0 0 55px rgba(255, 180, 20, 0.25);
+    /* v0.06: 黄→mint */
+    color: var(--ds-positive-bright);
+    text-shadow: 0 0 22px var(--ds-positive-glow),
+                 0 0 55px rgba(34, 163, 86, 0.25);
     animation: narrative-tag-in 0.22s ease-out forwards;
   }
   .narrative-flash__tag--penalty {
@@ -3347,20 +4187,20 @@
   .safe-node__badge {
     display: block;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.4rem, 1.8vw, 0.5rem);
-    letter-spacing: 0.28em;
+    font-size: clamp(10px, 0.62rem, 11.5px);         /* v0.06.1 原 .4–.5rem → 10–11.5px */
+    letter-spacing: 0.26em;
     text-transform: uppercase;
-    color: rgba(100, 160, 120, 0.5);
+    color: rgba(120, 195, 145, 0.78);                  /* v0.06.1 提亮 0.5→0.78 + 偏 mint */
     text-align: center;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(60, 90, 70, 0.18);
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid rgba(74, 222, 128, 0.22);
   }
   .safe-node__title {
     text-align: center;
-    margin: 0 0 0.25rem;
+    margin: 0 0 0.3rem;
     font-family: Inter, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
-    font-size: clamp(0.82rem, 3.6vw, 1rem);
+    font-size: clamp(14px, 1.05rem, 18px);           /* v0.06.1 原 .82–1rem → 14–18px */
     font-weight: 800;
     letter-spacing: 0.05em;
     background: linear-gradient(180deg, #e0f0e5 0%, #70b880 100%);
@@ -3371,78 +4211,81 @@
   .safe-node__subtitle {
     text-align: center;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.42rem, 1.95vw, 0.54rem);
+    font-size: clamp(11px, 0.66rem, 12.5px);         /* v0.06.1 原 .42–.54rem → 11–12.5px */
     letter-spacing: 0.08em;
-    color: rgba(140, 175, 150, 0.55);
-    margin-bottom: 0.85rem;
+    color: rgba(165, 195, 175, 0.78);                  /* 提亮 0.55→0.78 */
+    margin-bottom: 0.9rem;
   }
   .safe-node__lead {
-    margin: 0 0 0.5rem;
-    font-size: clamp(0.48rem, 2.1vw, 0.58rem);
-    line-height: 1.45;
-    color: rgba(200, 210, 205, 0.85);
+    margin: 0 0 0.55rem;
+    font-size: clamp(12.5px, 0.82rem, 14.5px);       /* v0.06.1 原 .5–.6rem → 12.5–14.5px */
+    line-height: 1.65;
+    color: rgba(218, 226, 222, 0.94);                  /* 提亮 0.85→0.94 */
   }
   .safe-node__offer {
-    background: rgba(12, 20, 15, 0.7);
-    border-left: 2px solid rgba(70, 130, 85, 0.35);
-    padding: 0.7rem 0.85rem;
-    margin-bottom: 0.9rem;
+    background: rgba(12, 20, 15, 0.78);
+    border-left: 2px solid rgba(74, 222, 128, 0.42);
+    padding: 0.78rem 0.9rem;
+    margin-bottom: 0.95rem;
     font-family: Inter, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
-    font-size: clamp(0.5rem, 2.3vw, 0.6rem);
-    line-height: 1.75;
-    color: rgba(195, 205, 198, 0.82);
+    font-size: clamp(12.5px, 0.8rem, 14px);          /* v0.06.1 原 .5–.6rem → 12.5–14px */
+    line-height: 1.78;
+    color: rgba(212, 220, 215, 0.92);
   }
   .safe-node__cost {
     display: block;
-    margin-top: 0.3rem;
+    margin-top: 0.4rem;
     font-family: "Courier New", monospace;
-    font-size: clamp(0.6rem, 2.7vw, 0.75rem);
+    font-size: clamp(15px, 0.95rem, 17px);           /* v0.06.1 原 .6–.75rem → 15–17px */
     font-weight: 800;
-    color: rgba(210, 190, 140, 0.88);
-    text-shadow: none;
+    color: rgba(140, 215, 168, 0.96);                  /* v0.06.1 改 mint，与 ds-positive 对齐 */
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 6px rgba(74, 222, 128, 0.25);
   }
   .safe-node__trap-hint {
     font-family: "Courier New", monospace;
-    font-size: clamp(0.5rem, 1.75vw, 0.6rem);  /* 8px min */
+    font-size: clamp(11px, 0.7rem, 12.5px);          /* v0.06.1 原 .5–.6rem → 11–12.5px */
     letter-spacing: 0.06em;
-    color: rgba(110, 150, 125, 0.45);
+    color: rgba(150, 185, 165, 0.72);                  /* 提亮 0.45→0.72 */
     text-align: center;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.85rem;
     font-style: italic;
   }
   .safe-node__actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.55rem;
+    gap: 0.6rem;
   }
   .safe-node__btn {
-    padding: 0.65rem 0.5rem;
+    padding: 0.78rem 0.5rem;                          /* 原 .65rem，按钮放大 */
     font-family: "Courier New", monospace;
-    font-size: clamp(0.5rem, 2.2vw, 0.6rem);
+    font-size: clamp(11.5px, 0.72rem, 13px);          /* v0.06.1 原 .5–.6rem → 11.5–13px */
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     cursor: pointer;
     border: 1px solid;
+    min-height: 40px;
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   }
   .safe-node__btn--purge {
-    background: rgba(18, 35, 25, 0.65);
-    border-color: rgba(70, 130, 85, 0.35);
-    color: rgba(130, 200, 150, 0.85);
+    background: rgba(18, 35, 25, 0.7);
+    border-color: rgba(74, 222, 128, 0.42);                 /* v0.06.1 提亮，对齐 ds-positive */
+    color: rgba(160, 230, 178, 0.95);
   }
   .safe-node__btn--purge:hover {
-    background: rgba(25, 45, 32, 0.7);
-    border-color: rgba(90, 155, 105, 0.5);
-    color: rgba(160, 220, 175, 0.92);
+    background: rgba(25, 45, 32, 0.78);
+    border-color: rgba(74, 222, 128, 0.65);
+    color: rgba(190, 240, 200, 1);
   }
   .safe-node__btn--skip {
-    background: rgba(16, 16, 16, 0.7);
-    border-color: rgba(100, 95, 88, 0.22);
-    color: rgba(170, 168, 162, 0.72);
+    background: rgba(16, 16, 16, 0.72);
+    border-color: rgba(120, 115, 108, 0.32);
+    color: rgba(195, 192, 185, 0.88);                        /* v0.06.1 提亮 0.72→0.88 */
   }
   .safe-node__btn--skip:hover {
-    background: rgba(22, 22, 22, 0.75);
-    border-color: rgba(120, 115, 108, 0.35);
+    background: rgba(22, 22, 22, 0.78);
+    border-color: rgba(150, 145, 135, 0.5);
+    color: rgba(220, 218, 212, 0.96);
   }
 
   /* =======================================================
@@ -3471,7 +4314,7 @@
   .risk-auth-panel__terms-key {
     color: rgba(155, 148, 140, 0.65);
     flex-shrink: 0;
-    font-size: clamp(0.42rem, 1.8vw, 0.5rem);
+    font-size: clamp(0.5rem, 1.8vw, 0.58rem);   /* min 8px */
   }
   .risk-auth-panel__terms-val {
     font-weight: 700;
@@ -3482,7 +4325,7 @@
   .risk-auth-panel__terms-val--danger {
     color: rgba(200, 130, 118, 0.85);
     text-shadow: none;
-    font-size: clamp(0.4rem, 1.75vw, 0.48rem);
+    font-size: clamp(0.5rem, 1.75vw, 0.58rem);  /* min 8px */
     font-weight: 400;
     white-space: normal;
     text-align: right;
@@ -3576,38 +4419,38 @@
 
   .debt-warning__lead {
     margin: 0 0 0.4rem;
-    font-size: clamp(0.6rem, 2.6vw, 0.74rem);
-    line-height: 1.55;
-    color: rgba(215, 210, 202, 0.92);
+    font-size: clamp(13px, 0.86rem, 15px);            /* v0.06.1 原 .6–.74rem → 13–15px */
+    line-height: 1.65;
+    color: rgba(225, 220, 212, 0.96);                  /* v0.06.1 提亮 */
   }
   .debt-warning__details {
-    margin: 0.15rem 0 0;
-    font-size: clamp(0.48rem, 2.2vw, 0.58rem);
-    line-height: 1.55;
-    color: rgba(170, 165, 158, 0.78);
+    margin: 0.25rem 0 0;
+    font-size: clamp(11.5px, 0.72rem, 13px);          /* v0.06.1 原 .48–.58rem → 11.5–13px */
+    line-height: 1.7;
+    color: rgba(190, 185, 178, 0.88);
   }
   .debt-warning__details > summary {
     cursor: pointer;
-    color: rgba(180, 155, 140, 0.7);
+    color: rgba(200, 175, 160, 0.85);                  /* 提亮 0.7→0.85 */
     letter-spacing: 0.06em;
-    margin-bottom: 0.2rem;
-    font-size: clamp(0.44rem, 2vw, 0.52rem);
+    margin-bottom: 0.25rem;
+    font-size: clamp(11px, 0.66rem, 12.5px);          /* v0.06.1 原 .44–.52rem → 11–12.5px */
     -webkit-tap-highlight-color: transparent;
     transition: color 0.15s ease;
   }
   .debt-warning__details > summary:hover {
-    color: rgba(210, 180, 165, 0.9);
+    color: rgba(225, 195, 178, 0.98);
   }
   .debt-warning__detail-inner { padding: 0.2rem 0 0.1rem; }
 
   .safe-node__details {
     margin: 0.35rem 0 0;
-    font-size: clamp(0.52rem, 2.3vw, 0.64rem);
-    color: rgba(175, 178, 185, 0.88);
+    font-size: clamp(12px, 0.76rem, 14px);            /* v0.06.1 原 .52–.64rem → 12–14px */
+    color: rgba(195, 198, 205, 0.92);
   }
   .safe-node__details > summary {
     cursor: pointer;
-    color: rgba(170, 155, 135, 0.7);
+    color: rgba(190, 175, 155, 0.85);
     letter-spacing: 0.06em;
   }
   .safe-node__details .safe-node__trap-hint {
@@ -3711,10 +4554,10 @@
   }
   .intro-curtain__text {
     margin: 0;
-    font-family: "Inter", system-ui, -apple-system, sans-serif;
-    font-size: clamp(0.73rem, 2.95vw, 1.02rem);
+    font-family: "Inter", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: clamp(0.82rem, 3.4vw, 1.12rem);   /* min ≈ 13px, 原 0.73rem ≈ 11.7px */
     font-weight: 700;
-    line-height: 1.5;
+    line-height: 1.55;
     letter-spacing: 0.04em;
     text-align: center;
     color: var(--hud-readout);
@@ -3752,17 +4595,42 @@
     background: rgba(5,5,5,.92);
     -webkit-backdrop-filter: blur(3px);
     backdrop-filter: blur(3px);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding: clamp(0.85rem, 3.2vh, 1.6rem) clamp(0.65rem, 3.2vw, 1.6rem);
-    padding-top: max(clamp(0.85rem, 3.2vh, 1.6rem), env(safe-area-inset-top, 0px));
-    padding-bottom: max(clamp(0.85rem, 3.2vh, 1.6rem), env(safe-area-inset-bottom, 0px));
+    /* v0.06：safe center —— 内容能装下时仍居中；放不下时退化为顶部对齐，
+       底部"启动电梯"主按钮永远可被滚到（之前在低分辨率会被绝对居中裁掉） */
+    display: flex; flex-direction: column;
+    align-items: center;
+    justify-content: safe center;
+    padding: clamp(0.6rem, 2.4vh, 1.2rem) clamp(0.65rem, 3.2vw, 1.6rem);
+    padding-top: max(clamp(0.6rem, 2.4vh, 1.2rem), env(safe-area-inset-top, 0px));
+    padding-bottom: max(clamp(0.6rem, 2.4vh, 1.2rem), env(safe-area-inset-bottom, 0px));
     padding-left: max(clamp(0.65rem, 3.2vw, 1.6rem), env(safe-area-inset-left, 0px));
     padding-right: max(clamp(0.65rem, 3.2vw, 1.6rem), env(safe-area-inset-right, 0px));
-    gap: clamp(0.5rem, 2vh, 0.9rem);
+    gap: clamp(0.32rem, 1.4vh, 0.7rem);
     transition: opacity .35s ease;
     box-sizing: border-box;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+
+    /* v0.06：暗锈滚动条（FBC 调性） */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 75, 60, 0.4) rgba(15, 10, 8, 0.55);
+  }
+  .deploy-panel::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .deploy-panel::-webkit-scrollbar-track {
+    background: rgba(15, 10, 8, 0.55);
+  }
+  .deploy-panel::-webkit-scrollbar-thumb {
+    background: rgba(120, 75, 60, 0.4);
+    border-radius: 3px;
+  }
+  .deploy-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(170, 105, 80, 0.6);
+  }
+  .deploy-panel::-webkit-scrollbar-corner {
+    background: transparent;
   }
   .deploy-panel.hidden { opacity: 0; pointer-events: none; }
 
@@ -3791,25 +4659,25 @@
     flex-direction: column;
     align-items: stretch;
     justify-content: center;
-    gap: clamp(0.48rem, 1.8vh, 0.85rem);
+    gap: clamp(0.32rem, 1.2vh, 0.68rem);
   }
 
   .risk-auth-panel__h2 {
-    margin: 0.2rem 0 0;
+    margin: 0.12rem 0 0;
     font-family: "Courier New", Courier, monospace;
     font-size: clamp(0.88rem, 3.8vw, 1.08rem);
     font-weight: 600;
-    line-height: 1.45;
+    line-height: 1.32;
     letter-spacing: 0.12em;
     text-align: center;
     color: rgba(215, 208, 198, 0.88);
   }
 
   .risk-auth-panel__protocol-note {
-    margin: -0.1rem 0 0.1rem;
+    margin: -0.06rem 0 0.05rem;
     font-family: "Courier New", Courier, monospace;
     font-size: clamp(0.62rem, 2.8vw, 0.78rem);
-    line-height: 1.45;
+    line-height: 1.35;
     letter-spacing: 0.05em;
     text-align: center;
     color: rgba(155, 145, 138, 0.65);
@@ -3874,7 +4742,7 @@
     width: 100%;
     border: 1px solid rgba(80, 55, 48, 0.3);
     background: rgba(8, 6, 5, 0.85);
-    padding: clamp(0.75rem, 2.8vh, 1.1rem) clamp(0.75rem, 3vw, 1.1rem);
+    padding: clamp(0.5rem, 1.8vh, 0.85rem) clamp(0.7rem, 2.8vw, 1rem);
     border-radius: 2px;
     box-shadow: inset 0 0 40px rgba(180, 100, 80, 0.04);
   }
@@ -3894,7 +4762,7 @@
     color: rgba(240, 200, 185, 0.95);
     letter-spacing: 0.06em;
     width: 100%;
-    min-height: 2.75rem;
+    min-height: 2.4rem;
     text-align: center;
     -moz-appearance: textfield;
     text-shadow: 0 0 24px rgba(200, 120, 90, 0.2);
@@ -4043,14 +4911,14 @@
   }
   .risk-auth-panel__onboarding-lead {
     display: none;
-    margin: 0 0 0.45rem;
-    padding: 0.5rem 0.65rem;
+    margin: 0 0 0.32rem;
+    padding: 0.42rem 0.6rem;
     border-radius: 2px;
     border: 1px solid rgba(120, 80, 65, 0.2);
     background: rgba(20, 14, 12, 0.55);
     font-family: Inter, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
     font-size: clamp(0.62rem, 2.6vw, 0.78rem);
-    line-height: 1.5;
+    line-height: 1.4;
     letter-spacing: 0.04em;
     color: rgba(210, 200, 192, 0.85);
     text-align: center;
@@ -4108,6 +4976,68 @@
       min-height: 50px;
       font-size: clamp(0.88rem, 4.2vw, 1.08rem);
     }
+  }
+
+  /* v0.06：短屏 / 笔记本竖向空间紧张时（含 1366×768 浏览器、iPhone SE 等）
+     把 deploy-panel 内部的间距、padding、按钮高度全面收紧，
+     确保「启动电梯」主按钮在首屏第一帧即可见，不需要滚动。 */
+  @media (max-height: 760px) {
+    .deploy-panel {
+      gap: clamp(0.28rem, 1.1vh, 0.55rem);
+      padding-top: max(clamp(0.45rem, 1.8vh, 0.85rem), env(safe-area-inset-top, 0px));
+      padding-bottom: max(clamp(0.45rem, 1.8vh, 0.85rem), env(safe-area-inset-bottom, 0px));
+    }
+    .risk-auth-panel__inner {
+      gap: clamp(0.28rem, 1vh, 0.55rem);
+    }
+    .risk-auth-panel__h2 {
+      font-size: clamp(0.82rem, 3.2vw, 0.98rem);
+      line-height: 1.28;
+    }
+    .risk-auth-panel__protocol-note {
+      font-size: clamp(0.6rem, 2.4vw, 0.72rem);
+      line-height: 1.3;
+    }
+    .risk-auth-panel__onboarding-lead {
+      padding: 0.32rem 0.55rem;
+      font-size: clamp(0.6rem, 2.4vw, 0.72rem);
+      line-height: 1.36;
+    }
+    .deploy-panel__input-wrap {
+      padding: clamp(0.4rem, 1.4vh, 0.65rem) clamp(0.6rem, 2.4vw, 0.85rem);
+    }
+    #deploy-amount {
+      min-height: 2rem;
+      font-size: clamp(1.1rem, 5vw, 1.55rem);
+    }
+    .preset-btn {
+      min-height: 42px;
+      padding: clamp(0.42rem, 1.4vh, 0.6rem) 0.15rem;
+    }
+    .deploy-panel__btn {
+      min-height: 42px;
+      padding: clamp(0.42rem, 1.6vh, 0.7rem) 0.6rem;
+    }
+  }
+  @media (max-height: 640px) {
+    .deploy-panel {
+      gap: 0.22rem;
+    }
+    .risk-auth-panel__inner {
+      gap: 0.24rem;
+    }
+    .risk-auth-panel__h2 {
+      font-size: 0.82rem;
+      margin-top: 0;
+    }
+    .risk-auth-panel__protocol-note {
+      margin: 0;
+    }
+    .deploy-panel__input-wrap {
+      padding: 0.4rem 0.6rem;
+    }
+    .preset-btn { min-height: 38px; }
+    .deploy-panel__btn { min-height: 40px; }
   }
 
   /* 授权 Glitch 动画 */
@@ -4564,7 +5494,7 @@
     );
     box-shadow:
       0 0 10px rgba(255, 90, 40, 0.35),
-      inset 0 0 6px rgba(255, 200, 120, 0.2);
+      inset 0 0 6px rgba(255, 220, 220, 0.2);
     cursor: pointer;
     z-index: 26;
     opacity: 0;
@@ -4908,6 +5838,17 @@
     }
   }
 
+  /* v0.06 · 移动端 / 桌面端文案双套切换工具类
+     - 默认显示桌面文案（含快捷键），假设玩家可能用键盘；
+     - 触屏 + 无悬停设备（手机 / 平板）切换为触屏文案，避免 Space / ⌘R 噪声。
+     纯 CSS，无 JS，遵循"以移动端为主"的产品方针。 */
+  .input-hint__desktop { display: inline; }
+  .input-hint__touch   { display: none; }
+  @media (hover: none) and (pointer: coarse) {
+    .input-hint__desktop { display: none; }
+    .input-hint__touch   { display: inline; }
+  }
+
   /* Space · 极简指令圆盘 */
   .radial-overlay {
     position: fixed;
@@ -5001,18 +5942,19 @@
   .radial-disk__seg--w { left: 0; top: 50%; transform: translateY(-50%); border-radius: 4px 0 0 4px; }
   .radial-disk__seg--e { right: 0; top: 50%; transform: translateY(-50%); border-radius: 0 4px 4px 0; }
 
-  /* 应急制动（软盘模块）：圆盘东侧加对比，避免与「手动加固」语义混淆 */
+  /* 应急制动（软盘模块）：v0.06 由暖橙改为 FBC 警示红，
+   * 与"手动加固"形成 红=制动 / 中性=维护 的语义对比 */
   .radial-disk__seg--brake:not(:disabled) {
-    border-color: rgba(255, 175, 70, 0.92);
-    background: rgba(48, 26, 10, 0.82);
-    color: #fff3e0;
+    border-color: rgba(255, 80, 80, 0.92);
+    background: rgba(56, 14, 14, 0.82);
+    color: #ffe0e0;
     box-shadow:
-      0 0 18px rgba(255, 130, 40, 0.42),
-      inset 0 0 14px rgba(255, 100, 40, 0.12);
+      0 0 18px rgba(255, 60, 60, 0.42),
+      inset 0 0 14px rgba(255, 40, 40, 0.12);
   }
   .radial-disk__seg--brake:hover:not(:disabled) {
-    border-color: rgba(255, 210, 120, 0.95);
-    background: rgba(62, 32, 12, 0.88);
+    border-color: rgba(255, 130, 130, 0.95);
+    background: rgba(76, 18, 18, 0.88);
     color: #fff;
   }
 
@@ -5430,6 +6372,7 @@
       0 0 0 3px #2a1010,
       0 0 28px rgba(255, 50, 35, 0.48),
       0 0 48px rgba(255, 0, 0, 0.2) !important;
+    transform: scale(0.93) translateY(2px) !important;
   }
   .metal-btn.metal-btn--withdraw:active:not(:disabled) {
     background:
@@ -5441,6 +6384,90 @@
       0 0 0 3px #102818,
       0 0 28px rgba(0, 255, 130, 0.42),
       0 0 48px rgba(0, 220, 110, 0.18) !important;
+    transform: scale(0.93) translateY(2px) !important;
+  }
+
+  /* =======================================================
+   * v0.06：主钮 hover / focus-visible 强化
+   *
+   *   - hover 仅作用于真鼠标设备 (hover:hover)，避免触屏 sticky-hover；
+   *   - 三角加 0.5s 慢呼吸的微光环，让用户在悬停时即"上膛"反馈；
+   *   - focus-visible 给一圈 FBC 暗锈金描边（键盘 Tab 友好）；
+   *   - 触屏（pointer:coarse）保留按下即缩，但禁止 hover 残留态。
+   * ======================================================= */
+  @media (hover: hover) and (pointer: fine) {
+    .metal-btn.metal-btn--deploy:hover:not(:disabled):not(:active) {
+      box-shadow:
+        inset 0 4px 10px rgba(0, 0, 0, 0.78),
+        inset 0 -2px 6px rgba(255, 80, 60, 0.08),
+        inset 0 0 22px rgba(0, 0, 0, 0.5),
+        0 2px 14px rgba(0, 0, 0, 0.55),
+        0 0 0 3px #2a0e0e,
+        0 0 14px rgba(255, 60, 40, 0.22) !important;
+    }
+    .metal-btn.metal-btn--withdraw:hover:not(:disabled):not(:active) {
+      box-shadow:
+        inset 0 4px 10px rgba(0, 0, 0, 0.78),
+        inset 0 -2px 6px rgba(60, 220, 140, 0.08),
+        inset 0 0 22px rgba(0, 0, 0, 0.5),
+        0 2px 14px rgba(0, 0, 0, 0.55),
+        0 0 0 3px #0e2a1a,
+        0 0 14px rgba(0, 220, 130, 0.22) !important;
+    }
+    .metal-btn.metal-btn--deploy:hover:not(:disabled):not(:active) .metal-btn__triangle {
+      filter: drop-shadow(0 0 6px rgba(255, 130, 100, 0.4))
+              drop-shadow(0 0 12px rgba(255, 60, 40, 0.32));
+      animation: metal-tri-breath-deploy 1.6s ease-in-out infinite;
+    }
+    .metal-btn.metal-btn--withdraw:hover:not(:disabled):not(:active) .metal-btn__triangle {
+      filter: drop-shadow(0 0 6px rgba(140, 255, 200, 0.38))
+              drop-shadow(0 0 12px rgba(0, 220, 130, 0.3));
+      animation: metal-tri-breath-withdraw 1.6s ease-in-out infinite;
+    }
+  }
+  @keyframes metal-tri-breath-deploy {
+    0%, 100% {
+      filter: drop-shadow(0 0 5px rgba(255, 130, 100, 0.32))
+              drop-shadow(0 0 10px rgba(255, 60, 40, 0.22));
+    }
+    50% {
+      filter: drop-shadow(0 0 9px rgba(255, 160, 130, 0.5))
+              drop-shadow(0 0 18px rgba(255, 80, 50, 0.4));
+    }
+  }
+  @keyframes metal-tri-breath-withdraw {
+    0%, 100% {
+      filter: drop-shadow(0 0 5px rgba(140, 255, 200, 0.32))
+              drop-shadow(0 0 10px rgba(0, 220, 130, 0.22));
+    }
+    50% {
+      filter: drop-shadow(0 0 9px rgba(180, 255, 220, 0.48))
+              drop-shadow(0 0 18px rgba(40, 240, 150, 0.38));
+    }
+  }
+  /* 键盘 Tab focus：FBC 暗锈金外环（不打扰鼠标用户） */
+  .metal-btn.metal-btn--deploy:focus-visible,
+  .metal-btn.metal-btn--withdraw:focus-visible {
+    outline: 2px solid rgba(212, 168, 116, 0.78);
+    outline-offset: 4px;
+  }
+  /* 触屏避免 sticky hover：按下即缩、释放归位（hover 不残留） */
+  @media (hover: none) and (pointer: coarse) {
+    .metal-btn.metal-btn--deploy:hover:not(:disabled),
+    .metal-btn.metal-btn--withdraw:hover:not(:disabled) {
+      box-shadow:
+        inset 0 4px 8px rgba(0,0,0,.7),
+        inset 0 -2px 4px rgba(255,255,255,.04),
+        inset 0 0 16px rgba(0,0,0,.5),
+        0 2px 8px rgba(0,0,0,.6),
+        0 0 0 3px #111;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .metal-btn.metal-btn--deploy:hover:not(:disabled):not(:active) .metal-btn__triangle,
+    .metal-btn.metal-btn--withdraw:hover:not(:disabled):not(:active) .metal-btn__triangle {
+      animation: none;
+    }
   }
 
   /* =======================================================
@@ -5454,8 +6481,14 @@
     opacity: 0.28;
     transition: opacity 0.45s ease;
   }
-  .stage--phase-dim .hud {
+  /* 上行/揭示期：HUD 整体不再整块压暗；
+     仅对 asset-counter（非 LED 数字区）降透，使楼层 LED 保持 100% 实色 */
+  .stage--phase-dim #asset-counter {
     opacity: 0.22;
+    transition: opacity 0.45s ease;
+  }
+  /* 楼层 LED 在任何阶段均保持满亮度 */
+  #floor-led {
     transition: opacity 0.45s ease;
   }
   .stage--phase-dim .corruption-meter {
@@ -5576,17 +6609,18 @@
       font-size: clamp(0.5rem, 1.8vw, 0.56rem);  /* 8px min */
     }
 
-    /* ── 委员会低语条 ── */
+    /* ── 委员会低语条（v0.06.1：与桌面规范对齐，最低 11.5–12px） ── */
     .committee-bar {
       max-width: 100%;
-      padding: 0.2rem 0.45rem;
+      padding: 0.28rem 0.5rem;
       margin-top: 0.15rem;
     }
     .committee-bar__prefix {
-      font-size: clamp(0.5rem, 2vw, 0.54rem);  /* 8px min */
+      font-size: clamp(11px, 2.8vw, 12.5px);
     }
     .committee-bar__text {
-      font-size: clamp(0.5rem, 2.6vw, 0.58rem);  /* 8px min */
+      font-size: clamp(11.5px, 3.4vw, 13.5px);
+      letter-spacing: 0.05em;
     }
 
     /* ── 结果文本适配 ── */
@@ -5600,20 +6634,20 @@
       font-size: clamp(0.42rem, 2.5vw, 0.55rem);
     }
 
-    /* ── 弹窗自适应 ── */
+    /* ── 弹窗自适应（v0.06.1：移动端字号同步上调，与桌面规范对齐） ── */
     .boss-overlay__box {
       width: 94%; max-width: none;
       padding: clamp(1rem, 4vh, 1.8rem) clamp(0.8rem, 4vw, 1.5rem);
     }
     .boss-overlay__question {
-      font-size: clamp(0.82rem, 4.5vw, 1rem);
+      font-size: clamp(15px, 4.5vw, 18px);     /* 原 .82–1rem → 15–18px */
     }
     .boss-overlay__stats {
-      font-size: clamp(0.52rem, 3vw, 0.62rem);
+      font-size: clamp(12px, 3vw, 13.5px);     /* 原 .52–.62rem → 12–13.5px */
     }
     .boss-overlay__actions button {
-      padding: clamp(0.55rem, 2vh, 0.75rem) 0.3rem;
-      font-size: clamp(0.52rem, 3vw, 0.62rem);
+      padding: clamp(0.6rem, 2vh, 0.8rem) 0.35rem;
+      font-size: clamp(11.5px, 3vw, 13px);     /* 原 .52–.62rem → 11.5–13px */
       min-height: 44px;
     }
 
@@ -5798,7 +6832,7 @@
       font-size: clamp(0.52rem, 3.15vw, 0.66rem);
     }
     .intro-curtain__text {
-      font-size: clamp(0.9rem, 3.85vw, 1.22rem);
+      font-size: clamp(0.95rem, 4vw, 1.32rem);
     }
     .inspection-menu__btn {
       font-size: clamp(0.75rem, 3.1vw, 0.88rem);  /* interactive ≥ 12px */
@@ -5807,7 +6841,9 @@
       font-size: clamp(0.85rem, 4.5vw, 1.12rem) !important;
     }
     .committee-bar__text {
-      font-size: clamp(0.5rem, 2.85vw, 0.64rem);
+      /* v0.06.1：与主断点对齐（>768px 平板/桌面） */
+      font-size: clamp(12px, 2.85vw, 14px);
+      letter-spacing: 0.06em;
     }
   }
 
@@ -5940,6 +6976,24 @@
     color: rgba(218, 135, 120, 0.92);
   }
 
+  /* FBC 流通损耗（House Edge）：极细官僚标注，仅在正向收益且 rate > 0 时显示 */
+  .door-result-frame__edge {
+    margin-top: 0.45rem;
+    font-family: "Courier New", monospace;
+    font-size: clamp(0.5rem, 1.85vw, 0.6rem);
+    letter-spacing: 0.16em;
+    color: rgba(170, 130, 118, 0.55);
+    text-transform: uppercase;
+    opacity: 0;
+    animation: drf-edge-in 0.32s 0.18s ease-out both;
+    white-space: nowrap;
+  }
+  .door-result-frame__edge[hidden] { display: none; }
+  @keyframes drf-edge-in {
+    from { opacity: 0; transform: translateY(2px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
   .door-result-frame__link {
     pointer-events: auto;
     margin-top: 40px;
@@ -6070,15 +7124,20 @@
     align-items: baseline;
     padding: 18px 22px 14px;
   }
+  /* v0.06.1：trm 字号 / 亮度统一规范，对齐 debt-warning · safe-node · boss-overlay。
+     旧值（偏小偏暗）：header .6rem ≈ 9.6px / lore .62rem ≈ 9.9px / tag .52rem ≈ 8.3px。
+     新值：header ≈ 13.5px / lore ≈ 13.5px / tag ≈ 11.5px，alpha 0.82→0.92。 */
   .trm__header-label {
-    font-size: 0.6rem;
-    color: rgba(200, 140, 130, 0.9);
+    font-size: clamp(12px, 0.84rem, 14.5px);   /* 原 0.6rem ≈ 9.6px */
+    color: rgba(220, 158, 145, 0.96);            /* 原 0.9 alpha → 0.96 */
     letter-spacing: 0.22em;
     text-transform: uppercase;
+    font-weight: 700;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
   }
   .trm__ref {
-    font-size: 0.5rem;
-    color: rgba(110, 80, 78, 0.52);
+    font-size: clamp(10px, 0.62rem, 11.5px);    /* 原 0.5rem ≈ 8px */
+    color: rgba(140, 110, 105, 0.7);             /* 原 0.52 alpha → 0.7 */
     letter-spacing: 0.1em;
   }
   .trm__divider {
@@ -6094,34 +7153,36 @@
     margin-bottom: 8px;
   }
   .trm__amount-label {
-    font-size: 0.5rem;
-    color: rgba(135, 95, 90, 0.56);
+    font-size: clamp(11px, 0.68rem, 12.5px);    /* 原 0.5rem ≈ 8px */
+    color: rgba(170, 130, 122, 0.78);             /* 原 0.56 alpha → 0.78 */
     letter-spacing: 0.14em;
     text-transform: uppercase;
   }
   .trm__amount-value {
-    font-size: 1.08rem;
-    color: rgba(220, 140, 125, 0.95);
+    font-size: clamp(16px, 1.1rem, 19px);       /* 原 1.08rem，略升 */
+    color: rgba(232, 158, 142, 0.98);             /* 原 0.95 → 0.98 */
     letter-spacing: 0.04em;
+    font-weight: 700;
   }
-  .trm__amount-value--gain    { color: rgba(130, 195, 158, 0.88); }
-  .trm__amount-value--neutral { color: rgba(155, 125, 118, 0.7);  }
+  .trm__amount-value--gain    { color: rgba(140, 215, 168, 0.96); }   /* mint，提亮 */
+  .trm__amount-value--neutral { color: rgba(180, 152, 145, 0.85); }
   .trm__tag-row { margin-bottom: 18px; }
   .trm__tag {
-    font-size: 0.52rem;
-    color: rgba(160, 95, 85, 0.62);
+    font-size: clamp(11px, 0.7rem, 12.5px);     /* 原 0.52rem ≈ 8.3px */
+    color: rgba(200, 130, 118, 0.85);             /* 原 0.62 alpha → 0.85 */
     letter-spacing: 0.2em;
     text-transform: uppercase;
+    font-weight: 600;
   }
   .trm__lore-divider {
     height: 1px;
-    background: rgba(140, 65, 55, 0.18);
+    background: rgba(140, 65, 55, 0.22);          /* 原 0.18 */
     margin-bottom: 18px;
   }
   .trm__lore {
-    font-size: 0.62rem;
-    line-height: 1.82;
-    color: rgba(188, 162, 157, 0.82);
+    font-size: clamp(12.5px, 0.82rem, 14.5px);  /* 原 0.62rem ≈ 9.9px */
+    line-height: 1.78;                            /* 原 1.82，紧凑一档以适配大字号 */
+    color: rgba(212, 196, 190, 0.94);             /* 原 0.82 alpha → 0.94，更亮 */
     letter-spacing: 0.03em;
     margin: 0;
     white-space: pre-wrap;
@@ -6139,24 +7200,26 @@
   }
   .trm__close-btn {
     background: transparent;
-    border: 1px solid rgba(140, 65, 55, 0.38);
-    color: rgba(185, 125, 115, 0.82);
+    border: 1px solid rgba(155, 78, 65, 0.5);     /* 原 0.38 → 0.5 */
+    color: rgba(210, 152, 140, 0.95);              /* 原 0.82 → 0.95 */
     font-family: 'Courier New', monospace;
-    font-size: 0.56rem;
-    letter-spacing: 0.2em;
-    padding: 7px 18px;
+    font-size: clamp(11.5px, 0.72rem, 13px);     /* 原 0.56rem ≈ 9px */
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    padding: 9px 20px;                            /* 原 7×18，按钮放大一档 */
+    min-height: 36px;
     cursor: pointer;
     border-radius: 1px;
     text-transform: uppercase;
     transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
   .trm__close-btn:hover {
-    background: rgba(110, 35, 28, 0.25);
-    color: rgba(220, 140, 125, 0.95);
-    border-color: rgba(160, 75, 65, 0.5);
+    background: rgba(110, 35, 28, 0.32);
+    color: rgba(232, 158, 142, 1);
+    border-color: rgba(180, 90, 75, 0.65);
   }
   .trm__close-btn:focus-visible {
-    outline: 1px solid rgba(160, 80, 70, 0.5);
+    outline: 1px solid rgba(180, 95, 80, 0.7);
     outline-offset: 2px;
   }
 </style>
@@ -6186,7 +7249,7 @@
   <div class="start-screen__vignette" aria-hidden="true"></div>
   <div class="start-screen__title">暴富电梯</div>
   <div class="start-screen__subtitle">关门再涨价 · 联邦控制局计价规程</div>
-  <div class="start-screen__slogan">再上一层，离暴富更近——也可能更近破产。</div>
+  <div class="start-screen__slogan">恭喜发财——再上一层，离暴富更近，也更近破产。</div>
   <div class="start-screen__line" aria-hidden="true"></div>
   <div class="start-screen__prompt">点按进入 · 开始首趟</div>
   <div class="start-screen__hint">TAP TO BEGIN</div>
@@ -6221,23 +7284,65 @@
 
 <!-- ===== 封存货舱选盘界面 ===== -->
 <div id="locker-selection-overlay" aria-hidden="true" role="dialog" aria-label="选择货舱">
-  <span class="locker-overlay__classification" id="locker-overlay-classification">FBC · 封存货舱 · 待开启</span>
-  <h2 class="locker-overlay__title" id="locker-overlay-title">选一只货舱开启</h2>
-  <p class="locker-overlay__subtitle" id="locker-overlay-subtitle">超时未选 · 由委员会代决议自动开柜</p>
-  <div class="locker-overlay__hint" id="locker-overlay-hint" aria-live="polite"></div>
-  <div class="locker-grid" id="locker-grid"></div>
-  <div class="locker-countdown" id="locker-countdown">
-    <div class="locker-countdown__bar"><div class="locker-countdown__fill" id="locker-countdown-fill"></div></div>
-    <div class="locker-countdown__label" id="locker-countdown-label">FBC · 倒计时</div>
+  <!-- v0.06：FBC 货舱档案库纵深布景（纯装饰，pointer-events: none）
+       —— 透视侧墙 + 远景吊灯阵列 + 远处青色地平光带 + 左暖右冷辉光团 + 地面反光线 -->
+  <div class="locker-stage" aria-hidden="true">
+    <div class="locker-stage__wall locker-stage__wall--left"></div>
+    <div class="locker-stage__wall locker-stage__wall--right"></div>
+    <div class="locker-stage__ceiling">
+      <span class="locker-stage__lamp locker-stage__lamp--far-l"></span>
+      <span class="locker-stage__lamp locker-stage__lamp--mid-l"></span>
+      <span class="locker-stage__lamp locker-stage__lamp--center"></span>
+      <span class="locker-stage__lamp locker-stage__lamp--mid-r"></span>
+      <span class="locker-stage__lamp locker-stage__lamp--far-r"></span>
+    </div>
+    <div class="locker-stage__floor">
+      <div class="locker-stage__floor-glow"></div>
+    </div>
+    <div class="locker-stage__horizon"></div>
+    <div class="locker-stage__rim locker-stage__rim--warm"></div>
+    <div class="locker-stage__rim locker-stage__rim--cool"></div>
+    <div class="locker-stage__vignette"></div>
+  </div>
+
+  <!-- 核心内容（全部 ID 保持不变，JS 不需调整） -->
+  <div class="locker-stage__content">
+    <span class="locker-overlay__classification" id="locker-overlay-classification">FBC · 封存货舱 · 待开启</span>
+    <h2 class="locker-overlay__title" id="locker-overlay-title">选一只货舱开启</h2>
+    <p class="locker-overlay__subtitle" id="locker-overlay-subtitle">超时未选 · 由委员会代决议自动开柜</p>
+    <div class="locker-overlay__hint" id="locker-overlay-hint" aria-live="polite"></div>
+    <div class="locker-grid" id="locker-grid"></div>
+    <div class="locker-countdown" id="locker-countdown">
+      <div class="locker-countdown__bar"><div class="locker-countdown__fill" id="locker-countdown-fill"></div></div>
+      <div class="locker-countdown__label" id="locker-countdown-label">FBC · 倒计时</div>
+    </div>
   </div>
 </div>
 
 <!-- ===== 货舱清点全屏翻页 ===== -->
 <div id="manifest-reveal-overlay" class="manifest-reveal-overlay" aria-hidden="true" role="dialog" aria-label="货舱清点">
+  <!-- v0.06：FBC 物证检查室纵深布景（纯装饰，pointer-events: none）
+       —— 左右带凹槽巨石柱(图1) + 顶部白光柱(图1+图2) + 中央反光审讯台(图2) +
+          远处青色地平线 + 整体 vignette。
+       光强度比"封存货舱"更强,顶部光柱将光打在 manifest-card 上。 -->
+  <div class="manifest-stage-decor" aria-hidden="true">
+    <div class="manifest-stage-decor__column manifest-stage-decor__column--left"></div>
+    <div class="manifest-stage-decor__column manifest-stage-decor__column--right"></div>
+    <div class="manifest-stage-decor__lightshaft"></div>
+    <div class="manifest-stage-decor__lightshaft-bloom"></div>
+    <div class="manifest-stage-decor__plinth-glow"></div>
+    <div class="manifest-stage-decor__plinth"></div>
+    <div class="manifest-stage-decor__floor"></div>
+    <div class="manifest-stage-decor__horizon"></div>
+    <div class="manifest-stage-decor__vignette"></div>
+  </div>
+
   <div class="manifest-reveal-overlay__head">
     <span class="manifest-reveal-overlay__class">FBC · 货舱清点</span>
-    <span class="manifest-reveal-overlay__lot"  id="manifest-reveal-lot">LOT —</span>
-    <span class="manifest-reveal-overlay__page" id="manifest-reveal-page">01 / 03</span>
+    <div class="manifest-reveal-overlay__lot-row">
+      <span class="manifest-reveal-overlay__lot"  id="manifest-reveal-lot">LOT —</span>
+      <span class="manifest-reveal-overlay__page" id="manifest-reveal-page">01 / 03</span>
+    </div>
   </div>
   <div class="manifest-reveal-stage">
     <div class="manifest-card" id="manifest-card" data-polarity="neutral">
@@ -6312,7 +7417,7 @@
           <h3 class="fbc-rules-section__title">货舱清点</h3>
           <p class="fbc-rules-section__body">
             选中柜门后，本层结算会被拆成 <strong>3 件子产物</strong> 逐张登记；
-            金黄发光为正向、红光为损失、灰白为中性。看清楚最末一张的总账面变动。
+            <span style="color:#6ee7a7">绿光为正向</span>、<span style="color:#ff5a5a">红光为损失</span>、灰白为中性。看清楚最末一张的总账面变动。
           </p>
         </div>
         <div class="fbc-rules-section">
@@ -6326,7 +7431,8 @@
           <h3 class="fbc-rules-section__title">音频 / 操作</h3>
           <p class="fbc-rules-section__body">
             右上角 <strong>♪ 切换</strong> 可静默 BGM（事件 SFX 始终保留）。
-            倒计时危急时面板会进入<em>恐慌色</em>。键盘可用 <strong>Space</strong> 撤离。
+            倒计时危急时面板会进入<em>恐慌色</em>。
+            <span class="input-hint__touch">所有操作通过屏幕按钮触发：<strong>▲ 上行</strong> / <strong>▼ 撤离</strong> / 点乘客审查 / 拉杆制动。</span><span class="input-hint__desktop">桌面键盘可用 <strong>Space</strong> 调指令圆盘 · <strong>⌘R</strong> 撤离 · <strong>Escape</strong> 关闭弹窗。</span>
           </p>
         </div>
       </section>
@@ -6439,8 +7545,11 @@
           <div class="hud__readout-main hud__readout-main--asset hud__asset-play-row hud__asset-play-row--hidden" id="hud-asset-play-row">
             <span class="hud__readout-currency" aria-hidden="true">¥</span>
             <span id="money">200</span>
-            <span class="hud__quota-sep" aria-hidden="true">/</span>
-            <span id="quota-display" class="hud__quota-target">1000</span>
+            <!-- v0.06.1：配额整组包到 .hud__quota-group，超宽时整组换行 -->
+            <span class="hud__quota-group" aria-hidden="true">
+              <span class="hud__quota-sep">/</span>
+              <span id="quota-display" class="hud__quota-target">1000</span>
+            </span>
           </div>
           <div class="hud__net-asset hud__net-asset--pre-hidden" id="net-asset-row">
             <span class="hud__net-asset__label">净资产</span>
@@ -6560,6 +7669,7 @@
           <span class="door-result-frame__sep" aria-hidden="true"></span>
           <span class="door-result-frame__brief" id="drf-brief"></span>
         </div>
+        <div class="door-result-frame__edge" id="drf-edge" hidden></div>
         <div class="manifest-strip" id="manifest-strip" aria-hidden="true"></div>
         <button type="button" class="door-result-frame__link" id="drf-archive-btn" hidden>
           📄 查阅异动档案
@@ -6622,7 +7732,9 @@
         <div class="breach-overlay__bar-track">
           <div class="breach-overlay__bar-fill" id="breach-fill"></div>
         </div>
-        <div class="breach-overlay__hint">撤离 · Space / ⌘R</div>
+        <div class="breach-overlay__hint">
+          <span class="input-hint__touch">点 ▼ 撤离</span><span class="input-hint__desktop">撤离 · Space / ⌘R</span>
+        </div>
       </div>
 
       <!-- 本层资产异动档案次级入口（DECIDING 状态下显示） -->
@@ -6729,6 +7841,8 @@
   /* ===========================================================
    * 委员会低语语料库
    * =========================================================== */
+  /* v0.06 文案本土化：保留 FBC 冷面规程语态 + 注入中国情结
+     （股民/理财/楼市/年节梗），与主品牌「暴富电梯」反差形成黑色幽默。 */
   var WHISPERS = [
     '偏移上升：克制或加码。',
     '倍率符合预期，氧气在变薄。',
@@ -6736,10 +7850,14 @@
     '再上一层：更近峰值，也更近清算。',
     '缆绳在颤，委员会在听。',
     '上行或步出，都是态度。',
-    '贪婪曲线与偏移同步登记。',
-    '井底有人读你的决策副本。',
+    '落袋为安——落水也叫为安。',
+    '今天少赚 1000，等于亏 1000。',
     '理智是耗材，配额是硬通货。',
-    '开门即质询。'
+    '开门即质询。',
+    '把鸡蛋分到三只货舱。',
+    '恭喜发财——委员会保留对「恭喜」的解释权。',
+    '加杠杆容易，下杠杆难。',
+    '天上不掉馅饼，井道里偶尔会。'
   ];
 
   var COMMITTEE_EDGE_LINES = [
@@ -6747,15 +7865,17 @@
     '倍率符合预期，氧气变薄。',
     '加码留痕。',
     '缆绳在颤。',
-    '上行或步出，都是态度。'
+    '上行或步出，都是态度。',
+    '落袋为安。',
+    '恭喜发财。'
   ];
 
   /** 开场幕布：总时长 BOOT_TOTAL_MS（与背景视频一致 8s），文案均分节拍换行 */
   var BOOT_TOTAL_MS = 8000;
   var BOOT_INTRO_LINES = [
+    '恭喜发财——也可能恭喜清算。',
     '关门后，本层报价重算。',
-    '配额线在前，数字在后。',
-    '上行即认价；撤离即归档。'
+    '上行即认价；撤离即落袋。'
   ];
   var _bootLineTimer = null;
   var _bootSafetyTimer = null;
@@ -6763,7 +7883,7 @@
   var DEPLOY_SEAL_MESSAGE =
     '许可生效。计价档案已同步。';
   var EVACUATION_DIRECTIVE =
-    '带走已到手的账面。';
+    '带走已到手的账面 · 落袋为安。';
   var PASSENGER_COMMITTEE = {
     VIP:      '审计在场：决策加快。',
     SCAMMER:  '观测员入场：读数不稳。',
@@ -6887,6 +8007,7 @@
   var drfEl        = document.getElementById('door-result-frame');
   var drfTagEl     = document.getElementById('drf-tag');
   var drfBriefEl   = document.getElementById('drf-brief');
+  var drfEdgeEl    = document.getElementById('drf-edge');
   var drfArchiveEl = document.getElementById('drf-archive-btn');
   var _drfHideTimer = null;
   /* 资产异动档案系统 */
@@ -7281,11 +8402,15 @@
 
   function updatePreGameMissionLine() {
     if (!hudMissionLineEl) return;
-    var q = 1000;
-    if (typeof game !== 'undefined' && game && game.quota != null) {
-      q = Math.floor(game.quota);
-    }
     var lev = getDeployAmountDraft();
+    var q;
+    if (GameController && typeof GameController.pickQuotaForBuyIn === 'function') {
+      q = Math.floor(GameController.pickQuotaForBuyIn(lev).value);
+    } else if (typeof game !== 'undefined' && game && game.quota != null) {
+      q = Math.floor(game.quota);
+    } else {
+      q = 1000;
+    }
     hudMissionLineEl.textContent =
       '目标 ¥' + formatYuanComma(q) + ' · 杠杆 ¥' + formatYuanComma(lev);
   }
@@ -7313,6 +8438,11 @@
     }
     if (hudAssetLabelEl) {
       hudAssetLabelEl.textContent = pre ? '许可概要' : '回收进度';
+    }
+    /* 开局态：许可概要标签 & 任务行水平并排对齐 */
+    var assetCounterEl = document.getElementById('asset-counter');
+    if (assetCounterEl) {
+      assetCounterEl.classList.toggle('hud__asset-counter--pre-game', pre);
     }
   }
 
@@ -7412,7 +8542,8 @@
     el.classList.remove('committee-edge--flash');
     void el.offsetWidth;
     el.classList.add('committee-edge--flash');
-    setTimeout(function () { el.classList.remove('committee-edge--flash'); }, 1450);
+    /* v0.06.1：清理时长跟随动画 1.35s → 2.8s */
+    setTimeout(function () { el.classList.remove('committee-edge--flash'); }, 2900);
   }
 
   function startCommitteeEdgeMonitoring() {
@@ -8016,13 +9147,36 @@
     _moneyOdometerGuard = true;
     from = Math.max(0, Math.floor(from));
     to = Math.max(0, Math.floor(to));
+    var isLoss = (to < from);
     _moneyOdometerGainTier = (to > from && odometerOpts.gainTier != null)
       ? Math.max(0, Math.floor(odometerOpts.gainTier))
       : 0;
+
+    /* 清除旧层级类，按方向与层级挂载样式类 */
+    moneyEl.classList.remove(
+      'money-odometer--loss',
+      'money-odometer--t1', 'money-odometer--t2',
+      'money-odometer--t3', 'money-odometer--t4'
+    );
     moneyEl.classList.add('money-odometer');
+    if (isLoss) {
+      moneyEl.classList.add('money-odometer--loss');
+    } else if (_moneyOdometerGainTier >= 3) {
+      moneyEl.classList.add('money-odometer--t' + Math.min(4, _moneyOdometerGainTier));
+    }
+
+    function _odCleanup() {
+      moneyEl.classList.remove(
+        'money-odometer',
+        'money-odometer--loss',
+        'money-odometer--t1', 'money-odometer--t2',
+        'money-odometer--t3', 'money-odometer--t4'
+      );
+    }
+
     if (from === to) {
       moneyEl.textContent = String(to);
-      moneyEl.classList.remove('money-odometer');
+      _odCleanup();
       _moneyOdometerGuard = false;
       _moneyOdometerGainTier = 0;
       if (onComplete) onComplete();
@@ -8032,7 +9186,7 @@
     function tick() {
       if (cur === to) {
         moneyEl.textContent = String(to);
-        moneyEl.classList.remove('money-odometer');
+        _odCleanup();
         _moneyOdometerGuard = false;
         _moneyOdometerTimer = null;
         var pulseTier = _moneyOdometerGainTier;
@@ -8055,9 +9209,20 @@
       cur += chunk;
       if ((diff > 0 && cur > to) || (diff < 0 && cur < to)) cur = to;
       moneyEl.textContent = String(Math.max(0, cur));
-      var delay = 34 + Math.floor(Math.random() * 26);
-      if (to > from && odometerOpts.gainTier >= 2) {
-        delay += 10 + (odometerOpts.gainTier - 1) * 12;
+
+      /* 层级化延迟：亏损快速尖锐；小增益正常；大增益缓放戏剧化 */
+      var tier = _moneyOdometerGainTier;
+      var delay;
+      if (isLoss) {
+        delay = 18 + Math.floor(Math.random() * 14);  /* 亏损：快速冲击 18-32ms */
+      } else if (tier <= 1) {
+        delay = 30 + Math.floor(Math.random() * 22);  /* 小增益：正常 30-52ms */
+      } else if (tier === 2) {
+        delay = 42 + Math.floor(Math.random() * 28);  /* 中增益：稍慢 42-70ms */
+      } else if (tier === 3) {
+        delay = 58 + Math.floor(Math.random() * 36);  /* 大增益：缓放 58-94ms */
+      } else {
+        delay = 72 + Math.floor(Math.random() * 48);  /* 极大增益：戏剧化 72-120ms */
       }
       _moneyOdometerTimer = setTimeout(tick, delay);
     }
@@ -8137,13 +9302,16 @@
     _whisperIdx = Math.floor(Math.random() * WHISPERS.length);
     committeeTextEl.textContent = WHISPERS[_whisperIdx];
     committeeBarEl.classList.add('active');
+    /* v0.06.1：轮换间隔 420ms → 2200ms。
+       原 420ms 是"叙事抖动"节奏，但用户反馈每句话还没读完就被换掉。
+       2200ms 确保 8–14 字 monospace 句子可以被完整阅读 + 留出 0.4s 缓冲消化。 */
     _whisperInterval = setInterval(function () {
       _whisperIdx = (_whisperIdx + 1) % WHISPERS.length;
       committeeTextEl.classList.remove('whisper-in');
       void committeeTextEl.offsetWidth;
       committeeTextEl.textContent = WHISPERS[_whisperIdx];
       if (_whisperIdx % 3 === 0) playCommitteePulseSafe();
-    }, 420);
+    }, 2200);
   }
 
   function stopCommitteeWhispers() {
@@ -8250,9 +9418,13 @@
 
   /**
    * 开门时同步显示：行政名目 tag + 金额变动 delta + 档案入口（若有 lore）
-   * 2s 后自动消隐；玩家点击上行/撤离时 hideReceiptSystem 立即清除
+   * 4s 后自动消隐；玩家点击上行/撤离时 hideReceiptSystem 立即清除
+   * @param {string} tag
+   * @param {number} delta
+   * @param {boolean} hasLore
+   * @param {{ edgeAmount?: number, edgeRate?: number }} [meta] FBC 流通损耗等附加注脚
    */
-  function showDoorResultFrame(tag, delta, hasLore) {
+  function showDoorResultFrame(tag, delta, hasLore, meta) {
     if (!drfEl) return;
     clearTimeout(_drfHideTimer);
 
@@ -8266,6 +9438,21 @@
       drfBriefEl.textContent = sign + '\u00a5' + Math.abs(d);
       drfBriefEl.className = 'door-result-frame__brief' +
         (d > 0 ? ' door-result-frame__brief--gain' : d < 0 ? ' door-result-frame__brief--loss' : '');
+    }
+
+    /* FBC 流通损耗注脚：仅在正向收益且本次税额 > 0 时显示 */
+    if (drfEdgeEl) {
+      var edgeAmount = (meta && Number(meta.edgeAmount)) || 0;
+      var edgeRate   = (meta && Number(meta.edgeRate))   || 0;
+      if (d > 0 && edgeAmount > 0) {
+        var pct = Math.round(edgeRate * 100);
+        drfEdgeEl.textContent = '// FBC §4.7 已扣 \u00a5' + formatYuanComma(edgeAmount) +
+          (pct > 0 ? ' · ' + pct + '% 流通损耗' : ' · 流通损耗');
+        drfEdgeEl.removeAttribute('hidden');
+      } else {
+        drfEdgeEl.textContent = '';
+        drfEdgeEl.setAttribute('hidden', '');
+      }
     }
 
     /* 档案入口：有 lore 才显示 */
@@ -8903,6 +10090,49 @@
     }
   }
 
+  /* v0.06.2 升级 B（精简版）：配额过线后的反馈集合
+     - HUD #money / quota / 分隔符渐染 mint
+     - 场景层一次性闪现 // FBC §3.1 — 配额已达成
+     - v0.06.1 的 LED 区 mono 标签已移除（占高度且次级）
+     - 不修改任何核心状态，纯 UI 旁路 */
+  var _quotaFlashTimer = null;
+  function showQuotaClearedFeedback(info) {
+    var assetCounter = document.getElementById('asset-counter');
+    if (assetCounter) {
+      assetCounter.classList.add('hud__asset-counter--quota-cleared');
+      assetCounter.classList.remove('hud__asset-counter--quota-flash');
+      void assetCounter.offsetWidth;
+      assetCounter.classList.add('hud__asset-counter--quota-flash');
+      if (_quotaFlashTimer) clearTimeout(_quotaFlashTimer);
+      _quotaFlashTimer = setTimeout(function () {
+        assetCounter.classList.remove('hud__asset-counter--quota-flash');
+      }, 1200);
+    }
+
+    var stage = document.getElementById('stage');
+    if (stage) {
+      var existing = stage.querySelector('.quota-cleared-flash');
+      if (existing) existing.remove();
+      var flash = document.createElement('div');
+      flash.className = 'quota-cleared-flash';
+      var multiplier = (info && info.multiplier) ? ('×' + info.multiplier.toFixed(1)) : '';
+      flash.textContent = '// FBC §3.1 — 配额已达成 ' + multiplier;
+      stage.appendChild(flash);
+      setTimeout(function () {
+        if (flash && flash.parentNode) flash.parentNode.removeChild(flash);
+      }, 2600);
+    }
+  }
+
+  function clearQuotaClearedFeedback() {
+    var assetCounter = document.getElementById('asset-counter');
+    if (assetCounter) {
+      assetCounter.classList.remove('hud__asset-counter--quota-cleared');
+      assetCounter.classList.remove('hud__asset-counter--quota-flash');
+    }
+    if (_quotaFlashTimer) { clearTimeout(_quotaFlashTimer); _quotaFlashTimer = null; }
+  }
+
   function updateNetAssetDisplay() {
     if (!netAssetValueEl) return;
     if (typeof game === 'undefined' || !game) return;
@@ -8914,7 +10144,10 @@
       : '- ¥' + abs;
     netAssetValueEl.className = 'hud__net-asset__value ' +
       (isPositive ? 'hud__net-asset__value--positive' : 'hud__net-asset__value--negative');
-    if (quotaDisplayEl) quotaDisplayEl.textContent = game.quota;
+    if (quotaDisplayEl) {
+      var q = Math.floor(game.quota || 0);
+      quotaDisplayEl.textContent = (typeof formatYuanComma === 'function') ? formatYuanComma(q) : q;
+    }
   }
 
   /**
@@ -8993,6 +10226,7 @@
     }
     if (coreTriggerDeployEl) coreTriggerDeployEl.classList.remove('core-trigger--impact');
     stageEl.classList.remove('stage--liquidation-shock', 'hiss-red-explosion', 'stage--phase-dim');
+    if (typeof clearQuotaClearedFeedback === 'function') clearQuotaClearedFeedback();
     stageEl.style.setProperty('--greed',      '0');
     stageEl.style.setProperty('--corruption', '0');
     screenEl.style.setProperty('--corruption', '0');
@@ -9134,7 +10368,7 @@
     }
     if (s.kind === GameController.SurpriseEvent.KINDS.SKIP_FLOOR) {
       triggerSkipFlash();
-      if (vt >= 3) setTimeout(function () { triggerFlash('rgba(255,230,120,.28)', 220); }, 320);
+      if (vt >= 3) setTimeout(function () { triggerFlash('rgba(110,231,167,.28)', 220); }, 320);
       audioEngine.playSurprise('SKIP_FLOOR');
     }
   }
@@ -9263,6 +10497,13 @@
     showDebtWarning(data);
   });
 
+  /* v0.06 升级 B：配额过线 → HUD 暖琥珀染色 + 一次性 mono 旁注 + 场景闪现 */
+  if (typeof game.onQuotaCrossed === 'function') {
+    game.onQuotaCrossed(function (info) {
+      try { showQuotaClearedFeedback(info); } catch (e) { console.error(e); }
+    });
+  }
+
   if (debtWarningContinueEl) {
     debtWarningContinueEl.addEventListener('click', function () {
       hideDebtWarning();
@@ -9321,7 +10562,11 @@
     }
   });
 
-  document.addEventListener('mousedown', function (e) {
+  /* v0.06 移动端兼容：用 pointerdown 取代 mousedown，确保 iOS 触控
+     在快速点击 / 滑动时也能稳定关闭审查菜单（mouse compatibility 在
+     某些浏览器下会被吞掉） */
+  var _inspectionDismissEvt = ('PointerEvent' in window) ? 'pointerdown' : 'mousedown';
+  document.addEventListener(_inspectionDismissEvt, function (e) {
     if (!inspectionMenuEl || !inspectionMenuEl.classList.contains('active')) return;
     if (inspectionMenuEl.contains(e.target)) return;
     if (passengerLayerEl && passengerLayerEl.contains(e.target)) return;
@@ -9467,7 +10712,11 @@
 
     if (o.kind !== 'LIQUIDATION') {
       var frameTag = (narrative && narrative.tag) ? narrative.tag : '';
-      showDoorResultFrame(frameTag, deltaMoney, !!_pendingReceiptData);
+      var edgeMeta = {
+        edgeAmount: (typeof o._fbcEdgeAmount === 'number') ? o._fbcEdgeAmount : 0,
+        edgeRate:   (typeof o._fbcEdgeRate   === 'number') ? o._fbcEdgeRate   : 0
+      };
+      showDoorResultFrame(frameTag, deltaMoney, !!_pendingReceiptData, edgeMeta);
       /* 货舱清点 3 件子产物逐步揭露：在结果框淡入后顺次铺开 */
       var manifestMs = runManifestReveal(o, deltaMoney, _biomeOfFloor(game.floor), payload.lockerNumber);
       holdMs = 0;
@@ -9615,7 +10864,10 @@
   if (coreBtnDeploy) {
     coreBtnDeploy.addEventListener('click', function (e) {
       e.preventDefault();
+      if (coreBtnDeploy.disabled) return;
       if (game.state === GameController.STATES.HISS_BREACH) return;
+      audioEngine.resumeIfNeeded();
+      if (typeof audioEngine.playMetalTap === 'function') audioEngine.playMetalTap('deploy');
       closeRadialCommand();
       attemptGoUp();
     });
@@ -9623,6 +10875,9 @@
   if (coreBtnWithdraw) {
     coreBtnWithdraw.addEventListener('click', function (e) {
       e.preventDefault();
+      if (coreBtnWithdraw.disabled) return;
+      audioEngine.resumeIfNeeded();
+      if (typeof audioEngine.playMetalTap === 'function') audioEngine.playMetalTap('withdraw');
       closeRadialCommand();
       if (bossOverlayEl && bossOverlayEl.classList.contains('active')) return;
       handleRiskEvacuate();
@@ -9738,9 +10993,13 @@
       screenEl.classList.add('pre-game--clearing');
       setTimeout(function () { screenEl.classList.remove('pre-game--clearing'); }, 300);
 
-      /* 以授权金额重置游戏 */
+      /* 以授权金额重置游戏；同时把建仓投入计入生涯档案，
+         供"累计建仓 / 累计核销 / 综合损益"三件套对账（v0.06） */
       game.initialBet = amount;
       game.reset();
+      try {
+        if (GameController.careerMerge) GameController.careerMerge({ buyIn: amount });
+      } catch (e) {}
 
       sceneEl.className = 'scene biome--admin';
       sceneContentEl.innerHTML = '';
@@ -10240,21 +11499,26 @@
 
     var MODES = ['on', 'off'];
 
-    /* 开启：双声波弧线（全频喇叭） */
+    /* v0.06: 由线性 stroke 改为面性 fill —— 与 Control · Weapon Mods 实心剪影一致
+     *   - 开启：实心喇叭 + 两层实心声波月牙
+     *   - 关闭：实心喇叭 + FBC 警示红实心 X */
     var SVG_ON = [
       '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">',
-        '<path d="M1 5.5h3l4-3.5v12l-4-3.5H1z"/>',
-        '<path d="M11.5 5.5c1.2 0.9 1.8 2.2 1.8 2.5s-0.6 1.6-1.8 2.5"/>',
-        '<path d="M13.5 3.5c2 1.6 2.8 3.2 2.8 4.5s-0.8 2.9-2.8 4.5"/>',
+        /* 喇叭主体：梯形 + 矩形拼合的实心剪影 */
+        '<path d="M0.6 5.5H3.4L7.4 2.05A0.95 0.95 0 0 1 9 2.78V13.22A0.95 0.95 0 0 1 7.4 13.95L3.4 10.5H0.6Z"/>',
+        /* 内圈声波月牙 */
+        '<path d="M10.4 5.0Q12.55 6.4 12.55 8T10.4 11.0V9.4Q11.25 8.55 11.25 8T10.4 6.6Z"/>',
+        /* 外圈声波月牙 */
+        '<path d="M12.5 3.0Q15.6 5.0 15.6 8T12.5 13.0V11.4Q14.0 9.95 14.0 8T12.5 4.6Z"/>',
       '</svg>'
     ].join('');
 
-    /* 关闭：喇叭 + 红色叉号 */
     var SVG_OFF = [
       '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">',
-        '<path d="M1 5.5h3l4-3.5v12l-4-3.5H1z"/>',
-        '<line class="bgm-toggle__mute-x" x1="10.5" y1="5" x2="15"   y2="9.5"/>',
-        '<line class="bgm-toggle__mute-x" x1="15"   y1="5" x2="10.5" y2="9.5"/>',
+        '<path d="M0.6 5.5H3.4L7.4 2.05A0.95 0.95 0 0 1 9 2.78V13.22A0.95 0.95 0 0 1 7.4 13.95L3.4 10.5H0.6Z"/>',
+        /* 实心 X（两个粗矩形旋转 ±45°），face-fill style */
+        '<path class="bgm-toggle__mute-x" d="M10.05 4.65L11.20 3.50L15.50 7.80L14.35 8.95Z"/>',
+        '<path class="bgm-toggle__mute-x" d="M14.35 7.05L15.50 8.20L11.20 12.50L10.05 11.35Z"/>',
       '</svg>'
     ].join('');
 
@@ -10393,27 +11657,54 @@
       if (!careerCt) return;
       var c = (typeof GameController !== 'undefined' && GameController.careerLoad)
         ? GameController.careerLoad()
-        : { total_credits_collected: 0, total_floors_climbed: 0, max_floor_reached: 0, total_liquidations: 0, total_committee_overrides: 0 };
+        : { total_buy_in: 0, total_credits_collected: 0, total_credits_lost: 0,
+            total_floors_climbed: 0, max_floor_reached: 0,
+            total_liquidations: 0, total_committee_overrides: 0 };
 
-      var hasAny = c.total_credits_collected > 0 || c.total_floors_climbed > 0 ||
-                   c.total_liquidations > 0 || c.total_committee_overrides > 0;
+      var hasAny = c.total_buy_in > 0 || c.total_credits_collected > 0 ||
+                   c.total_floors_climbed > 0 || c.total_liquidations > 0 ||
+                   c.total_committee_overrides > 0;
 
       if (!hasAny) {
         careerCt.innerHTML =
           '<div class="fbc-career-empty">// 暂无作业记录 · 上行后自动归档</div>' +
           '<div class="fbc-rules-section__body" style="margin-top:14px;line-height:1.7;">' +
-          '档案库会在每趟上行 / 撤离 / 破产后自动留痕，包含累计资产、最高深度、破产次数与代决议次数。' +
+          '档案库会在每趟上行 / 撤离 / 破产后自动留痕，含建仓投入、核销资产、综合损益、深度记录与破产损失。' +
           '</div>';
         return;
       }
 
       var fmt = function (n) { return (n || 0).toLocaleString('zh-Hans-CN'); };
+
+      /* 博彩对账三件套：
+         net P&L = 累计核销 − 累计建仓
+         若玩家从未建仓（旧档案兼容）则按 collected 全部视为净盈展示。 */
+      var buyIn     = Math.max(0, Math.floor(c.total_buy_in        || 0));
+      var collected = Math.max(0, Math.floor(c.total_credits_collected || 0));
+      var lost      = Math.max(0, Math.floor(c.total_credits_lost  || 0));
+      var pnl       = collected - buyIn;
+      var pnlClass, pnlSign;
+      if (pnl > 0)      { pnlClass = 'fbc-career-cell--pnl-gain'; pnlSign = '+'; }
+      else if (pnl < 0) { pnlClass = 'fbc-career-cell--pnl-loss'; pnlSign = '-'; }
+      else              { pnlClass = 'fbc-career-cell--pnl-flat'; pnlSign = '±'; }
+
       var html = '';
       html += '<div class="fbc-career-grid">';
-      html +=   '<div class="fbc-career-cell fbc-career-cell--accent">' +
-                  '<span class="fbc-career-cell__label">累计核销资产</span>' +
-                  '<span class="fbc-career-cell__value">¥' + fmt(c.total_credits_collected) + '</span>' +
+      /* 第 1 行：建仓 / 核销 — 博彩流水的两端 */
+      html +=   '<div class="fbc-career-cell fbc-career-cell--debit">' +
+                  '<span class="fbc-career-cell__label">累计建仓投入</span>' +
+                  '<span class="fbc-career-cell__value">¥' + fmt(buyIn) + '</span>' +
                 '</div>';
+      html +=   '<div class="fbc-career-cell fbc-career-cell--credit">' +
+                  '<span class="fbc-career-cell__label">累计核销资产</span>' +
+                  '<span class="fbc-career-cell__value">¥' + fmt(collected) + '</span>' +
+                '</div>';
+      /* 第 2 行：综合损益结算（通栏，正负染色） */
+      html +=   '<div class="fbc-career-cell fbc-career-cell--pnl ' + pnlClass + '" style="grid-column:1 / -1;">' +
+                  '<span class="fbc-career-cell__label">综合损益结算 · NET P&amp;L</span>' +
+                  '<span class="fbc-career-cell__value">' + pnlSign + '¥' + fmt(Math.abs(pnl)) + '</span>' +
+                '</div>';
+      /* 第 3 行：深度记录 */
       html +=   '<div class="fbc-career-cell">' +
                   '<span class="fbc-career-cell__label">历史最高深度</span>' +
                   '<span class="fbc-career-cell__value">B' + (c.max_floor_reached || 0) + '</span>' +
@@ -10422,13 +11713,25 @@
                   '<span class="fbc-career-cell__label">累计上行楼层</span>' +
                   '<span class="fbc-career-cell__value">' + fmt(c.total_floors_climbed) + '</span>' +
                 '</div>';
-      html +=   '<div class="fbc-career-cell ' + (c.total_liquidations >= 3 ? 'fbc-career-cell--warn' : '') + '">' +
+      /* 第 4 行：破产记录 — 含金额（次数 + 累计损失） */
+      var liqCount = c.total_liquidations || 0;
+      html +=   '<div class="fbc-career-cell ' + (liqCount >= 3 ? 'fbc-career-cell--warn' : '') + '" style="grid-column:1 / -1;">' +
                   '<span class="fbc-career-cell__label">破产记录</span>' +
-                  '<span class="fbc-career-cell__value">' + (c.total_liquidations || 0) + '</span>' +
+                  '<span class="fbc-career-cell__value">' + liqCount + ' 次 · 损失 ¥' + fmt(lost) + '</span>' +
+                  '<span class="fbc-career-cell__sublabel">CUMULATIVE LIQUIDATION DAMAGE</span>' +
                 '</div>';
+      /* 第 5 行：FBC 委员会代决议次数 */
       html +=   '<div class="fbc-career-cell" style="grid-column:1 / -1;">' +
                   '<span class="fbc-career-cell__label">FBC 委员会代决议次数</span>' +
                   '<span class="fbc-career-cell__value">' + (c.total_committee_overrides || 0) + '</span>' +
+                '</div>';
+      /* 第 6 行：v0.06 升级 B / C-1 — 配额过线 / 债务撤离审计 */
+      var qCross = c.total_quota_crossings || 0;
+      var dCash  = c.total_debt_cashouts   || 0;
+      html +=   '<div class="fbc-career-cell" style="grid-column:1 / -1;">' +
+                  '<span class="fbc-career-cell__label">配额过线次数 · 债务撤离次数</span>' +
+                  '<span class="fbc-career-cell__value">' + qCross + ' / ' + dCash + '</span>' +
+                  '<span class="fbc-career-cell__sublabel">QUOTA CLEARED · DEBT CASHOUT</span>' +
                 '</div>';
       html += '</div>';
       html += '<div class="fbc-career-eval">' + _evalText(c) + '</div>';
@@ -10441,7 +11744,7 @@
           if (!confirm('确认清空 FBC 个人战绩档案？此操作不可撤销。')) return;
           try {
             if (typeof localStorage !== 'undefined') {
-              localStorage.removeItem('fbc_career_v1');
+              localStorage.removeItem('fbc_career_archive_v1');
             }
           } catch (e) { void e; }
           renderCareer();

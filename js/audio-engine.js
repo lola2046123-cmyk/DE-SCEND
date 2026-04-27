@@ -323,6 +323,84 @@
   };
 
   /**
+   * v0.06：HUD 主按钮（▲ 上行 / ▼ 撤离）按下瞬间的金属脆响。
+   * 设计要点：
+   *   - 极短（≈110 ms），不阻塞后续 deployImpact / cashOut 的次级音效；
+   *   - 中频金属脆响（叮 + 极短余韵），与 leverPull 的"机械下拉"形成层次区分；
+   *   - kind 参数：'deploy' 偏暖（700→520 Hz，红铜质感）；'withdraw' 偏冷亮
+   *     （820→640 Hz，黄铜质感）；其它默认中性。
+   */
+  AudioEngine.prototype.playMetalTap = function (kind) {
+    this.resumeIfNeeded();
+    if (!this._ctx || !this._master) return;
+    if (this._ctx.state === 'suspended') return;
+    try {
+      var ctx = this._ctx;
+      var t0  = ctx.currentTime;
+      var master = this._master;
+
+      var fStart = 760, fEnd = 580;
+      if (kind === 'deploy')   { fStart = 700; fEnd = 520; }
+      else if (kind === 'withdraw') { fStart = 820; fEnd = 640; }
+
+      /* 主体：三角波叮响 + 高通去掉低频闷感 */
+      var o1 = ctx.createOscillator();
+      o1.type = 'triangle';
+      o1.frequency.setValueAtTime(fStart, t0);
+      o1.frequency.exponentialRampToValueAtTime(fEnd, t0 + 0.07);
+      var g1 = ctx.createGain();
+      g1.gain.setValueAtTime(0.0001, t0);
+      g1.gain.exponentialRampToValueAtTime(0.085, t0 + 0.008);
+      g1.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.11);
+      var hp = ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 320;
+      o1.connect(hp);
+      hp.connect(g1);
+      g1.connect(master);
+      o1.start(t0);
+      o1.stop(t0 + 0.13);
+
+      /* 顶端泛音：让"叮"更有金属感，4× 倍频极短 */
+      var o2 = ctx.createOscillator();
+      o2.type = 'sine';
+      o2.frequency.setValueAtTime(fStart * 2.6, t0);
+      var g2 = ctx.createGain();
+      g2.gain.setValueAtTime(0.0001, t0);
+      g2.gain.exponentialRampToValueAtTime(0.04, t0 + 0.005);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
+      o2.connect(g2);
+      g2.connect(master);
+      o2.start(t0);
+      o2.stop(t0 + 0.07);
+
+      /* 触感前导：极轻的碎音点击，模拟手指接触金属面 */
+      var len = Math.floor(ctx.sampleRate * 0.012);
+      var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) {
+        d[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.5;
+      }
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      var g3 = ctx.createGain();
+      g3.gain.setValueAtTime(0.022, t0);
+      g3.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.013);
+      var bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 3600;
+      bp.Q.value = 0.6;
+      src.connect(bp);
+      bp.connect(g3);
+      g3.connect(master);
+      src.start(t0);
+      src.stop(t0 + 0.014);
+    } catch (e) {
+      console.warn('[AudioEngine] playMetalTap:', e);
+    }
+  };
+
+  /**
    * 手动加固 / 断路器拉杆：粗重机械回弹 + 金属摩擦感（不依赖 loadSlot）。
    */
   AudioEngine.prototype.playLeverPull = function () {

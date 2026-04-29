@@ -370,17 +370,27 @@
      越富越缓，逼迫高资产玩家在"守"与"再赌一层"之间做真实决策。 */
   var BASELINE_GROWTH_TIERS = (function () {
     var raw = cfg('baselineGrowth.tiers', null);
-    if (!raw || !raw.length) return null;
     var list = [];
-    for (var i = 0; i < raw.length; i++) {
-      var t = raw[i] || {};
-      var s = Number(t.stakeRatio);
-      var m = Number(t.multiplier);
-      if (!isFinite(s) || s <= 0 || !isFinite(m) || m <= 0) continue;
-      list.push({ stakeRatio: s, multiplier: m, label: t.label || '' });
+    if (raw && raw.length) {
+      for (var i = 0; i < raw.length; i++) {
+        var t = raw[i] || {};
+        var s = Number(t.stakeRatio);
+        var m = Number(t.multiplier);
+        if (!isFinite(s) || s <= 0 || !isFinite(m) || m <= 0) continue;
+        list.push({ stakeRatio: s, multiplier: m, label: t.label || '' });
+      }
     }
     list.sort(function (a, b) { return a.stakeRatio - b.stakeRatio; });
-    return list.length ? list : null;
+    /* 硬编码保底：config 加载失败时保留衰减曲线，与 game-events.json 对齐 */
+    if (!list.length) {
+      list = [
+        { stakeRatio: 1.5, multiplier: 1.10, label: 'incentive'        },
+        { stakeRatio: 3.0, multiplier: 1.06, label: 'throttle'         },
+        { stakeRatio: 6.0, multiplier: 1.03, label: 'freeze'           },
+        { stakeRatio: 999, multiplier: 1.015,label: 'millionaire-trap' }
+      ];
+    }
+    return list;
   })();
 
   function pickBaselineGrowthTier(credits, quota) {
@@ -403,15 +413,17 @@
     var enabled = cfg('fbcEdge.enabled', true);
     var rates   = cfg('fbcEdge.rates', null) || {};
     var label   = cfg('fbcEdge.label', '联邦资产流通损耗');
+    /* 硬编码保底：config 加载失败时确保 House Edge 税率不归零 */
+    var RATE_FALLBACK = { POSITIVE: 0.04, DOUBLE: 0.08, GOLDEN: 0.12, NEGATIVE: 0, LIQUIDATION: 0 };
     return {
       enabled: !!enabled,
       label:   String(label),
       rates: {
-        POSITIVE:    Number(rates.POSITIVE)    || 0,
-        DOUBLE:      Number(rates.DOUBLE)      || 0,
-        GOLDEN:      Number(rates.GOLDEN)      || 0,
-        NEGATIVE:    Number(rates.NEGATIVE)    || 0,
-        LIQUIDATION: Number(rates.LIQUIDATION) || 0
+        POSITIVE:    Number(rates.POSITIVE)    || RATE_FALLBACK.POSITIVE,
+        DOUBLE:      Number(rates.DOUBLE)      || RATE_FALLBACK.DOUBLE,
+        GOLDEN:      Number(rates.GOLDEN)      || RATE_FALLBACK.GOLDEN,
+        NEGATIVE:    Number(rates.NEGATIVE)    || RATE_FALLBACK.NEGATIVE,
+        LIQUIDATION: Number(rates.LIQUIDATION) || RATE_FALLBACK.LIQUIDATION
       }
     };
   })();

@@ -47,8 +47,20 @@
 
   /* =====================================================================
    * 局长生涯档案 — FBC 绩效核查中枢 (LocalStorage 持久化)
+   *
+   * v0.07 信用评级 v1（feature gated by `creditRating.enabled`）：
+   *   - 在不破坏 v0.05 / v0.06 既有字段语义的前提下，扩展 4 个评级相关字段：
+   *     credit_rating / consecutive_liquidations / consecutive_evacuations / credit_rating_history
+   *   - careerMerge 对 liquidation / cashOut 两条主回路同时调用 _recomputeRating()
+   *   - 灰度开关关闭时（默认）：连续计数仍然累加（让上线时存量玩家有正确状态），
+   *     但 credit_rating 永远复位为 'A'，UI/数值挂钩零副作用。
    * ===================================================================== */
   var _FBC_CAREER_KEY = 'fbc_career_archive_v1';
+
+  /* 评级档位（从低到高）。降档由连续清算驱动：2→B / 3→C / 4+→D；
+     升档由连续成功撤离驱动：≥2→AAA。所有阈值从 cfg 读取，方便 PR 1b 调参。 */
+  var _CREDIT_RATING_DEFAULT = 'A';
+  var _CREDIT_RATING_HISTORY_MAX = 10;
 
   function _careerBlank() {
     return {
@@ -60,7 +72,19 @@
       total_liquidations:         0,
       total_committee_overrides:  0,
       total_quota_crossings:      0,   /* v0.06：累计配额过线次数（每局至多 +1） */
-      total_debt_cashouts:        0    /* v0.06：累计未达配额触发的债务撤离次数 */
+      total_debt_cashouts:        0,   /* v0.06：累计未达配额触发的债务撤离次数 */
+
+      /* v0.07 信用评级 v1 ▼ */
+      credit_rating:              _CREDIT_RATING_DEFAULT,
+      consecutive_liquidations:   0,   /* 连续清算计数；成功撤离归 0；债务撤离不重置（玩家不能用债务撤离规避降档） */
+      consecutive_evacuations:    0,   /* 连续成功撤离计数；任何清算归 0 */
+      credit_rating_history:      [],  /* 最近 N 次档位变更：{ ts, from, to, reason, counts } */
+
+      /* v0.07.2 探测协议 ▼ —— 连胜干预的剩余生效局数（>0 时 fbcEdge +2%）。
+         触发：consecutive_evacuations 达到 pressureProtocol.triggerEvacuations 时设为 durationRuns。
+         消耗：每次 buyIn（开新局）-1，最低 0。
+         提前清空：liquidation 归 0；debtCashout 不归 0（与连胜计数同套规则，不允许投机规避）。 */
+      pressure_protocol_remaining_runs: 0
     };
   }
 
@@ -80,7 +104,16 @@
           total_liquidations:         d.total_liquidations         || 0,
           total_committee_overrides:  d.total_committee_overrides  || 0,
           total_quota_crossings:      d.total_quota_crossings      || 0,
-          total_debt_cashouts:        d.total_debt_cashouts        || 0
+          total_debt_cashouts:        d.total_debt_cashouts        || 0,
+
+          /* v0.07：旧档案缺失时全部回落默认值（信用评级=A 基线，不影响视觉） */
+          credit_rating:              d.credit_rating              || _CREDIT_RATING_DEFAULT,
+          consecutive_liquidations:   d.consecutive_liquidations   || 0,
+          consecutive_evacuations:    d.consecutive_evacuations    || 0,
+          credit_rating_history:      Array.isArray(d.credit_rating_history) ? d.credit_rating_history.slice(-_CREDIT_RATING_HISTORY_MAX) : [],
+
+          /* v0.07.2：旧档案缺失时回落 0（无 protocol 生效，等价无效化） */
+          pressure_protocol_remaining_runs: Math.max(0, Math.floor(d.pressure_protocol_remaining_runs || 0))
         };
       }
     } catch (e) {}
@@ -95,26 +128,165 @@
   }
 
   /**
+   * v0.07 信用评级核心：根据连续清算 / 连续撤离重新计算档位。
+   * 灰度未启用时强制锁定 'A'，但连续计数仍然累加，确保启用瞬间状态准确。
+   * 档位变化时追加 history（环形 buffer，仅保留最近 _CREDIT_RATING_HISTORY_MAX 条）。
+   *
+   * @param {object} archive    将被原地修改的存档对象
+   * @param {object} sourceDelta 触发本次重算的 careerMerge delta（用于 history.reason）
+   * @returns {object} 同 archive
+   */
+  function _recomputeRating(archive, sourceDelta) {
+    var enabled = cfg('creditRating.enabled', false);
+    var prev = archive.credit_rating || _CREDIT_RATING_DEFAULT;
+
+    if (!enabled) {
+      if (prev !== _CREDIT_RATING_DEFAULT) archive.credit_rating = _CREDIT_RATING_DEFAULT;
+      return archive;
+    }
+
+    var liq = archive.consecutive_liquidations || 0;
+    var win = archive.consecutive_evacuations  || 0;
+
+    var thr = {
+      bDownAt:    cfg('creditRating.downgradeAt.B', 2),
+      cDownAt:    cfg('creditRating.downgradeAt.C', 3),
+      dDownAt:    cfg('creditRating.downgradeAt.D', 4),
+      aaaUpAt:    cfg('creditRating.upgradeAt.AAA', 2)
+    };
+
+    var next = _CREDIT_RATING_DEFAULT;
+    if      (liq >= thr.dDownAt) next = 'D';
+    else if (liq >= thr.cDownAt) next = 'C';
+    else if (liq >= thr.bDownAt) next = 'B';
+    else if (win >= thr.aaaUpAt) next = 'AAA';
+
+    if (next !== prev) {
+      archive.credit_rating = next;
+      var hist = Array.isArray(archive.credit_rating_history) ? archive.credit_rating_history.slice() : [];
+      hist.push({
+        ts:     Date.now(),
+        from:   prev,
+        to:     next,
+        reason: (sourceDelta && sourceDelta.liquidation) ? 'liquidation'
+              : (sourceDelta && sourceDelta.successfulEvacuation) ? 'successfulEvacuation'
+              : 'unknown',
+        counts: { liq: liq, win: win }
+      });
+      if (hist.length > _CREDIT_RATING_HISTORY_MAX) hist = hist.slice(-_CREDIT_RATING_HISTORY_MAX);
+      archive.credit_rating_history = hist;
+    }
+    return archive;
+  }
+
+  /**
    * 原子化合并：所有新增字段与旧字段共用同一 key，向后兼容。
    * 支持的 delta：
    *   - buyIn:           累加到 total_buy_in（玩家每次"建仓"在 deploy 入口调用）
    *   - creditsCollected:累加到 total_credits_collected（成功撤离）
    *   - creditsLost:     累加到 total_credits_lost（清算时显式记录损失金额；通常 = 该局 buy-in）
    *   - floorsClimbed / floorReached / liquidation / committeeOverride: 同 0.05
+   *   - quotaCrossing / debtCashout: 0.06
+   *   - successfulEvacuation: v0.07 信用评级——成功撤离（达配额）触发升档计数
+   *
+   * 评级影响事件：
+   *   - liquidation:           consecutive_liquidations++; consecutive_evacuations=0; recompute
+   *   - successfulEvacuation:  consecutive_evacuations++; consecutive_liquidations=0; recompute
+   *   - debtCashout:           中性事件，**不重置任何连续计数**（防止用债务撤离规避降档）
+   *   - 其它事件:               不动评级
    */
   function careerMerge(delta) {
     var a = careerLoad();
-    if (delta.buyIn)               a.total_buy_in              += Math.max(0, Math.floor(delta.buyIn));
+    if (delta.buyIn) {
+      a.total_buy_in += Math.max(0, Math.floor(delta.buyIn));
+      /* v0.07.2 探测协议消耗：每开新局（buyIn 入口）-1 局；最低 0。 */
+      if ((a.pressure_protocol_remaining_runs || 0) > 0) {
+        a.pressure_protocol_remaining_runs = Math.max(0, a.pressure_protocol_remaining_runs - 1);
+      }
+    }
     if (delta.creditsCollected)    a.total_credits_collected   += Math.max(0, Math.floor(delta.creditsCollected));
     if (delta.creditsLost)         a.total_credits_lost        += Math.max(0, Math.floor(delta.creditsLost));
     if (delta.floorsClimbed)       a.total_floors_climbed      += delta.floorsClimbed;
     if (delta.floorReached)        a.max_floor_reached          = Math.max(a.max_floor_reached, delta.floorReached);
-    if (delta.liquidation)         a.total_liquidations        += 1;
     if (delta.committeeOverride)   a.total_committee_overrides += 1;
     if (delta.quotaCrossing)       a.total_quota_crossings     += 1;
     if (delta.debtCashout)         a.total_debt_cashouts       += 1;
+
+    if (delta.liquidation) {
+      a.total_liquidations          += 1;
+      a.consecutive_liquidations    += 1;
+      a.consecutive_evacuations      = 0;
+      /* v0.07.2 探测协议提前清空：liquidation 归 0（庄家"已经清算到，停止监督"语义）。
+         debtCashout **不**清空——与连胜计数同套规则，不允许玩家用故意债务撤离规避协议。 */
+      a.pressure_protocol_remaining_runs = 0;
+      _recomputeRating(a, delta);
+    }
+    if (delta.successfulEvacuation) {
+      a.consecutive_evacuations     += 1;
+      a.consecutive_liquidations     = 0;
+      _recomputeRating(a, delta);
+
+      /* v0.07.2 探测协议触发：连胜达 triggerEvacuations 且当前未生效时激活 durationRuns 局。
+         "未生效时激活"避免连胜 4/5/6/... 局每局都重置剩余次数，让协议自然衰减。 */
+      var ppEnabled = cfg('pressureProtocol.enabled', false);
+      if (ppEnabled) {
+        var trig = Math.max(1, Math.floor(cfg('pressureProtocol.triggerEvacuations', 3)));
+        var dur  = Math.max(1, Math.floor(cfg('pressureProtocol.durationRuns', 3)));
+        if ((a.consecutive_evacuations || 0) >= trig && (a.pressure_protocol_remaining_runs || 0) === 0) {
+          a.pressure_protocol_remaining_runs = dur;
+        }
+      }
+    }
+
     _careerSave(a);
     return a;
+  }
+
+  /**
+   * v0.07：UI 层快速读取当前评级与升降档进度。
+   * 返回值含已规整的"距离下次降/升档剩余次数"，方便授权面板第 4 行直接渲染。
+   */
+  function careerGetRating() {
+    var a = careerLoad();
+    var enabled = cfg('creditRating.enabled', false);
+    var thr = {
+      bDownAt: cfg('creditRating.downgradeAt.B', 2),
+      cDownAt: cfg('creditRating.downgradeAt.C', 3),
+      dDownAt: cfg('creditRating.downgradeAt.D', 4),
+      aaaUpAt: cfg('creditRating.upgradeAt.AAA', 2)
+    };
+    var liq = a.consecutive_liquidations || 0;
+    var win = a.consecutive_evacuations  || 0;
+
+    var nextDown = null;
+    if      (liq < thr.bDownAt) nextDown = { tier: 'B', in: thr.bDownAt - liq };
+    else if (liq < thr.cDownAt) nextDown = { tier: 'C', in: thr.cDownAt - liq };
+    else if (liq < thr.dDownAt) nextDown = { tier: 'D', in: thr.dDownAt - liq };
+
+    var nextUp = (win < thr.aaaUpAt && a.credit_rating !== 'AAA')
+      ? { tier: 'AAA', in: thr.aaaUpAt - win } : null;
+
+    /* v0.07.2 探测协议状态（与信用评级同源，便于 UI 一次拉齐渲染） */
+    var ppEnabled = cfg('pressureProtocol.enabled', false);
+    var ppRem     = Math.max(0, Math.floor(a.pressure_protocol_remaining_runs || 0));
+    var ppBoost   = Number(cfg('pressureProtocol.edgeRateBoost', 0)) || 0;
+    var protocol  = {
+      enabled:        !!ppEnabled,
+      remainingRuns:  ppRem,
+      edgeRateBoost:  ppBoost,
+      active:         !!ppEnabled && ppRem > 0
+    };
+
+    return {
+      enabled:                  !!enabled,
+      rating:                   a.credit_rating || _CREDIT_RATING_DEFAULT,
+      consecutiveLiquidations:  liq,
+      consecutiveEvacuations:   win,
+      nextDowngrade:            nextDown,
+      nextUpgrade:              nextUp,
+      history:                  Array.isArray(a.credit_rating_history) ? a.credit_rating_history.slice() : [],
+      pressureProtocol:         protocol
+    };
   }
 
   /* =====================================================================
@@ -251,6 +423,39 @@
     return (typeof r === 'number' && r > 0) ? Math.min(r, 0.5) : 0;
   }
 
+  /* v0.07.1 浮盈折现（House Edge 升级 ⑤）：仅 delta > 0 时生效，按 stake / quota 分档查表。
+     tiers 在配置中按 stakeRatioMin 降序排列；引擎从高到低遍历命中第一个返回。 */
+  var SURPLUS_DISCOUNT_CFG = (function () {
+    var enabled = cfg('surplusDiscount.enabled', false);
+    var raw = cfg('surplusDiscount.tiers', []) || [];
+    var tiers = [];
+    if (Array.isArray(raw)) {
+      for (var i = 0; i < raw.length; i++) {
+        var t = raw[i];
+        if (t && typeof t.stakeRatioMin === 'number' && typeof t.multiplier === 'number') {
+          tiers.push({
+            stakeRatioMin: t.stakeRatioMin,
+            multiplier:    Math.max(0, Math.min(1, t.multiplier)),
+            label:         t.label || ('tier-' + i)
+          });
+        }
+      }
+      tiers.sort(function (a, b) { return b.stakeRatioMin - a.stakeRatioMin; });
+    }
+    return { enabled: !!enabled, tiers: tiers };
+  })();
+
+  function pickSurplusDiscountMult(stake, quota) {
+    if (!SURPLUS_DISCOUNT_CFG.enabled || !quota || quota <= 0) return 1;
+    var ratio = stake / quota;
+    for (var i = 0; i < SURPLUS_DISCOUNT_CFG.tiers.length; i++) {
+      if (ratio >= SURPLUS_DISCOUNT_CFG.tiers[i].stakeRatioMin) {
+        return SURPLUS_DISCOUNT_CFG.tiers[i].multiplier;
+      }
+    }
+    return 1;
+  }
+
   var FLOORS_JUMPED_MIN = cfg('floorsJumped.min', 1);
   var FLOORS_JUMPED_MAX = cfg('floorsJumped.max', 8);
 
@@ -349,9 +554,20 @@
   };
 
   var LOCKER_HINT_COPY = {
-    good: cfg('lockerHintCopy.good', []),
-    bad:  cfg('lockerHintCopy.bad',  [])
+    good:       cfg('lockerHintCopy.good', []),
+    bad:        cfg('lockerHintCopy.bad',  []),
+    byIdentity: cfg('lockerHintCopy.byIdentity', null)
   };
+
+  /* v0.06.4：按 passenger.identity 取子池；缺失则回落顶层兜底池。
+     约束：返回数组永不为 undefined（最差也是顶层池），让调用侧 pool.length 安全。 */
+  function _pickLockerHintPool(identity, polarity) {
+    var by = LOCKER_HINT_COPY.byIdentity;
+    if (by && identity && by[identity] && Array.isArray(by[identity][polarity]) && by[identity][polarity].length) {
+      return by[identity][polarity];
+    }
+    return LOCKER_HINT_COPY[polarity] || [];
+  }
 
   function tpl(str, o) {
     if (!str) return '';
@@ -623,14 +839,22 @@
     return Math.max(BREACH_MIN_PROB, Math.min(BREACH_MAX_PROB, p));
   }
 
-  function createPassenger(rng) {
+  function createPassenger(rng, weightAdjustments) {
     var keys = ['VIP', 'SCAMMER', 'DANGER', 'INFORMER', 'CLEANER'];
+    weightAdjustments = weightAdjustments || {};
+    /* v0.07：weightAdjustments 由 GameController.prototype._creditRatingTier 注入；
+       任何身份权重最低锁 1，避免修饰量过激（如 -7 应用于初始 8 时）把权重压到 0 导致死锁分布。 */
+    var effectiveW = {};
     var totalW = 0;
-    for (var i = 0; i < keys.length; i++) totalW += PASSENGER.TYPES[keys[i]].weight;
+    for (var i = 0; i < keys.length; i++) {
+      var w = PASSENGER.TYPES[keys[i]].weight + (Number(weightAdjustments[keys[i]]) || 0);
+      effectiveW[keys[i]] = Math.max(1, w);
+      totalW += effectiveW[keys[i]];
+    }
     var r = rng() * totalW, cumulative = 0;
     var type = PASSENGER.TYPES.VIP;
     for (var j = 0; j < keys.length; j++) {
-      cumulative += PASSENGER.TYPES[keys[j]].weight;
+      cumulative += effectiveW[keys[j]];
       if (r < cumulative) { type = PASSENGER.TYPES[keys[j]]; break; }
     }
     return {
@@ -939,6 +1163,7 @@
   GameController.cfg                        = cfg;
   GameController.careerLoad                 = careerLoad;
   GameController.careerMerge                = careerMerge;
+  GameController.careerGetRating            = careerGetRating;
   GameController.pickQuotaForBuyIn          = pickQuotaForBuyIn;
 
   /* ---- 重置 ---- */
@@ -979,8 +1204,76 @@
     this._lockerHandEnvRoll     = null;
     this._lockerCountdownDeadline = 0;
 
+    /* v0.07：每局开始刷新当前信用评级修饰量，避免局中清算/撤离触发评级变化导致 mid-game 数值跳变。 */
+    this._refreshCreditRatingTier();
+
     this._clearBreachTimer();
     this._emitState(STATES.IDLE, null);
+  };
+
+  /**
+   * v0.07：从 LocalStorage 读当前信用评级 + 配置档位修饰量，缓存到实例。
+   * 在 reset() 时调用一次（每局开始）；UI 可通过 getCreditRatingTier() 读取。
+   * 灰度未启用时 enabled=false，所有数值修饰生效条件检查都会短路返回基线。
+   */
+  GameController.prototype._refreshCreditRatingTier = function () {
+    var rating = careerGetRating();
+    var tiersCfg = cfg('creditRating.tiers', {}) || {};
+    var tier = tiersCfg[rating.rating] || tiersCfg.A || {};
+    this._creditRatingTier = {
+      enabled:                   !!rating.enabled,
+      rating:                    rating.rating || _CREDIT_RATING_DEFAULT,
+      label:                     tier._label || (rating.rating + ' 档'),
+      baselineGrowthMult:        Number(tier.baselineGrowthMult)        || 1,
+      pigPeriodMaxFloorDelta:    Number(tier.pigPeriodMaxFloorDelta)    || 0,
+      initialBetMaxMult:         Number(tier.initialBetMaxMult)         || 1,
+      informerWeightDelta:       Number(tier.informerWeightDelta)       || 0,
+      debtRestructure:           !!tier.debtRestructure,
+      debtRestructureQuotaRatio: Number(tier.debtRestructureQuotaRatio) || 0,
+
+      consecutiveLiquidations:   rating.consecutiveLiquidations || 0,
+      consecutiveEvacuations:    rating.consecutiveEvacuations  || 0,
+      nextDowngrade:             rating.nextDowngrade || null,
+      nextUpgrade:               rating.nextUpgrade   || null,
+
+      /* v0.07.2 探测协议：与信用评级缓存同步刷新；engine 内部 _applyOutcomeToCredits 会读取 boost。 */
+      pressureProtocol:          rating.pressureProtocol || { enabled: false, remainingRuns: 0, edgeRateBoost: 0, active: false }
+    };
+  };
+
+  /** v0.07：UI 层读取信用评级修饰量（浅复制，防篡改） */
+  GameController.prototype.getCreditRatingTier = function () {
+    if (!this._creditRatingTier) this._refreshCreditRatingTier();
+    var t = this._creditRatingTier;
+    return {
+      enabled:                   t.enabled,
+      rating:                    t.rating,
+      label:                     t.label,
+      baselineGrowthMult:        t.baselineGrowthMult,
+      pigPeriodMaxFloorDelta:    t.pigPeriodMaxFloorDelta,
+      initialBetMaxMult:         t.initialBetMaxMult,
+      informerWeightDelta:       t.informerWeightDelta,
+      debtRestructure:           t.debtRestructure,
+      debtRestructureQuotaRatio: t.debtRestructureQuotaRatio,
+      consecutiveLiquidations:   t.consecutiveLiquidations,
+      consecutiveEvacuations:    t.consecutiveEvacuations,
+      nextDowngrade:             t.nextDowngrade,
+      nextUpgrade:               t.nextUpgrade,
+      pressureProtocol:          t.pressureProtocol ? {
+        enabled:       !!t.pressureProtocol.enabled,
+        remainingRuns: t.pressureProtocol.remainingRuns || 0,
+        edgeRateBoost: t.pressureProtocol.edgeRateBoost || 0,
+        active:        !!t.pressureProtocol.active
+      } : { enabled: false, remainingRuns: 0, edgeRateBoost: 0, active: false }
+    };
+  };
+
+  /** v0.07：UI 层授权面板使用——根据当前评级返回有效的 buy-in 上限。 */
+  GameController.prototype.getEffectiveMaxBuyIn = function (defaultMax) {
+    var base = (typeof defaultMax === 'number' && defaultMax > 0) ? defaultMax : 99999;
+    if (!this._creditRatingTier || !this._creditRatingTier.enabled) return base;
+    var mult = this._creditRatingTier.initialBetMaxMult || 1;
+    return Math.max(10, Math.floor(base * mult));
   };
 
   /* ---- 计算属性 ---- */
@@ -1195,7 +1488,14 @@
     if (this.passengers.length < PASSENGER.MAX_ONBOARD &&
         this.floor >= PASSENGER.MIN_FLOOR &&
         this._rng() < PASSENGER.BOARD_CHANCE) {
-      p = createPassenger(this._rng);
+      /* v0.07：根据当前信用评级注入身份权重调整（INFORMER 在低评级下被抑制，
+         象征"流动性管理介入后，内线情报员被收紧调度"）。 */
+      var weightAdj = null;
+      if (this._creditRatingTier && this._creditRatingTier.enabled &&
+          this._creditRatingTier.informerWeightDelta !== 0) {
+        weightAdj = { INFORMER: this._creditRatingTier.informerWeightDelta };
+      }
+      p = createPassenger(this._rng, weightAdj);
       if (p.identity === SPECULATOR_CFG.targetId && SPECULATOR_CFG.enabled && !p.isDisguised) {
         this._tryOfferSpeculatorContract(false);
       }
@@ -1360,6 +1660,12 @@
   GameController.prototype._applyBaselineGrowth = function () {
     var tier = pickBaselineGrowthTier(this.credits, this.quota);
     this.credits *= tier.multiplier;
+    /* v0.07 信用评级降档：B/C/D 档对基线增长再施加 0.80~0.90 的二次抑制，
+       让"养肥期"在低评级下可见地缩水（高评级 AAA 当前基线乘子=1，无放大）。 */
+    if (this._creditRatingTier && this._creditRatingTier.enabled &&
+        this._creditRatingTier.baselineGrowthMult !== 1) {
+      this.credits *= this._creditRatingTier.baselineGrowthMult;
+    }
     this._lastBaselineTier = tier;
     this._updatePeakCredits();
   };
@@ -1384,10 +1690,34 @@
       delta = Math.round(delta * COMBO_BLIND_CFG.gainMult);
     }
 
+    /* v0.07.1 浮盈折现（House Edge 升级 ⑤）：在 fbcEdge 之前生效。
+       与 fbcEdge 的语义差异：fbcEdge 是普惠税（所有正向收益都切一片），
+       折现是奢侈税（只针对 stakeRatio ≥ 3 的高资产玩家累进抽水）。
+       串行：先折现（按本层 delta 缩水），再 fbcEdge 切剩余 delta。 */
+    var surplusMult            = (delta > 0) ? pickSurplusDiscountMult(stake, this.quota) : 1;
+    var surplusDiscountAmount  = 0;
+    if (surplusMult < 1 && delta > 0) {
+      var preDiscountDelta = delta;
+      delta = Math.round(delta * surplusMult);
+      surplusDiscountAmount = Math.max(0, preDiscountDelta - delta);
+    }
+    outcome._surplusDiscountMult   = surplusMult;
+    outcome._surplusDiscountAmount = surplusDiscountAmount;
+
     /* FBC 流通损耗：仅对正向 delta 抽水。
-       税基为已叠加 speculator/blindConfidence 的最终增益，
+       税基为已叠加 speculator/blindConfidence/surplusDiscount 的最终增益，
        语义为"FBC 对所有渠道的正面收益统一切片"。 */
     var edgeRate   = (delta > 0) ? pickFbcEdgeRate(outcome) : 0;
+    /* v0.07.2 探测协议加码：连胜达标后激活 N 局，期间 fbcEdge +edgeRateBoost。
+       仅 enabled && active 时生效；与 baselineRate 直接相加，最终钳到 [0, 0.5]。 */
+    if (edgeRate > 0 && this._creditRatingTier && this._creditRatingTier.pressureProtocol &&
+        this._creditRatingTier.pressureProtocol.active) {
+      var ppBoost = this._creditRatingTier.pressureProtocol.edgeRateBoost || 0;
+      if (ppBoost > 0) {
+        edgeRate = Math.min(0.5, edgeRate + ppBoost);
+        outcome._pressureProtocolBoost = ppBoost;
+      }
+    }
     var edgeAmount = 0;
     if (edgeRate > 0) {
       edgeAmount = Math.round(delta * edgeRate);
@@ -1506,6 +1836,24 @@
       }
     }
 
+    /* v0.07.2 高偏移加码（庄家三触发③）：corruptionRatio 越过阈值时压缩选盘 countdown。
+       作用顺序在 quotaBonus 之后——quota 奖励先加足，再被 corruption 削掉一刀，
+       让玩家在"高偏移区"始终感到决策窗收紧（而不是被 quotaBonus 豁免）。 */
+    var pressureCorruptionActive = false;
+    var pressureCorruptionMult   = 1;
+    if (cfg('pressureProtocol.enabled', false)) {
+      var ppThreshold = Number(cfg('pressureProtocol.corruption.thresholdRatio', 0)) || 0;
+      var ppCdMult    = Number(cfg('pressureProtocol.corruption.countdownMult', 1));
+      if (typeof ppCdMult !== 'number' || isNaN(ppCdMult)) ppCdMult = 1;
+      if (ppThreshold > 0 && ppCdMult > 0 && ppCdMult < 1 &&
+          this.corruptionRatio > ppThreshold) {
+        var ppMinMs = Math.max(0, Math.floor(cfg('pressureProtocol.corruption.minCountdownMs', 1500)));
+        countdownMs = Math.max(ppMinMs, Math.round(countdownMs * ppCdMult));
+        pressureCorruptionActive = true;
+        pressureCorruptionMult   = ppCdMult;
+      }
+    }
+
     this._lockerHand            = hand.candidates;
     this._lockerHandMeta = {
       biome:             biome,
@@ -1514,7 +1862,12 @@
       paxEvents:         pEvents,
       quotaShift:        quotaShift,
       countdownMs:       countdownMs,
-      quotaBonusApplied: quotaBonusApplied
+      quotaBonusApplied: quotaBonusApplied,
+      pressureCorruption: {
+        active:        pressureCorruptionActive,
+        countdownMult: pressureCorruptionMult,
+        ratio:         this.corruptionRatio
+      }
     };
     this._lockerCountdownDeadline = Date.now() + countdownMs;
 
@@ -1534,7 +1887,8 @@
       passengerDeparted: pEvents.departed,
       envEvent:          envRoll,
       envActive:         this.activeEnvEvent,
-      hint:              hint
+      hint:              hint,
+      pressureCorruption: this._lockerHandMeta.pressureCorruption
     };
     this._emitLockerHand(payload);
 
@@ -1587,7 +1941,7 @@
                            : (goodIdx >= 0 ? goodIdx : Math.floor(this._rng() * candidates.length));
     }
     var lockerNumber = candidates[targetIdx].lockerNumber;
-    var pool = LOCKER_HINT_COPY[polarity] || [];
+    var pool = _pickLockerHintPool(bestPax.identity, polarity);
     var line = pool.length ? pool[Math.floor(this._rng() * pool.length)] : null;
     var text = line ? tpl(line, { locker: _formatLockerNumber(lockerNumber) }) : null;
     return {
@@ -1887,15 +2241,42 @@
   GameController.prototype.cashOut = function () {
     if (!this.canCashOut()) return { ok: false, reason: 'invalid_state' };
     this._clearBreachTimer();
-    var payout = Math.floor(this.credits);
-    this.lastPayout = payout;
-    careerMerge({ creditsCollected: payout });
+
+    var grossCredits = Math.floor(this.credits);
+
+    /* v0.07.1 撤离税（House Edge 升级 ⑥）：仅对超额部分（surplus = max(0, credits − quota)）征税，
+       配额内的收益不征税——玩家感受是"赚得多交得多"而非"赚了还扣"。
+       enabled=false 或 surplus=0 时整段 no-op，payout = grossCredits。 */
+    var taxEnabled = !!cfg('evacuationTax.enabled', false);
+    var surplus    = Math.max(0, grossCredits - this.quota);
+    var taxRate    = (taxEnabled && surplus > 0)
+      ? Math.max(0, Math.min(0.5, Number(cfg('evacuationTax.surplusTaxRate', 0)) || 0))
+      : 0;
+    var taxAmount  = Math.floor(surplus * taxRate);
+    var payout     = Math.max(0, grossCredits - taxAmount);
+
+    var taxMeta = {
+      enabled:      taxEnabled,
+      grossCredits: grossCredits,
+      quota:        this.quota,
+      surplus:      surplus,
+      rate:         taxRate,
+      amount:       taxAmount,
+      payout:       payout
+    };
+    this.lastPayout        = payout;
+    this.lastEvacuationTax = taxMeta;
+
+    /* v0.07：cashOut 仅由 requestCashOut（已校验 credits ≥ quota）触发，视为"成功撤离"
+       并入信用评级升档计数。debtCashout 走 forceDebtCashOut，不会路径到这里。
+       入账金额已扣税——与 NET P&L 计算一致（buyIn − 实际到账，不是 buyIn − 毛账面）。 */
+    careerMerge({ creditsCollected: payout, successfulEvacuation: true });
     this._setState(STATES.CASHED_OUT);
     for (var i = 0; i < this._listeners.cashOut.length; i++) {
-      try { this._listeners.cashOut[i](payout, this); } catch (e) { console.error(e); }
+      try { this._listeners.cashOut[i](payout, this, { evacuationTax: taxMeta }); } catch (e) { console.error(e); }
     }
     this.reset();
-    return { ok: true, payout: payout };
+    return { ok: true, payout: payout, evacuationTax: taxMeta };
   };
 
   GameController.prototype.acknowledgeGameOver = function () {

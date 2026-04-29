@@ -816,6 +816,11 @@
 
   /**
    * FBC 代决议盖章：低沉冲击 + 公文章戳 + 阴森余音。
+   *
+   * v0.07.2：加入 playbackRate 微随机化（0.95×–1.05×）。
+   *   - noise BufferSource 直接设置 src.playbackRate；
+   *   - oscillator 以相同比例缩放 frequency，等效于 playbackRate 偏移；
+   *   - 连续触发时每次音色轻微偏移，避免机械重复感。
    */
   AudioEngine.prototype.playFbcOverrideStamp = function () {
     this.resumeIfNeeded();
@@ -826,11 +831,14 @@
       var master = this._master;
       var t0 = ctx.currentTime;
 
-      /* 重落: 低 square 强压 */
+      /* 0.95x–1.05x 随机播速，为每次盖章注入轻微物理差异感 */
+      var rate = 0.95 + Math.random() * 0.1;
+
+      /* 重落: 低 square 强压（频率随 rate 偏移） */
       var thud = ctx.createOscillator();
       thud.type = 'square';
-      thud.frequency.setValueAtTime(110, t0);
-      thud.frequency.exponentialRampToValueAtTime(48, t0 + 0.13);
+      thud.frequency.setValueAtTime(110 * rate, t0);
+      thud.frequency.exponentialRampToValueAtTime(48 * rate, t0 + 0.13);
       var tg = ctx.createGain();
       tg.gain.setValueAtTime(0.0001, t0);
       tg.gain.exponentialRampToValueAtTime(0.13, t0 + 0.008);
@@ -840,12 +848,14 @@
       thud.connect(lp); lp.connect(tg); tg.connect(master);
       thud.start(t0); thud.stop(t0 + 0.2);
 
-      /* 公文章纸面摩擦 */
+      /* 公文章纸面摩擦（BufferSource 直接设 playbackRate） */
       var len = Math.floor(ctx.sampleRate * 0.08);
       var buf = ctx.createBuffer(1, len, ctx.sampleRate);
       var d = buf.getChannelData(0);
       for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) * 0.6;
-      var src = ctx.createBufferSource(); src.buffer = buf;
+      var src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = rate;          /* ← playbackRate 随机化核心 */
       var bp = ctx.createBiquadFilter();
       bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.8;
       var sg = ctx.createGain();
@@ -855,11 +865,11 @@
       src.connect(bp); bp.connect(sg); sg.connect(master);
       src.start(t0 + 0.04); src.stop(t0 + 0.13);
 
-      /* 阴森余音 */
+      /* 阴森余音（频率随 rate 偏移） */
       var dr = ctx.createOscillator();
       dr.type = 'sawtooth';
-      dr.frequency.setValueAtTime(72, t0 + 0.1);
-      dr.frequency.linearRampToValueAtTime(58, t0 + 0.6);
+      dr.frequency.setValueAtTime(72 * rate, t0 + 0.1);
+      dr.frequency.linearRampToValueAtTime(58 * rate, t0 + 0.6);
       var dg = ctx.createGain();
       dg.gain.setValueAtTime(0.0001, t0 + 0.1);
       dg.gain.linearRampToValueAtTime(0.035, t0 + 0.18);
@@ -870,6 +880,90 @@
       dr.start(t0 + 0.1); dr.stop(t0 + 0.85);
     } catch (e) {
       console.warn('[AudioEngine] playFbcOverrideStamp:', e);
+    }
+  };
+
+  /**
+   * 三位一体展示框（door-result-frame）淡入扫描音。
+   *
+   * 设计意图：模拟 FBC 终端从虚空中"打印"出数据的质感。
+   *   ① 噪底层：带通白噪（~2.8 kHz）在 CSS opacity 过渡（0.4s）内做淡入→淡出，
+   *      营造"打印头扫描"的粒状纹理；
+   *   ② 扫描线：细线正弦从 600 Hz 爬升至 960 Hz，贯穿整段，
+   *      模拟 CRT 扫描线自下而上的行进感；
+   *   ③ 锁定 click：末尾极短方波 click，暗示数据已完整写入。
+   *
+   * 路由：直连 master，完全绕过 BGM 低通滤波器；
+   *       即使在"音频降维（沉浸模式）"下亦保持清晰穿透力。
+   */
+  AudioEngine.prototype.playScanPrint = function () {
+    this.resumeIfNeeded();
+    if (!this._ctx || !this._master) return;
+    if (this._ctx.state === 'suspended') return;
+    try {
+      var ctx    = this._ctx;
+      var master = this._master;
+      var t0     = ctx.currentTime;
+
+      /* ── ① 噪底：带通白噪，淡入（~150 ms）→ 保持 → 淡出（~120 ms）── */
+      var dur = 0.44;
+      var len = Math.floor(ctx.sampleRate * dur);
+      var nbuf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var nd   = nbuf.getChannelData(0);
+      for (var i = 0; i < len; i++) nd[i] = (Math.random() * 2 - 1) * 0.8;
+
+      var nsrc = ctx.createBufferSource();
+      nsrc.buffer = nbuf;
+
+      var nbp = ctx.createBiquadFilter();
+      nbp.type = 'bandpass';
+      nbp.frequency.value = 2800;
+      nbp.Q.value = 0.9;
+
+      var ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.0001, t0);
+      ng.gain.linearRampToValueAtTime(0.036, t0 + 0.15);   /* 淡入 */
+      ng.gain.setValueAtTime(0.036, t0 + 0.28);
+      ng.gain.linearRampToValueAtTime(0.0001, t0 + dur);   /* 淡出 */
+
+      nsrc.connect(nbp); nbp.connect(ng); ng.connect(master);
+      nsrc.start(t0); nsrc.stop(t0 + dur + 0.01);
+
+      /* ── ② 扫描线：正弦从 600 Hz 爬升至 960 Hz，带形淡入/淡出 ── */
+      var scan = ctx.createOscillator();
+      scan.type = 'sine';
+      scan.frequency.setValueAtTime(600, t0);
+      scan.frequency.linearRampToValueAtTime(960, t0 + 0.36);
+
+      var sg = ctx.createGain();
+      sg.gain.setValueAtTime(0.0001, t0);
+      sg.gain.linearRampToValueAtTime(0.016, t0 + 0.10);   /* 淡入 */
+      sg.gain.setValueAtTime(0.016, t0 + 0.28);
+      sg.gain.linearRampToValueAtTime(0.0001, t0 + 0.42);  /* 淡出 */
+
+      scan.connect(sg); sg.connect(master);
+      scan.start(t0); scan.stop(t0 + 0.44);
+
+      /* ── ③ 锁定 click：末尾极短方波，暗示数据写入完毕 ── */
+      var click = ctx.createOscillator();
+      click.type = 'square';
+      click.frequency.setValueAtTime(1180, t0 + 0.36);
+      click.frequency.exponentialRampToValueAtTime(720, t0 + 0.42);
+
+      var cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.0001, t0 + 0.355);
+      cg.gain.exponentialRampToValueAtTime(0.020, t0 + 0.364);
+      cg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.42);
+
+      var chp = ctx.createBiquadFilter();
+      chp.type = 'highpass';
+      chp.frequency.value = 600;
+
+      click.connect(chp); chp.connect(cg); cg.connect(master);
+      click.start(t0 + 0.355); click.stop(t0 + 0.44);
+
+    } catch (e) {
+      console.warn('[AudioEngine] playScanPrint:', e);
     }
   };
 

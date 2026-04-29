@@ -1,0 +1,354 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.wrap { padding: 1rem 0 2rem; }
+
+.sec-label { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); letter-spacing: 0.1em; text-transform: uppercase; margin: 2rem 0 0.75rem; }
+.sec-label:first-child { margin-top: 0; }
+hr.div { border: none; border-top: 0.5px solid var(--color-border-tertiary); margin: 1.5rem 0; }
+
+/* Score cards */
+.score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.score-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.9rem 1rem; }
+.sc-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 6px; line-height: 1.4; }
+.sc-val { font-size: 24px; font-weight: 500; line-height: 1; }
+.sc-sub { font-size: 11px; color: var(--color-text-tertiary); margin-top: 5px; line-height: 1.4; }
+.v-green { color: #3B6D11; } .v-amber { color: #854F0B; } .v-red { color: #A32D2D; } .v-blue { color: #185FA5; }
+
+/* Audit table */
+.audit-wrap { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); overflow: hidden; }
+.audit-head { display: grid; grid-template-columns: 120px 1fr 1fr 80px; background: var(--color-background-secondary); }
+.audit-row { display: grid; grid-template-columns: 120px 1fr 1fr 80px; border-top: 0.5px solid var(--color-border-tertiary); }
+.audit-row:hover { background: var(--color-background-secondary); }
+.ah { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); padding: 8px 10px; }
+.ac { font-size: 12px; color: var(--color-text-primary); padding: 9px 10px; line-height: 1.5; }
+.ac-dim { font-size: 12px; color: var(--color-text-secondary); padding: 9px 10px; line-height: 1.5; }
+.tag { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
+.t-green { background: var(--color-background-success); color: var(--color-text-success); }
+.t-amber { background: var(--color-background-warning); color: var(--color-text-warning); }
+.t-red { background: var(--color-background-danger); color: var(--color-text-danger); }
+.t-blue { background: var(--color-background-info); color: var(--color-text-info); }
+.t-gray { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+
+/* Strengths / Gaps */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.panel { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 1rem 1.1rem; }
+.panel-title { font-size: 12px; font-weight: 500; margin-bottom: 10px; }
+.panel-title.ok { color: var(--color-text-success); }
+.panel-title.warn { color: var(--color-text-warning); }
+.panel-title.bad { color: var(--color-text-danger); }
+.pi { font-size: 12px; color: var(--color-text-primary); padding: 5px 0; border-bottom: 0.5px solid var(--color-border-tertiary); line-height: 1.5; }
+.pi:last-child { border-bottom: none; }
+.pi-sub { font-size: 11px; color: var(--color-text-secondary); }
+
+/* Upgrade roadmap */
+.road-list { display: flex; flex-direction: column; gap: 10px; }
+.road-card { border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); overflow: hidden; }
+.road-head { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; padding: 0.9rem 1rem; cursor: pointer; }
+.road-head:hover { background: var(--color-background-secondary); }
+.road-phase { font-size: 11px; font-weight: 500; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ph-now { background: var(--color-background-danger); color: var(--color-text-danger); }
+.ph-next { background: var(--color-background-warning); color: var(--color-text-warning); }
+.ph-later { background: var(--color-background-info); color: var(--color-text-info); }
+.road-title { font-size: 14px; font-weight: 500; }
+.road-meta { font-size: 11px; color: var(--color-text-secondary); margin-top: 3px; }
+.road-toggle { font-size: 16px; color: var(--color-text-tertiary); transition: transform 0.2s; flex-shrink: 0; }
+.road-toggle.open { transform: rotate(180deg); }
+.road-body { display: none; padding: 0 1rem 1rem 54px; font-size: 13px; color: var(--color-text-secondary); line-height: 1.7; border-top: 0.5px solid var(--color-border-tertiary); }
+.road-body.show { display: block; }
+.road-body ul { padding-left: 1.2em; }
+.road-body li { margin-bottom: 5px; }
+.road-body strong { color: var(--color-text-primary); font-weight: 500; }
+.road-body code { font-family: var(--font-mono); font-size: 11px; background: var(--color-background-secondary); padding: 1px 4px; border-radius: 3px; }
+
+/* Bar chart */
+.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.bar-name { font-size: 12px; color: var(--color-text-primary); width: 130px; flex-shrink: 0; }
+.bar-bg { flex: 1; height: 6px; background: var(--color-background-secondary); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; }
+.bar-val { font-size: 12px; font-weight: 500; width: 32px; text-align: right; }
+.bf-green { background: #3B6D11; } .bf-amber { background: #854F0B; } .bf-red { background: #A32D2D; } .bf-blue { background: #185FA5; }
+</style>
+
+<div class="wrap">
+
+<div class="sec-label">整体评分（三文档交叉审计）</div>
+<div class="score-grid">
+  <div class="score-card">
+    <div class="sc-label">数值设计完整度</div>
+    <div class="sc-val v-amber">7.8</div>
+    <div class="sc-sub">方向正确，RTP仍偏高，③-⑥待落地</div>
+  </div>
+  <div class="score-card">
+    <div class="sc-label">文案系统一致性</div>
+    <div class="sc-val v-green">8.9</div>
+    <div class="sc-sub">FBC腔＋中国本土化双轨清晰，已归档</div>
+  </div>
+  <div class="score-card">
+    <div class="sc-label">设计规范执行度</div>
+    <div class="sc-val v-green">9.1</div>
+    <div class="sc-sub">Token体系完整，v0.06.3色相规则成熟</div>
+  </div>
+  <div class="score-card">
+    <div class="sc-label">博弈感/多巴胺</div>
+    <div class="sc-val v-amber">5.4</div>
+    <div class="sc-sub">基础建设完成，核心爽感机制未到位</div>
+  </div>
+  <div class="score-card">
+    <div class="sc-label">跨局张力</div>
+    <div class="sc-val v-red">3.2</div>
+    <div class="sc-sub">信用评级未落地，破产代价仍可控</div>
+  </div>
+  <div class="score-card">
+    <div class="sc-label">文档工程质量</div>
+    <div class="sc-val v-green">9.4</div>
+    <div class="sc-sub">版本追溯、回退机制、埋点均属一流</div>
+  </div>
+</div>
+
+<hr class="div">
+<div class="sec-label">三维度现状评分</div>
+<div class="bar-row"><div class="bar-name">数值·RTP压制</div><div class="bar-bg"><div class="bar-fill bf-amber" style="width:55%"></div></div><div class="bar-val v-amber">5.5</div></div>
+<div class="bar-row"><div class="bar-name">数值·破产代价</div><div class="bar-bg"><div class="bar-fill bf-red" style="width:28%"></div></div><div class="bar-val v-red">2.8</div></div>
+<div class="bar-row"><div class="bar-name">文案·FBC腔调</div><div class="bar-bg"><div class="bar-fill bf-green" style="width:90%"></div></div><div class="bar-val v-green">9.0</div></div>
+<div class="bar-row"><div class="bar-name">文案·中国本土化</div><div class="bar-bg"><div class="bar-fill bf-green" style="width:88%"></div></div><div class="bar-val v-green">8.8</div></div>
+<div class="bar-row"><div class="bar-name">文案·情报员人格</div><div class="bar-bg"><div class="bar-fill bf-amber" style="width:62%"></div></div><div class="bar-val v-amber">6.2</div></div>
+<div class="bar-row"><div class="bar-name">设计·色彩语义</div><div class="bar-bg"><div class="bar-fill bf-green" style="width:93%"></div></div><div class="bar-val v-green">9.3</div></div>
+<div class="bar-row"><div class="bar-name">设计·信息层级</div><div class="bar-bg"><div class="bar-fill bf-green" style="width:86%"></div></div><div class="bar-val v-green">8.6</div></div>
+<div class="bar-row"><div class="bar-name">设计·动效仪式感</div><div class="bar-bg"><div class="bar-fill bf-amber" style="width:67%"></div></div><div class="bar-val v-amber">6.7</div></div>
+<div class="bar-row"><div class="bar-name">博弈感·主动决策</div><div class="bar-bg"><div class="bar-fill bf-red" style="width:38%"></div></div><div class="bar-val v-red">3.8</div></div>
+<div class="bar-row"><div class="bar-name">博弈感·庄家存在感</div><div class="bar-bg"><div class="bar-fill bf-red" style="width:22%"></div></div><div class="bar-val v-red">2.2</div></div>
+
+<hr class="div">
+<div class="sec-label">三文档交叉审计：一致性 & 漂移点</div>
+<div class="audit-wrap">
+  <div class="audit-head">
+    <div class="ah">审计项</div>
+    <div class="ah">现状</div>
+    <div class="ah">风险 / 建议</div>
+    <div class="ah">状态</div>
+  </div>
+  <div class="audit-row">
+    <div class="ac">色彩语义<br><span class="pi-sub">三文档一致性</span></div>
+    <div class="ac">DS文档Token体系 → 游戏文案§24速查表 → 数值文档无涉色彩，三者完全解耦，无漂移</div>
+    <div class="ac-dim">v0.06.3主色复位逻辑清晰；mint仅极端态；纯白作高亮替代位——三层规则无歧义</div>
+    <div class="ac"><span class="tag t-green">优秀</span></div>
+  </div>
+  <div class="audit-row">
+    <div class="ac">配额公式<br><span class="pi-sub">数值↔产品逻辑</span></div>
+    <div class="ac">数值文档定义了动态配额（买入×倍率），文案文档§4写"总资产≥¥"动态配额联动。但文案来源标注为"A（index.html静态DOM）"</div>
+    <div class="ac-dim"><strong>漂移风险</strong>：配额公式若更新，index.html静态文案的"目标¥X"预览需同步；现有`pickQuotaForBuyIn`已暴露给面板，但文案文档未标注动态更新时机</div>
+    <div class="ac"><span class="tag t-amber">注意</span></div>
+  </div>
+  <div class="audit-row">
+    <div class="ac">FBC税文案<br><span class="pi-sub">新增字段覆盖</span></div>
+    <div class="ac">0.06新增`fbcEdge`税率逻辑，视觉注脚"// FBC §4.7 已扣¥X · 4% 流通损耗"。但游戏全局文案文档§7.5结果条部分<strong>未列出此注脚</strong></div>
+    <div class="ac-dim"><strong>文案文档漏录</strong>：`#door-result-frame`底部FBC税注脚未在§7.5建档，翻译/合规审查时会遗漏。建议在§7.5增加一行</div>
+    <div class="ac"><span class="tag t-red">漏录</span></div>
+  </div>
+  <div class="audit-row">
+    <div class="ac">情报员文案<br><span class="pi-sub">文案↔数值精度</span></div>
+    <div class="ac">lockerHintAccuracy：INFORMER 78%真 / CLEANER 55%真。文案池12条，good/bad各6条。调性已从FBC规程腔扩展到"老韭菜/包工头"口吻</div>
+    <div class="ac-dim">两套调性（官僚腔vs韭菜腔）共存于同一乘客，人格不统一。INFORMER应有专属腔调（情报员≠包工头）。建议按乘客身份分文案子池</div>
+    <div class="ac"><span class="tag t-amber">人格漂移</span></div>
+  </div>
+  <div class="audit-row">
+    <div class="ac">禁用词执行<br><span class="pi-sub">DS§14规范</span></div>
+    <div class="ac">DS规定禁用：死/活/输/赢，改用清算/撤离/核销/偏差。全局文案检查：启动Slogan"离暴富更近，也更近破产"——"破产"未在禁用词列表</div>
+    <div class="ac-dim">"破产"是允许词（非"输/赢"）；但Slogan与局内冷面规程腔反差强烈——这是刻意策略A，无需修改。整体禁用词执行良好</div>
+    <div class="ac"><span class="tag t-green">通过</span></div>
+  </div>
+  <div class="audit-row">
+    <div class="ac">NET P&L字段<br><span class="pi-sub">数值↔文案逻辑</span></div>
+    <div class="ac">数值文档定义了`total_buy_in`/`total_credits_lost`，战绩页新增5行布局。游戏文案文档<strong>完全未覆盖</strong>战绩页文案（行标签、数字格式）</div>
+    <div class="ac-dim"><strong>文案空白</strong>：战绩页5行布局的所有标签文案（"累计建仓投入"/"综合损益结算·NET P&L"/"破产记录"）未建档，后续改动无法追溯</div>
+    <div class="ac"><span class="tag t-red">空白</span></div>
+  </div>
+  <div class="audit-row">
+    <div class="ac">INFORMER乘客<br><span class="pi-sub">v0.05新增↔文案</span></div>
+    <div class="ac">数值文档定义了INFORMER（内线情报员）和CLEANER（清扫员）两个新身份，权重14/8。游戏文案文档§6状态坞<strong>未包含这两个身份的组合文案</strong></div>
+    <div class="ac-dim">状态坞只有VIP/SCAMMER/DANGER的组合描述，新增身份的HUD描述未建档，开发时会用硬编码或沿用旧乘客格式</div>
+    <div class="ac"><span class="tag t-red">缺失</span></div>
+  </div>
+  <div class="audit-row">
+    <div class="ac">动效节拍<br><span class="pi-sub">数值↔DS规范</span></div>
+    <div class="ac">数值文档详细列出所有ms节拍（manifestItemRevealMs 1500等）。DS文档§11.1给出动效节奏标准（标准切换0.28-0.40s，庆贺爆光0.95-2.28s）</div>
+    <div class="ac-dim">货舱清点单件1500ms＋末件1200ms额外hold已超出DS"标准切换"区间，但属于刻意的"阅读窗口"设计，两套规范可并存，需在DS注明例外</div>
+    <div class="ac"><span class="tag t-amber">例外</span></div>
+  </div>
+</div>
+
+<hr class="div">
+<div class="sec-label">最强项 & 最弱项</div>
+<div class="two-col">
+  <div class="panel">
+    <div class="panel-title ok">最强项（值得保持）</div>
+    <div class="pi"><strong>色彩信号三层架构</strong><br><span class="pi-sub">暖珊瑚主色 → 冷白次级 → mint极端奖励，是目前全项目最完整的设计决策，解决了"绿色泛滥导致信号失效"的根本问题</span></div>
+    <div class="pi"><strong>中国本土化物品池</strong><br><span class="pi-sub">户口/学区房/P2P暴雷/共享单车押金——三段年代切片（行政/维护/超自然）形成完整的中国情结叙事弧</span></div>
+    <div class="pi"><strong>文档工程体系</strong><br><span class="pi-sub">来源索引（A/B/C三源）、版本diff速查（附录A）、一键回退标注——这套维护体系在同规模项目中极为少见</span></div>
+    <div class="pi"><strong>FBC官僚美学坚守</strong><br><span class="pi-sub">从禁用词规范到弹窗字号强化，始终在「冷面规程腔」与「暴富主品牌」之间保持克制的张力，未滑向游乐场化</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-title bad">最弱项（需要攻坚）</div>
+    <div class="pi"><strong>庄家没有人格</strong><br><span class="pi-sub">FBC的"联邦资产流通损耗"目前是纯数字，没有配套的叙事行为。庄家应该"说话"——委员会在玩家大赢时应有反应</span></div>
+    <div class="pi"><strong>破产无跨局后果</strong><br><span class="pi-sub">信用评级系统仍在路线图中，是最高优先级的缺口。这是让"下一局"产生真实风险感知的唯一入口</span></div>
+    <div class="pi"><strong>情报员人格不统一</strong><br><span class="pi-sub">官僚腔"情报员低声"与民间腔"老韭菜耳语/包工头叼着烟"混在同一乘客，人格分裂影响世界观可信度</span></div>
+    <div class="pi"><strong>选盘仍是被动选择</strong><br><span class="pi-sub">货舱选盘是从N选1，不是"出价"——玩家没有"我估了多少、对手估了多少"的主动博弈感，这是与竞拍之王最大的结构差距</span></div>
+  </div>
+</div>
+
+<hr class="div">
+<div class="sec-label">升级策略路线图（点击展开）</div>
+<div class="road-list" id="roadmap">
+
+  <div class="road-card">
+    <div class="road-head" onclick="toggle(this)">
+      <div class="road-phase ph-now">NOW</div>
+      <div>
+        <div class="road-title">修复三处文案文档漏录</div>
+        <div class="road-meta">工期：0.5天 · 纯文档 · 零风险</div>
+      </div>
+      <div class="road-toggle">▾</div>
+    </div>
+    <div class="road-body">
+      <ul>
+        <li><strong>补录§7.5</strong>：`#door-result-frame` 底部 FBC 税注脚（"// FBC §4.7 已扣¥X · 4% 流通损耗"），标注来源为 A + C（fbcEdge配置）</li>
+        <li><strong>补录战绩页</strong>：新建§（建议§20.1）记录战绩页5行布局所有标签文案（"累计建仓投入" / "综合损益结算·NET P&L" / "破产记录：N次·损失¥X" / "FBC委员会代决议次数"），并标注数字格式规范（千分位·负数用<code>-¥</code>前缀）</li>
+        <li><strong>补录§6状态坞</strong>：新增 INFORMER（内线情报员）和 CLEANER（清扫员）进场时的状态坞文案，建议格式与现有VIP/SCAMMER/DANGER一致</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="road-card">
+    <div class="road-head" onclick="toggle(this)">
+      <div class="road-phase ph-now">NOW</div>
+      <div>
+        <div class="road-title">情报员人格分化——按乘客身份拆分文案子池</div>
+        <div class="road-meta">工期：1天 · 仅改config · 不动引擎</div>
+      </div>
+      <div class="road-toggle">▾</div>
+    </div>
+    <div class="road-body">
+      <p>现在12条好坏情报文案是INFORMER和CLEANER共用的，但两个角色人格截然不同。建议在<code>lockerHintCopy</code>下按身份拆池：</p>
+      <ul>
+        <li><strong>INFORMER专属腔调</strong>：FBC内部情报腔——"内部编号37，根据侦测数据……"，保持官僚冷感，信息精准但生硬</li>
+        <li><strong>CLEANER专属腔调</strong>：底层工人腔——"我只是扫地的，但昨天那柜……"，信息不精确，带烟火气和怀疑</li>
+        <li>将现有"老韭菜/包工头"文案归入CLEANER池，"情报员低声/情报员压低声音"归入INFORMER池</li>
+        <li>引擎只需在<code>_computeLockerHint</code>按<code>passenger.identity</code>路由到对应文案子池</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="road-card">
+    <div class="road-head" onclick="toggle(this)">
+      <div class="road-phase ph-now">NOW</div>
+      <div>
+        <div class="road-title">信用评级系统——让破产产生跨局代价</div>
+        <div class="road-meta">工期：2-3天 · 最高优先级博弈改造</div>
+      </div>
+      <div class="road-toggle">▾</div>
+    </div>
+    <div class="road-body">
+      <p>这是整个升级策略中单一影响最大的改动。核心逻辑：破产不归零，而是滑入更难的游戏状态。</p>
+      <ul>
+        <li><strong>新增 LocalStorage 字段</strong>：<code>fbc_credit_rating_v1</code>，存储当前等级（AAA/A/B/C/D）和连续清算计数</li>
+        <li><strong>等级映射</strong>：连续2局清算→B级（<code>baselineGrowth</code>上限-10%，养猪期延长到5层）；连续3局→C级（buy-in上限-30%，INFORMER出现率-50%）；连续4局→D级（需要完成"债务重组"——达到quota×0.5才解锁正常参数）</li>
+        <li><strong>授权面板动态评价新增第四行</strong>：信用评级为B/C/D时显示，例如"// 信用评级：B级 · 联邦侧偿区间已激活。"</li>
+        <li><strong>文案策略</strong>：评级降档用FBC档案语言——不说"你输了"，说"侦测到稳定性偏差，委员会已介入流动性管理"</li>
+        <li>连续赢局（配额×1.5撤离）升级到AAA：<code>initialBet</code>上限+20%，养猪期缩短到2层——给好玩家正向反馈</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="road-card">
+    <div class="road-head" onclick="toggle(this)">
+      <div class="road-phase ph-next">NEXT</div>
+      <div>
+        <div class="road-title">庄家人格化——委员会主动干预系统</div>
+        <div class="road-meta">工期：3-4天 · 核心博弈感升级</div>
+      </div>
+      <div class="road-toggle">▾</div>
+    </div>
+    <div class="road-body">
+      <p>FBC的"联邦资产流通损耗"目前是静默的数字扣除，玩家不会感受到"庄家在盯着我"。需要给庄家行为配上声音和态度。</p>
+      <ul>
+        <li><strong>触发场景1：大赢反应</strong>——玩家单局净收益超过quota×4时，开门后委员会低语新增专属行："本局资产曲线已进入联邦监控区间。"（扩展现有WHISPERS池，新增"大赢监控"子池）</li>
+        <li><strong>触发场景2：连胜干预</strong>——连续3局达配额撤离，授权面板第三行改为："// 您的收益模式已被建模。下次许可将附加探测协议。"（下局FBC税率+2%，限时3局）</li>
+        <li><strong>触发场景3：高偏移时庄家加码</strong>——偏移>65%时，选盘倒计时缩短10%（委员会不给时间想），文案改为"FBC · 高偏移区 · 代决议概率上升"</li>
+        <li><strong>新文案池</strong>：<code>COMMITTEE_PRESSURE_LINES</code>——约8条，均用第三人称官僚陈述句，不带感叹号，越冷静越有压迫感</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="road-card">
+    <div class="road-head" onclick="toggle(this)">
+      <div class="road-phase ph-next">NEXT</div>
+      <div>
+        <div class="road-title">浮盈折现 + 撤离税——RTP完整压制</div>
+        <div class="road-meta">工期：2天 · 数值经济第⑤⑥阶段</div>
+      </div>
+      <div class="road-toggle">▾</div>
+    </div>
+    <div class="road-body">
+      <p>配合信用评级落地后，继续完成数值经济路线图第⑤⑥阶段，把高资产玩家的RTP推到91-96%目标区间。</p>
+      <ul>
+        <li><strong>浮盈折现</strong>：资产超过quota×3后，每次POSITIVE实际到账 × 0.88；超过quota×6后 × 0.72。文案包装："超额净利按FBC §6.2浮动折现率结算。"</li>
+        <li><strong>撤离税</strong>：正常撤离时，净收益（超出配额部分）征收8%"联邦资产核销手续费"，仅在超额部分征收，不影响配额内收益——玩家感受是"赚的多交的多"而非"赚了还扣"</li>
+        <li><strong>撤离面板新增注脚</strong>：结算面板显示"手续费：¥XX · FBC §8.1核销规程"，与现有FBC税注脚风格一致</li>
+        <li>两项合计预期：把高资产局RTP从117%推向98-103%，接近设计目标</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="road-card">
+    <div class="road-head" onclick="toggle(this)">
+      <div class="road-phase ph-later">LATER</div>
+      <div>
+        <div class="road-title">选盘博弈化——从"N选1"到"估价出价"</div>
+        <div class="road-meta">工期：5-7天 · 竞拍之王核心移植</div>
+      </div>
+      <div class="road-toggle">▾</div>
+    </div>
+    <div class="road-body">
+      <p>这是与《竞拍之王》核心机制最近的改造，工期最长，但也是多巴胺提升最大的单项改动。</p>
+      <ul>
+        <li><strong>机制核心</strong>：选盘前，玩家先对每只货舱提交一个"估价"（用滑动条或输入框，范围为当前资产的10%-90%），提交后才能看到货舱极性揭晓——估价越接近实际delta，本局收益有额外加成（"精准估算奖励"）</li>
+        <li><strong>FBC包装</strong>："提交探测评估 · 精度越高 · 联邦补贴越高"——完全符合世界观</li>
+        <li><strong>最小可行版本</strong>：不需要做完整多人竞拍，只需在现有选盘浮层增加"估价输入"步骤，引擎在揭晓时计算"估价偏差"并给出系数加成（0.85-1.15范围）</li>
+        <li><strong>文案新增</strong>：估价结果反馈文案4条（精准/接近/偏差/大偏差），格式参照现有货舱清点腔调</li>
+        <li>这个改动把选盘从"被动等待"变成"主动博弈"，是解决"玩家决策感弱"的结构性方案</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="road-card">
+    <div class="road-head" onclick="toggle(this)">
+      <div class="road-phase ph-later">LATER</div>
+      <div>
+        <div class="road-title">DS规范增补：v0.07 info-cyan + 例外规则</div>
+        <div class="road-meta">工期：0.5天 · 设计规范完善</div>
+      </div>
+      <div class="road-toggle">▾</div>
+    </div>
+    <div class="road-body">
+      <ul>
+        <li>DS文档末尾已建议"v0.07引入<code>--ds-info-cyan</code>"，时机成熟时可正式建档：适用于"中性信息提示"语义层（非增益非危险）</li>
+        <li>在DS §11.1动效节奏表增加例外注释："货舱清点单件reveal（1500ms）属于刻意阅读窗口设计，不受标准切换0.28-0.40s约束"——避免后续开发者错误压缩节拍</li>
+        <li>在DS §15检查清单增加"FBC税注脚"条目：新增带fbcEdge收益的结果帧，必须包含底部§4.7注脚</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+</div>
+
+<script>
+function toggle(head) {
+  const body = head.parentElement.querySelector('.road-body');
+  const arrow = head.querySelector('.road-toggle');
+  const open = body.classList.toggle('show');
+  arrow.classList.toggle('open', open);
+}
+</script>

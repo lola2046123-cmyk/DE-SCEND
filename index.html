@@ -65,7 +65,7 @@
   }
   .start-screen__slogan {
     font-family: 'Courier New', monospace;
-    font-size: clamp(.48rem, 1.9vw, .65rem);
+    font-size: 10px;
     color: #555c66;
     letter-spacing: .06em;
     margin-top: .85rem;
@@ -397,6 +397,18 @@
     margin-bottom: 1rem;
     text-align: center;
     padding: 0 1.5rem;
+    transition: color 0.32s ease, text-shadow 0.32s ease;
+  }
+  /* v0.07.2 高偏移加码副标题：与 committee-bar--pressure 同色系，强调"庄家盯上你"
+     轻微脉冲让玩家感觉到决策窗收紧。 */
+  .locker-overlay__subtitle--pressure {
+    color: rgba(195, 215, 235, 0.92);
+    text-shadow: 0 0 8px rgba(120, 145, 175, 0.45);
+    animation: locker-subtitle-pressure-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes locker-subtitle-pressure-pulse {
+    0%, 100% { opacity: 0.92; }
+    50%      { opacity: 0.72; }
   }
   .locker-overlay__hint {
     font-family: 'Courier New', monospace;
@@ -743,8 +755,9 @@
     transition: opacity .28s ease, transform .28s ease, color .28s ease, border-color .28s ease;
   }
   .manifest-row.revealed { opacity: 1; transform: translateX(0); }
-  .manifest-row.gain { color: #cfeed7; border-left-color: #4ade80; }
-  .manifest-row.loss { color: #f4c8c4; border-left-color: #d42020; }
+  /* v0.07.2 货舱清点条：红涨绿跌 */
+  .manifest-row.gain { color: #ffd8d2; border-left-color: rgba(248, 130, 110, 0.9); }
+  .manifest-row.loss { color: #c8f0d8; border-left-color: rgba(72, 200, 128, 0.85); }
   .manifest-row__name { white-space: nowrap; }
   /* FBC 编码（如 FBC-A02）是内部代码，玩家无需解读 —— 直接隐藏 */
   .manifest-row__tag  { display: none; }
@@ -753,8 +766,8 @@
     font-size: .72rem;
     letter-spacing: .04em;
   }
-  .manifest-row.gain .manifest-row__delta { color: #b8f5c8; }
-  .manifest-row.loss .manifest-row__delta { color: #f87171; }
+  .manifest-row.gain .manifest-row__delta { color: #ffb8a8; }
+  .manifest-row.loss .manifest-row__delta { color: #7aded8; }
 
   /* =======================================================
    * 货舱清点 · 全屏翻页 overlay（FBC 官僚文书美学）
@@ -1166,52 +1179,53 @@
    * - loss  → 锈红
    * - neutral → 冷灯白
    */
+  /* v0.07.2 货舱卡牌极性色：红涨（gain=红珊瑚）绿跌（loss=中国绿） */
   .manifest-card[data-polarity="gain"] {
-    --card-glow:      rgba(74, 222, 128, .70);
-    --card-glow-mid:  rgba(74, 222, 128, .26);
-    --card-glow-soft: rgba(110, 231, 167, .24);
+    --card-glow:      rgba(248, 130, 110, .70);
+    --card-glow-mid:  rgba(248, 130, 110, .26);
+    --card-glow-soft: rgba(255, 165, 150, .24);
   }
   .manifest-card[data-polarity="gain"] .manifest-card__shell {
-    border-color: rgba(74, 222, 128, 0.35);
+    border-color: rgba(248, 130, 110, 0.38);
     box-shadow:
-      inset 0 0 36px rgba(74, 222, 128, 0.12),
+      inset 0 0 36px rgba(248, 130, 110, 0.12),
       inset 0 0 0 1px rgba(0,0,0,.5),
-      0 0 22px rgba(74, 222, 128, 0.18),
+      0 0 22px rgba(248, 130, 110, 0.20),
       0 20px 52px rgba(0,0,0,.7);
   }
   .manifest-card[data-polarity="gain"] .manifest-card__corner {
-    border-color: rgba(110, 231, 167, 0.65);
+    border-color: rgba(255, 160, 140, 0.65);
   }
-  /* v0.06: 让原始暖金贴图也偏向 mint,与冷光环境一致 */
+  /* 贴图维持暖色调（不再偏 mint），与珊瑚红辉光一致 */
   .manifest-card[data-polarity="gain"] .manifest-card__crate-img {
     filter:
       drop-shadow(0 6px 14px rgba(0,0,0,.6))
-      drop-shadow(0 0 7px rgba(74, 222, 128, .35))
-      hue-rotate(72deg)
-      saturate(.85);
+      drop-shadow(0 0 7px rgba(248, 130, 110, .32))
+      hue-rotate(-8deg)
+      saturate(.92);
   }
   .manifest-card[data-polarity="loss"] {
-    --card-glow:      rgba(190, 75, 65, .65);
-    --card-glow-mid:  rgba(160, 50, 42, .25);
-    --card-glow-soft: rgba(170, 60, 52, .28);
+    --card-glow:      rgba(60, 190, 120, .60);
+    --card-glow-mid:  rgba(50, 175, 108, .22);
+    --card-glow-soft: rgba(72, 200, 128, .24);
   }
   .manifest-card[data-polarity="loss"] .manifest-card__shell {
-    border-color: rgba(140, 58, 50, 0.40);
+    border-color: rgba(55, 175, 110, 0.38);
     box-shadow:
-      inset 0 0 36px rgba(160,50,42,.16),
+      inset 0 0 36px rgba(55, 175, 110, .14),
       inset 0 0 0 1px rgba(0,0,0,.5),
-      0 0 20px rgba(160,50,42,.18),
+      0 0 20px rgba(55, 175, 110, .18),
       0 20px 52px rgba(0,0,0,.7);
   }
   .manifest-card[data-polarity="loss"] .manifest-card__corner {
-    border-color: rgba(200, 85, 72, 0.65); opacity: .88;
+    border-color: rgba(80, 210, 135, 0.62); opacity: .88;
   }
   .manifest-card[data-polarity="loss"] .manifest-card__crate-img {
     filter:
       drop-shadow(0 6px 14px rgba(0,0,0,.6))
-      drop-shadow(0 0 7px rgba(180,50,42,.35))
-      hue-rotate(-18deg)
-      saturate(.95);
+      drop-shadow(0 0 7px rgba(60,190,120,.32))
+      hue-rotate(72deg)
+      saturate(.82);
   }
   .manifest-card[data-polarity="neutral"] {
     --card-glow:      rgba(130, 140, 155, .40);
@@ -1254,14 +1268,14 @@
     color: rgba(215, 205, 195, 0.92);
     text-shadow: none;
   }
+  /* v0.07.2 货舱卡牌金额数字：红涨绿跌 */
   .manifest-card[data-polarity="gain"] .manifest-card__delta {
-    /* v0.06: 黄→mint */
-    color: rgba(110, 231, 167, 0.95);
-    text-shadow: 0 0 10px rgba(74, 222, 128, 0.35);
+    color: rgba(255, 150, 133, 0.97);
+    text-shadow: 0 0 10px rgba(248, 110, 90, 0.42);
   }
   .manifest-card[data-polarity="loss"] .manifest-card__delta {
-    color: rgba(210, 115, 100, 0.95);
-    text-shadow: 0 0 10px rgba(180, 65, 52, 0.30);
+    color: rgba(80, 210, 140, 0.95);
+    text-shadow: 0 0 10px rgba(50, 185, 110, 0.32);
   }
   .manifest-card[data-polarity="neutral"] .manifest-card__delta { color: rgba(165, 170, 178, 0.85); }
 
@@ -1275,7 +1289,16 @@
     color: rgba(110, 105, 98, 0.55);
     letter-spacing: .28em;
     text-transform: uppercase;
+    transition: color .18s ease, letter-spacing .18s ease;
   }
+  /* 进入 holding 阶段后提示变为跳过引导 */
+  .manifest-reveal-overlay__hint--skip {
+    color: rgba(185, 152, 140, 0.52);
+    letter-spacing: .18em;
+    text-transform: none;
+  }
+  /* 整体 overlay 进入可跳过态时手型光标，传达可交互感 */
+  .manifest-reveal-overlay.skippable { cursor: pointer; }
 
   @media (max-width: 460px) {
     .manifest-reveal-stage { width: 240px; height: 320px; }
@@ -1392,7 +1415,8 @@
        - --hud-led-readout / --hud-led-readout-glow：HUD 次级辅助冷白
          → 仅用于"标签 / 配额副数字 / 净资产标签 / mission 标签"等"读数附属物"。
        - 高亮替代：跳层闪光 / +¥ t1·t2 闪光中间帧用 #FFFFFF（红色不够亮时的备选高亮）
-       - mint 仅保留极端正反馈态：quota-cleared / gain pulse t3·t4 / wealth-burst */
+       - v0.07.2：mint 已全部撤出财务数值着色，改用暖珊瑚红（涨 = 红，Chinese stock convention）
+       - mint/green 仅保留非财务 UI 装饰（locker border flash / 探测协议 / 净资产亏损行） */
     --hud-readout: rgba(248, 165, 155, 1);
     --hud-readout-glow: rgba(248, 165, 155, 0.5);
     --hud-led-readout:       #F2F5F9;
@@ -1710,7 +1734,9 @@
   .fbc-menu-panel {
     position: relative;
     width: min(420px, 92vw);
-    max-height: 86vh;
+    /* 固定高度：两个 tab 页面始终占满同一容器，切换时面板不跳高 */
+    height: min(86vh, 580px);
+    min-height: 360px;
     background:
       linear-gradient(180deg, #161616 0%, #0d0d0d 100%);
     border: 1px solid rgba(140, 65, 55, 0.45);
@@ -1790,13 +1816,23 @@
     overflow-y: auto;
     padding: 14px 18px 18px;
     flex: 1;
+    min-height: 0; /* 允许 flex 子项收缩，防溢出 */
   }
+  /* 两 tab 都用 display:flex 填满 body，非激活时隐藏但不占高度 */
   .fbc-menu-page { display: none; }
-  .fbc-menu-page.active { display: block; }
+  .fbc-menu-page.active {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
 
   /* === 规则页 === */
   .fbc-rules-section {
-    margin-bottom: 14px;
+    margin-bottom: 12px;
+  }
+  /* 规则页最后一节无底边距 */
+  #fbc-menu-page-rules .fbc-rules-section:last-child {
+    margin-bottom: 0;
   }
   .fbc-rules-section__title {
     font-family: 'VT323', monospace;
@@ -1860,8 +1896,9 @@
   .fbc-career-cell--pnl .fbc-career-cell__label {
     color: rgba(200, 170, 155, 0.75);
   }
-  .fbc-career-cell--pnl-gain .fbc-career-cell__value { color: #94d0a8; }
-  .fbc-career-cell--pnl-loss .fbc-career-cell__value { color: #db8778; }
+  /* v0.07.2 战绩 NET P&L：红涨绿跌（Chinese stock convention） */
+  .fbc-career-cell--pnl-gain .fbc-career-cell__value { color: rgba(255, 150, 133, 0.97); }
+  .fbc-career-cell--pnl-loss .fbc-career-cell__value { color: rgba(80, 210, 140, 0.95); }
   .fbc-career-cell--pnl-flat .fbc-career-cell__value { color: #c8d0d8; }
   .fbc-career-cell__sublabel {
     display: block;
@@ -1890,7 +1927,117 @@
     font-family: 'Courier New', monospace;
     font-size: .54rem;
     letter-spacing: .14em;
-    padding: 22px 0;
+    padding: 28px 0 18px;
+  }
+
+  /* ── 空状态缺省图：纯实心块风格（无描边/线形），与菜单按钮 filled-glyph 同源 ── */
+  .fbc-career-empty__illu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: 0 auto 20px;
+    width: 52px;
+    position: relative;
+    opacity: 0;
+    animation: fbc-empty-fadein 0.55s 0.12s cubic-bezier(.22,.61,.36,1) forwards;
+  }
+  @keyframes fbc-empty-fadein {
+    to { opacity: 1; }
+  }
+
+  /* 楼层指示点行（顶部）：5个实心小方块 */
+  .fbc-career-empty__floors {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .fbc-career-empty__floor-dot {
+    width: 6px;
+    height: 6px;
+    background: rgba(100, 62, 56, 0.30);
+  }
+  .fbc-career-empty__floor-dot--lit {
+    background: rgba(248, 165, 155, 0.18);
+    box-shadow: 0 0 4px rgba(248, 130, 110, 0.22);
+  }
+
+  /* 电梯顶梁：实心填充条 */
+  .fbc-career-empty__top-bar {
+    width: 52px;
+    height: 6px;
+    background: rgba(130, 62, 52, 0.48);
+  }
+
+  /* 电梯舱体 */
+  .fbc-career-empty__cabin {
+    width: 52px;
+    height: 42px;
+    background: rgba(38, 18, 15, 0.78);
+    display: flex;
+    gap: 3px;
+    padding: 3px;
+  }
+  /* 左右门扇：实心填充块 */
+  .fbc-career-empty__door {
+    flex: 1;
+    background: rgba(28, 12, 10, 0.88);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* 门把手：实心小方块，非线形 */
+  .fbc-career-empty__door::after {
+    content: '';
+    display: block;
+    width: 5px;
+    height: 5px;
+    background: rgba(120, 62, 52, 0.42);
+  }
+
+  /* 电梯底梁 */
+  .fbc-career-empty__bottom-bar {
+    width: 52px;
+    height: 5px;
+    background: rgba(100, 50, 42, 0.42);
+  }
+
+  /* 竖井段：两根实心粗柱 + 中央空隙 */
+  .fbc-career-empty__shaft {
+    width: 52px;
+    height: 14px;
+    background: rgba(20, 8, 6, 0.55);
+    display: flex;
+    gap: 0;
+  }
+  .fbc-career-empty__shaft-col {
+    width: 8px;
+    height: 100%;
+    background: rgba(80, 40, 36, 0.38);
+  }
+  .fbc-career-empty__shaft-col--right {
+    margin-left: auto;
+  }
+
+  /* VOID 徽章：实心背景色块 + 文字 */
+  .fbc-career-empty__badge {
+    margin-top: 10px;
+    background: rgba(50, 24, 20, 0.55);
+    padding: 2px 7px;
+    font-family: 'VT323', monospace;
+    font-size: .82rem;
+    color: rgba(160, 80, 68, 0.55);
+    letter-spacing: .22em;
+    text-transform: uppercase;
+  }
+
+  /* 缺省提示文字 */
+  .fbc-career-empty__msg {
+    font-family: 'Courier New', monospace;
+    font-size: .54rem;
+    color: rgba(100, 68, 62, 0.72);
+    letter-spacing: .14em;
   }
   .fbc-career-reset {
     margin-top: 14px;
@@ -2549,33 +2696,33 @@
     40% { opacity: 1; transform: scale(1.06); filter: blur(0); }
     100% { opacity: 1; transform: scale(1); filter: blur(0); }
   }
-  /* 正收益分档：停留更久 + 金绿激励色 + 峰值「悬停」强化积极反馈 */
+  /* v0.07.2 正收益分档：红色激励（涨 = 红，Chinese stock convention）*/
   @keyframes credits-delta-pop-gain-t1 {
-    0%   { opacity: 0; transform: scale(0.52); filter: blur(5px); color: #c8ffd8; }
-    38%  { opacity: 1; transform: scale(1.08); filter: blur(0); color: #e8fff0; }
+    0%   { opacity: 0; transform: scale(0.52); filter: blur(5px); color: #ffe4e0; }
+    38%  { opacity: 1; transform: scale(1.08); filter: blur(0); color: #ffffff; }
     72%  { opacity: 1; transform: scale(1.03); }
     100% { opacity: 1; transform: scale(1); color: var(--hud-readout); }
   }
   @keyframes credits-delta-pop-gain-t2 {
-    0%   { opacity: 0; transform: scale(0.48); filter: blur(7px); color: #9cf5c0; }
-    32%  { opacity: 1; transform: scale(1.14); filter: blur(0); color: #e8fff0;
-           text-shadow: 0 0 14px rgba(110, 231, 167, 0.55), 0 0 32px rgba(120, 220, 160, 0.35); }
+    0%   { opacity: 0; transform: scale(0.48); filter: blur(7px); color: #ffc8c0; }
+    32%  { opacity: 1; transform: scale(1.14); filter: blur(0); color: #ffffff;
+           text-shadow: 0 0 14px rgba(248, 130, 110, 0.6), 0 0 32px rgba(220, 90, 70, 0.35); }
     58%  { transform: scale(1.08); }
     82%  { opacity: 1; transform: scale(1.04); }
     100% { opacity: 1; transform: scale(1); color: var(--hud-readout); }
   }
   @keyframes credits-delta-pop-gain-t3 {
-    0%   { opacity: 0; transform: scale(0.42) rotate(-2deg); filter: blur(8px); color: #7af0a8; }
-    28%  { opacity: 1; transform: scale(1.2) rotate(0deg); filter: blur(0); color: #e8fff0;
-           text-shadow: 0 0 18px rgba(74, 222, 128, 0.7), 0 0 48px rgba(80, 255, 180, 0.4); }
+    0%   { opacity: 0; transform: scale(0.42) rotate(-2deg); filter: blur(8px); color: #ffb0a4; }
+    28%  { opacity: 1; transform: scale(1.2) rotate(0deg); filter: blur(0); color: #ffffff;
+           text-shadow: 0 0 18px rgba(248, 130, 110, 0.75), 0 0 48px rgba(220, 80, 60, 0.45); }
     50%  { transform: scale(1.12); }
     75%  { opacity: 1; transform: scale(1.06); }
     100% { opacity: 1; transform: scale(1); color: var(--hud-readout); }
   }
   @keyframes credits-delta-pop-gain-t4 {
-    0%   { opacity: 0; transform: scale(0.38) rotate(-3deg); filter: blur(10px); color: #5cf598; }
+    0%   { opacity: 0; transform: scale(0.38) rotate(-3deg); filter: blur(10px); color: #ff9888; }
     22%  { opacity: 1; transform: scale(1.28) rotate(1deg); filter: blur(0); color: #ffffff;
-           text-shadow: 0 0 22px rgba(170, 255, 210, 0.95), 0 0 60px rgba(74, 222, 128, 0.55), 0 0 90px rgba(100, 255, 200, 0.35); }
+           text-shadow: 0 0 22px rgba(255, 200, 190, 0.95), 0 0 60px rgba(248, 130, 110, 0.6), 0 0 90px rgba(220, 80, 60, 0.38); }
     45%  { transform: scale(1.18) rotate(0deg); }
     70%  { opacity: 1; transform: scale(1.1); }
     88%  { opacity: 1; transform: scale(1.05); }
@@ -2594,7 +2741,7 @@
   }
   @keyframes outcome-triumph-pulse {
     0%, 100% { opacity: 1; filter: brightness(1); }
-    50%      { opacity: 0.92; filter: brightness(1.18); text-shadow: 0 0 20px rgba(74, 222, 128, 0.5); }
+    50%      { opacity: 0.92; filter: brightness(1.18); text-shadow: 0 0 20px rgba(248, 130, 110, 0.55); }
   }
   #money.money-hud-gain-pulse {
     animation: money-hud-gain-pulse 0.95s cubic-bezier(0.2, 1.1, 0.3, 1) both;
@@ -2618,27 +2765,27 @@
   @keyframes money-hud-gain-pulse-strong {
     0%   { transform: scale(1); filter: brightness(1); }
     30%  { transform: scale(1.1); filter: brightness(1.38); color: #ffffff;
-           text-shadow: 0 0 16px rgba(170, 255, 210, 0.85), 0 0 40px rgba(74, 222, 128, 0.55); }
+           text-shadow: 0 0 16px rgba(255, 210, 200, 0.88), 0 0 40px rgba(248, 130, 110, 0.62); }
     100% { transform: scale(1); filter: brightness(1); }
   }
   .car.asset-gain-aura {
     transition: box-shadow 0.35s ease, filter 0.35s ease;
   }
-  /* v0.06: 车厢资产辉光 t1-t4 全部统一为 mint 阶梯（去全局黄） */
+  /* v0.07.2 车厢资产辉光 t1-t4：暖珊瑚红（涨 = 红，Chinese stock convention） */
   .car.asset-gain-aura--t1 {
-    box-shadow: inset 0 0 50px rgba(0,0,0,.72), 0 0 22px rgba(120, 220, 160, 0.22);
+    box-shadow: inset 0 0 50px rgba(0,0,0,.72), 0 0 22px rgba(248, 165, 155, 0.22);
     filter: saturate(1.06) brightness(1.03);
   }
   .car.asset-gain-aura--t2 {
-    box-shadow: inset 0 0 48px rgba(0,0,0,.68), 0 0 32px rgba(74, 222, 128, 0.32);
+    box-shadow: inset 0 0 48px rgba(0,0,0,.68), 0 0 32px rgba(248, 130, 110, 0.32);
     filter: saturate(1.1) brightness(1.06);
   }
   .car.asset-gain-aura--t3 {
-    box-shadow: inset 0 0 42px rgba(10,30,18,.55), 0 0 42px rgba(74, 222, 128, 0.42);
+    box-shadow: inset 0 0 42px rgba(30,10,8,.55), 0 0 42px rgba(248, 110, 90, 0.42);
     filter: saturate(1.14) brightness(1.1);
   }
   .car.asset-gain-aura--t4 {
-    box-shadow: inset 0 0 38px rgba(15,45,28,.5), 0 0 52px rgba(110, 231, 167, 0.55), 0 0 88px rgba(74, 222, 128, 0.22);
+    box-shadow: inset 0 0 38px rgba(45,12,8,.5), 0 0 52px rgba(255, 145, 125, 0.55), 0 0 88px rgba(220, 80, 60, 0.22);
     filter: saturate(1.2) brightness(1.14);
   }
   @media (prefers-reduced-motion: reduce) {
@@ -2664,14 +2811,14 @@
     color: rgba(210, 115, 100, 0.9) !important;
     transition: color 0.08s ease;
   }
-  /* 里程表：高层级增益 — v0.06 暖金 → mint 脉冲 */
+  /* v0.07.2 里程表：高层级增益 — 暖珊瑚红强化脉冲（涨 = 红） */
   #money.money-odometer--t3 {
     letter-spacing: 0.05em;
-    text-shadow: 0 0 12px rgba(74, 222, 128, 0.45), 0 0 6px var(--hud-readout-glow) !important;
+    text-shadow: 0 0 12px rgba(248, 130, 110, 0.52), 0 0 6px var(--hud-readout-glow) !important;
   }
   #money.money-odometer--t4 {
     letter-spacing: 0.07em;
-    text-shadow: 0 0 18px rgba(74, 222, 128, 0.65), 0 0 8px var(--hud-readout-glow) !important;
+    text-shadow: 0 0 18px rgba(248, 130, 110, 0.72), 0 0 8px var(--hud-readout-glow) !important;
     animation: odometer-swell-t4 0.14s ease-in-out infinite alternate;
   }
   @keyframes odometer-swell-t4 {
@@ -3091,6 +3238,17 @@
   .committee-bar.committee-bar--directive {
     border-left-color: rgba(200, 50, 50, 0.85);
   }
+  /* v0.07.2 庄家压迫低语：冷蓝官僚色，与红色 directive 区隔；微微更亮的文字色形成"被盯上"感 */
+  .committee-bar.committee-bar--pressure {
+    border-left-color: rgba(120, 145, 175, 0.92);
+  }
+  .committee-bar.committee-bar--pressure .committee-bar__text {
+    color: rgba(195, 215, 235, 0.92);
+    letter-spacing: 0.04em;
+  }
+  .committee-bar.committee-bar--pressure .committee-bar__prefix {
+    color: rgba(165, 190, 220, 0.78);
+  }
 
   /* 委员会边缘碎闪（主舞台四角感）
    * v0.06.1：从"纯氛围 + 看不清"改为"低频 + 可读叙事"——
@@ -3211,16 +3369,17 @@
      - 仅 quota 数字 / 分隔符 / #money 渐染 mint（极端正反馈态保留绿色）
      - v0.06.1 的 // ALLOC_QUOTA · CLEARED 标签已移除（占用 LED 高度，属次级装饰）
      - 场景层闪现 // FBC §3.1 — 配额已达成 仍保留 */
+  /* v0.07.2 配额达成态：红色高亮（涨 = 红）；不再出现 mint 绿 */
   #asset-counter.hud__asset-counter--quota-cleared .hud__quota-target {
-    color: rgba(160, 230, 178, 0.94);
-    text-shadow: 0 0 6px rgba(74, 222, 128, 0.38);
+    color: rgba(255, 175, 160, 0.96);
+    text-shadow: 0 0 6px rgba(248, 130, 110, 0.45);
   }
   #asset-counter.hud__asset-counter--quota-cleared .hud__quota-sep {
-    color: rgba(160, 230, 178, 0.6);
+    color: rgba(248, 165, 155, 0.65);
   }
   #asset-counter.hud__asset-counter--quota-cleared #money {
-    color: rgba(190, 245, 210, 0.98);
-    text-shadow: 0 0 6px rgba(74, 222, 128, 0.32);
+    color: rgba(255, 155, 140, 0.98);
+    text-shadow: 0 0 8px rgba(248, 130, 110, 0.48), 0 0 22px rgba(220, 80, 60, 0.22);
   }
 
   /* 一次性扫光：过线瞬间从 quota 数字上扫过（v0.06.1 由暖琥珀改 mint） */
@@ -3228,9 +3387,9 @@
     animation: fbc-quota-flash 1100ms cubic-bezier(.22,.61,.36,1) 1;
   }
   @keyframes fbc-quota-flash {
-    0%   { transform: scale(1);    text-shadow: 0 0 0 rgba(74, 222, 128, 0); }
-    18%  { transform: scale(1.06); text-shadow: 0 0 14px rgba(74, 222, 128, 0.6); }
-    65%  { transform: scale(1.02); text-shadow: 0 0 8px rgba(74, 222, 128, 0.35); }
+    0%   { transform: scale(1);    text-shadow: 0 0 0 rgba(248, 130, 110, 0); }
+    18%  { transform: scale(1.06); text-shadow: 0 0 14px rgba(248, 130, 110, 0.65); }
+    65%  { transform: scale(1.02); text-shadow: 0 0 8px rgba(248, 130, 110, 0.38); }
     100% { transform: scale(1);    text-shadow: 0 0 6px rgba(74, 222, 128, 0.32); }
   }
 
@@ -3289,23 +3448,25 @@
     color: rgba(248, 100, 88, 0.88);
     transition: color 0.4s ease;
   }
-  /* 达标：绿色稳定光晕 */
+  /* v0.07.2 中国股市用色规范：红涨绿跌（全局数值色规则）
+     达标/盈利 → 红色（暖珊瑚，与 HUD 主读数同色相）
+     亏损/负债 → 绿色（Chinese market green = loss signal） */
   .hud__net-asset__value--positive {
-    color: #5cd68a;
+    color: rgba(255, 145, 130, 0.98);
     text-shadow:
-      0 0 6px rgba(80, 220, 120, 0.55),
-      0 0 18px rgba(60, 200, 100, 0.28);
+      0 0 6px rgba(248, 130, 110, 0.6),
+      0 0 18px rgba(220, 80, 60, 0.28);
     animation: none;
   }
-  /* 负债：红色闪烁故障 */
+  /* 亏损：绿色闪烁故障（跌 = 绿，Chinese convention） */
   .hud__net-asset__value--negative {
-    color: rgba(230, 60, 50, 0.95);
+    color: rgba(72, 210, 128, 0.95);
     text-shadow:
-      0 0 8px rgba(220, 40, 30, 0.7),
-      0 0 22px rgba(180, 20, 15, 0.35);
-    animation: net-debt-glitch 1.8s steps(1) infinite;
+      0 0 8px rgba(50, 200, 110, 0.65),
+      0 0 22px rgba(30, 160, 85, 0.32);
+    animation: net-asset-loss-glitch 1.8s steps(1) infinite;
   }
-  @keyframes net-debt-glitch {
+  @keyframes net-asset-loss-glitch {
     0%, 58%, 62%, 92%, 100% {
       opacity: 1;
       transform: translateX(0);
@@ -3314,12 +3475,12 @@
     59% {
       opacity: 0.6;
       transform: translateX(-2px);
-      filter: drop-shadow(2px 0 rgba(255, 0, 60, 0.8));
+      filter: drop-shadow(2px 0 rgba(0, 200, 80, 0.8));
     }
     61% {
       opacity: 0.85;
       transform: translateX(2px);
-      filter: drop-shadow(-2px 0 rgba(0, 220, 255, 0.6));
+      filter: drop-shadow(-2px 0 rgba(200, 255, 100, 0.5));
     }
     93% {
       opacity: 0.5;
@@ -3833,6 +3994,20 @@
     text-shadow: none;
   }
 
+  /* v0.07.1 撤离税行：与 success 同源 sheet，但文字降饱和度（"被扣"语义） */
+  .result-overlay__stat-row--evtax {
+    border-top: 0.5px dashed rgba(120, 100, 95, 0.28);
+    padding-top: 5px;
+    margin-top: 2px;
+  }
+  .result-overlay__stat-val--evtax {
+    color: rgba(218, 165, 150, 0.86);
+    font-family: "Courier New", monospace;
+    font-size: clamp(0.62rem, 2.4vw, 0.78rem);
+    letter-spacing: 0.06em;
+    text-shadow: none;
+  }
+
   .result-overlay__footer {
     display: flex;
     justify-content: space-between;
@@ -3939,6 +4114,7 @@
   .car.wealth-burst--mega {
     animation: car-wealth-gold-mega 1.25s ease-out;
   }
+  /* v0.07.2 财富爆闪：暖珊瑚红（涨 = 红，Chinese stock convention） */
   @keyframes car-wealth-gold-burst {
     0%, 100% {
       box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.75);
@@ -3946,15 +4122,15 @@
     }
     22% {
       box-shadow:
-        inset 0 0 45px rgba(74, 222, 128, 0.40),
-        0 0 38px rgba(74, 222, 128, 0.62),
-        0 0 85px rgba(170, 255, 210, 0.32);
+        inset 0 0 45px rgba(248, 130, 110, 0.40),
+        0 0 38px rgba(248, 130, 110, 0.62),
+        0 0 85px rgba(255, 210, 200, 0.32);
       filter: brightness(1.2) saturate(1.18);
     }
     48% {
       box-shadow:
-        inset 0 0 28px rgba(110, 231, 167, 0.30),
-        0 0 52px rgba(34, 163, 86, 0.48);
+        inset 0 0 28px rgba(255, 145, 125, 0.30),
+        0 0 52px rgba(220, 80, 60, 0.48);
       filter: brightness(1.12) saturate(1.12);
     }
   }
@@ -3965,15 +4141,15 @@
     }
     18%, 55% {
       box-shadow:
-        inset 0 0 55px rgba(74, 222, 128, 0.48),
-        0 0 48px rgba(74, 222, 128, 0.72),
-        0 0 110px rgba(200, 255, 230, 0.42);
+        inset 0 0 55px rgba(248, 130, 110, 0.48),
+        0 0 48px rgba(248, 130, 110, 0.72),
+        0 0 110px rgba(255, 200, 190, 0.42);
       filter: brightness(1.28) saturate(1.22);
     }
     36% {
       box-shadow:
-        inset 0 0 40px rgba(170, 255, 210, 0.34),
-        0 0 70px rgba(74, 222, 128, 0.55);
+        inset 0 0 40px rgba(255, 200, 190, 0.34),
+        0 0 70px rgba(248, 130, 110, 0.58);
       filter: brightness(1.35) saturate(1.28);
     }
   }
@@ -4399,12 +4575,18 @@
     color: rgba(210, 185, 165, 0.9);
   }
   .risk-auth-panel__expand > summary::-webkit-details-marker { display: none; }
+  /* 固定箭头占位，避免 ▼/▲ 字宽不同导致 summary 行重排微抖 */
   .risk-auth-panel__expand > summary::after {
-    content: " ▼";
+    content: "▼";
+    display: inline-block;
+    min-width: 1.1em;
+    margin-left: 0.35em;
+    text-align: center;
     font-size: 0.85em;
     opacity: 0.5;
+    vertical-align: baseline;
   }
-  .risk-auth-panel__expand[open] > summary::after { content: " ▲"; }
+  .risk-auth-panel__expand[open] > summary::after { content: "▲"; }
   .risk-auth-panel__expand-hint {
     font-size: 0.88em;
     font-weight: 600;
@@ -4595,11 +4777,12 @@
     background: rgba(5,5,5,.92);
     -webkit-backdrop-filter: blur(3px);
     backdrop-filter: blur(3px);
-    /* v0.06：safe center —— 内容能装下时仍居中；放不下时退化为顶部对齐，
-       底部"启动电梯"主按钮永远可被滚到（之前在低分辨率会被绝对居中裁掉） */
+    /* v0.06：顶部对齐 —— 过长时向下滚动即可到底部主按钮（与旧版 safe center 等效可达性）。
+       若用 vertical center：规程 <details> 展开/收起会改变内容总高度，flex 会反复重算垂直居中，
+       导致整块授权文案上下跳动（用户感知为「全局抖动」）。 */
     display: flex; flex-direction: column;
     align-items: center;
-    justify-content: safe center;
+    justify-content: flex-start;
     padding: clamp(0.6rem, 2.4vh, 1.2rem) clamp(0.65rem, 3.2vw, 1.6rem);
     padding-top: max(clamp(0.6rem, 2.4vh, 1.2rem), env(safe-area-inset-top, 0px));
     padding-bottom: max(clamp(0.6rem, 2.4vh, 1.2rem), env(safe-area-inset-bottom, 0px));
@@ -4610,6 +4793,8 @@
     box-sizing: border-box;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    /* 避免出现纵向滚动条时主内容区宽度突变引发二次排版抖动 */
+    scrollbar-gutter: stable;
 
     /* v0.06：暗锈滚动条（FBC 调性） */
     scrollbar-width: thin;
@@ -4658,7 +4843,7 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    justify-content: center;
+    justify-content: flex-start;
     gap: clamp(0.32rem, 1.2vh, 0.68rem);
   }
 
@@ -4710,6 +4895,62 @@
   .fbc-career-stats__eval {
     margin-top: 0.1rem;
     color: rgba(200, 170, 155, 0.28);
+  }
+
+  /* v0.07 信用评级行：字号略大于 badge（玩家需要立刻感知到），用色按档位区分。
+     默认隐藏；仅当评级 != 'A' 且 creditRating.enabled=true 时显示。 */
+  .deploy-panel__credit-rating {
+    display: block;
+    font-family: "Courier New", monospace;
+    font-size: clamp(0.56rem, 2.4vw, 0.72rem);
+    letter-spacing: 0.14em;
+    margin: 0.25rem 0 0;
+    text-align: center;
+    line-height: 1.5;
+    color: rgba(248, 165, 155, 0.85);
+    text-shadow: 0 0 8px rgba(248, 165, 155, 0.32);
+    transition: color 0.4s ease, text-shadow 0.4s ease;
+  }
+  .deploy-panel__credit-rating[hidden] { display: none; }
+  /* 升档：联邦优先通道（AAA）—— mint 极端正反馈 */
+  .deploy-panel__credit-rating--aaa {
+    color: var(--ds-positive-bright);
+    text-shadow: 0 0 10px rgba(110, 231, 167, 0.45);
+  }
+  /* 降档 B：暖珊瑚警告 */
+  .deploy-panel__credit-rating--b {
+    color: var(--hud-readout);
+    text-shadow: 0 0 10px var(--hud-readout-glow);
+  }
+  /* 降档 C：弱红警告 */
+  .deploy-panel__credit-rating--c {
+    color: var(--ds-danger);
+    text-shadow: 0 0 10px var(--ds-danger-soft);
+  }
+  /* v0.07.2 探测协议行：与信用评级行同源 chip，但用冷蓝官僚色（与 committee-bar--pressure 同一色系）。
+     仅当 pressureProtocol.active 时显示；与信用评级行可同时显示，垂直堆叠。 */
+  .deploy-panel__pressure-protocol {
+    display: block;
+    font-family: "Courier New", monospace;
+    font-size: clamp(0.62rem, 1.95vw, 0.74rem);
+    letter-spacing: 0.10em;
+    text-transform: none;
+    color: rgba(195, 215, 235, 0.92);
+    text-shadow: 0 0 8px rgba(120, 145, 175, 0.35);
+    margin-top: 0.42rem;
+    line-height: 1.45;
+    transition: color 0.4s ease, text-shadow 0.4s ease;
+  }
+  .deploy-panel__pressure-protocol[hidden] { display: none; }
+  /* 降档 D：危险红，配脉冲动效 */
+  .deploy-panel__credit-rating--d {
+    color: var(--ds-danger-bright);
+    text-shadow: 0 0 12px rgba(255, 107, 107, 0.5);
+    animation: deploy-credit-rating-pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes deploy-credit-rating-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.62; }
   }
 
   .deploy-panel__badge {
@@ -6969,11 +7210,12 @@
     white-space: nowrap;
     color: rgba(225, 210, 200, 0.92);
   }
+  /* v0.07.2 结果框涨跌：红涨绿跌（Chinese stock convention） */
   .door-result-frame__brief--gain {
-    color: rgba(148, 208, 168, 0.92);
+    color: rgba(255, 150, 133, 0.95);
   }
   .door-result-frame__brief--loss {
-    color: rgba(218, 135, 120, 0.92);
+    color: rgba(90, 205, 140, 0.92);
   }
 
   /* FBC 流通损耗（House Edge）：极细官僚标注，仅在正向收益且 rate > 0 时显示 */
@@ -6992,6 +7234,25 @@
   @keyframes drf-edge-in {
     from { opacity: 0; transform: translateY(2px); }
     to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* v0.07.1 浮盈折现注脚：与 .door-result-frame__edge 同源（同字号、同色相、同动效），
+     仅在 stakeRatio ≥ 3 且 surplusDiscountAmount > 0 时显示。位置在 fbcEdge 注脚之上。 */
+  .door-result-frame__discount {
+    margin-top: 0.45rem;
+    font-family: "Courier New", monospace;
+    font-size: clamp(0.5rem, 1.85vw, 0.6rem);
+    letter-spacing: 0.16em;
+    color: rgba(170, 130, 118, 0.55);
+    text-transform: uppercase;
+    opacity: 0;
+    animation: drf-edge-in 0.32s 0.10s ease-out both;
+    white-space: nowrap;
+  }
+  .door-result-frame__discount[hidden] { display: none; }
+  /* 折现+流通损耗双行同时存在时，第二行的上间距收紧一点 */
+  .door-result-frame__discount + .door-result-frame__edge {
+    margin-top: 0.18rem;
   }
 
   .door-result-frame__link {
@@ -7160,11 +7421,11 @@
   }
   .trm__amount-value {
     font-size: clamp(16px, 1.1rem, 19px);       /* 原 1.08rem，略升 */
-    color: rgba(232, 158, 142, 0.98);             /* 原 0.95 → 0.98 */
+    color: rgba(80, 210, 140, 0.95);              /* v0.07.2 绿跌（loss 默认色，Chinese convention） */
     letter-spacing: 0.04em;
     font-weight: 700;
   }
-  .trm__amount-value--gain    { color: rgba(140, 215, 168, 0.96); }   /* mint，提亮 */
+  .trm__amount-value--gain    { color: rgba(255, 150, 133, 0.97); }   /* v0.07.2 红涨：暖珊瑚红 */
   .trm__amount-value--neutral { color: rgba(180, 152, 145, 0.85); }
   .trm__tag-row { margin-bottom: 18px; }
   .trm__tag {
@@ -7417,7 +7678,15 @@
           <h3 class="fbc-rules-section__title">货舱清点</h3>
           <p class="fbc-rules-section__body">
             选中柜门后，本层结算会被拆成 <strong>3 件子产物</strong> 逐张登记；
-            <span style="color:#6ee7a7">绿光为正向</span>、<span style="color:#ff5a5a">红光为损失</span>、灰白为中性。看清楚最末一张的总账面变动。
+            <span style="color:#ff6b6b">红光为正向（收益）</span>、<span style="color:#4ade80">绿光为损失</span>、灰白为中性。
+            看清最末一张的总账面变动。<em>阅读期间点击任意空白区域可跳过，进入下一张。</em>
+          </p>
+        </div>
+        <div class="fbc-rules-section">
+          <h3 class="fbc-rules-section__title">结算修正</h3>
+          <p class="fbc-rules-section__body">
+            账面超过配额幅度越大，<em>浮盈折现</em>扣率越高（局方抽成比例上升）；
+            主动撤离时若账面仍有盈余，须额外缴纳<em>撤离税</em>，最终到手金额见结算界面。
           </p>
         </div>
         <div class="fbc-rules-section">
@@ -7428,11 +7697,10 @@
           </p>
         </div>
         <div class="fbc-rules-section">
-          <h3 class="fbc-rules-section__title">音频 / 操作</h3>
+          <h3 class="fbc-rules-section__title">操作</h3>
           <p class="fbc-rules-section__body">
             右上角 <strong>♪ 切换</strong> 可静默 BGM（事件 SFX 始终保留）。
-            倒计时危急时面板会进入<em>恐慌色</em>。
-            <span class="input-hint__touch">所有操作通过屏幕按钮触发：<strong>▲ 上行</strong> / <strong>▼ 撤离</strong> / 点乘客审查 / 拉杆制动。</span><span class="input-hint__desktop">桌面键盘可用 <strong>Space</strong> 调指令圆盘 · <strong>⌘R</strong> 撤离 · <strong>Escape</strong> 关闭弹窗。</span>
+            <span class="input-hint__touch">所有操作通过屏幕按钮触发：<strong>▲ 上行</strong> / <strong>▼ 撤离</strong>。</span><span class="input-hint__desktop">桌面键盘：<strong>Space</strong> 指令圆盘 · <strong>⌘R</strong> 撤离 · <strong>Escape</strong> 关闭弹窗。</span>
           </p>
         </div>
       </section>
@@ -7599,6 +7867,10 @@
             <span class="fbc-career-stats__line fbc-career-stats__eval" id="fbc-stat-eval" hidden></span>
           </div>
           <span class="deploy-panel__badge" id="deploy-panel-badge">FBC · 计价规程 · ASCENT 0</span>
+          <!-- v0.07 信用评级行：仅当 rating != 'A' 且 creditRating.enabled=true 时显示；JS 动态写入文本 + 修饰类 -->
+          <span class="deploy-panel__credit-rating" id="deploy-credit-rating-line" hidden></span>
+          <!-- v0.07.2 探测协议行：仅当 pressureProtocol.active=true 时显示；与信用评级行可同时显示 -->
+          <span class="deploy-panel__pressure-protocol" id="deploy-pressure-protocol-line" hidden></span>
           <hr class="deploy-panel__divider">
           <span class="deploy-panel__title" id="deploy-panel-title">联邦资产上行计价许可 [A-092]</span>
           <p class="risk-auth-panel__onboarding-lead" id="deploy-onboarding-lead" aria-hidden="true">到配额可撤离，每层选柜开箱。</p>
@@ -7669,6 +7941,8 @@
           <span class="door-result-frame__sep" aria-hidden="true"></span>
           <span class="door-result-frame__brief" id="drf-brief"></span>
         </div>
+        <!-- v0.07.1 浮盈折现注脚（紧贴在流通损耗注脚之上） -->
+        <div class="door-result-frame__discount" id="drf-discount" hidden></div>
         <div class="door-result-frame__edge" id="drf-edge" hidden></div>
         <div class="manifest-strip" id="manifest-strip" aria-hidden="true"></div>
         <button type="button" class="door-result-frame__link" id="drf-archive-btn" hidden>
@@ -7870,6 +8144,20 @@
     '恭喜发财。'
   ];
 
+  /* v0.07.2 庄家人格化（COMMITTEE_PRESSURE_LINES）— FBC 第三人称官僚陈述句。
+     不带感叹号，不带"恭喜"，不带情绪词；越冷静越压迫。
+     与 WHISPERS 的轮换式低语不同——这些只在玩家"被庄家盯上"的瞬间一次性触发。 */
+  var COMMITTEE_PRESSURE_LINES = {
+    bigWin: [
+      '本局资产曲线已进入联邦监控区间。',
+      '委员会已记录您的高额账面节奏。',
+      '您的收益模式已被建模。',
+      '联邦审计署对您的本局轨迹展开关注。',
+      '高净值事件已纳入档案监督。',
+      'FBC 流动性管理区已收到本局信号。'
+    ]
+  };
+
   /** 开场幕布：总时长 BOOT_TOTAL_MS（与背景视频一致 8s），文案均分节拍换行 */
   var BOOT_TOTAL_MS = 8000;
   var BOOT_INTRO_LINES = [
@@ -8005,10 +8293,11 @@
   var narrativeFlashTextEl    = document.getElementById('narrative-flash-text');
   /* 三位一体结果展示框 */
   var drfEl        = document.getElementById('door-result-frame');
-  var drfTagEl     = document.getElementById('drf-tag');
-  var drfBriefEl   = document.getElementById('drf-brief');
-  var drfEdgeEl    = document.getElementById('drf-edge');
-  var drfArchiveEl = document.getElementById('drf-archive-btn');
+  var drfTagEl       = document.getElementById('drf-tag');
+  var drfBriefEl     = document.getElementById('drf-brief');
+  var drfDiscountEl  = document.getElementById('drf-discount');
+  var drfEdgeEl      = document.getElementById('drf-edge');
+  var drfArchiveEl   = document.getElementById('drf-archive-btn');
   var _drfHideTimer = null;
   /* 资产异动档案系统 */
   var receiptTriggerBtn  = document.getElementById('receipt-trigger-btn');
@@ -8278,6 +8567,77 @@
   var fbcStatCreditsEl = document.getElementById('fbc-stat-credits');
   var fbcStatFloorEl   = document.getElementById('fbc-stat-floor');
   var fbcStatEvalEl    = document.getElementById('fbc-stat-eval');
+
+  /* v0.07 信用评级行 DOM */
+  var deployCreditRatingEl     = document.getElementById('deploy-credit-rating-line');
+  /* v0.07.2 探测协议行 DOM */
+  var deployPressureProtocolEl = document.getElementById('deploy-pressure-protocol-line');
+
+  /* 信用评级文案——FBC 档案语言，不说"输/赢"，说"侦测到稳定性偏差/委员会介入"等。
+     与 docs/游戏全局文案.md §26 / §6 状态坞补录保持口径一致。 */
+  var CREDIT_RATING_COPY = {
+    AAA: { text: '// 信用评级：AAA · 联邦优先通道已激活。',  klass: 'deploy-panel__credit-rating--aaa' },
+    A:   { text: '',                                          klass: '' },
+    B:   { text: '// 信用评级：B 级 · 联邦侧偿区间已激活。', klass: 'deploy-panel__credit-rating--b' },
+    C:   { text: '// 信用评级：C 级 · 流动性管理已介入。',   klass: 'deploy-panel__credit-rating--c' },
+    D:   { text: '// 信用评级：D 级 · 进入债务重组期。',     klass: 'deploy-panel__credit-rating--d' }
+  };
+
+  /**
+   * 一次性刷新与信用评级相关的所有 PRE_GAME UI：
+   *   1. 强制刷新引擎缓存（game._creditRatingTier）—— 让 PRE_GAME 读到最新评级（清算 / 撤离已经更新过 LocalStorage）
+   *   2. 在授权面板渲染信用评级行（A 档或灰度关闭时隐藏）
+   *   3. 根据 initialBetMaxMult 调整 #deploy-amount 的 max 与 value 钳位
+   *
+   * 调用时机：boot 完成进入 PRE_GAME / 局结束回到许可面板 —— 即每次玩家"看到授权面板"前。
+   */
+  function refreshCreditRatingUI() {
+    /* Step 1：刷引擎缓存。reset() 在 deploy 入口才调，但评级变化已写入 LocalStorage，
+       此处用引擎私有方法（公开导出会污染 API surface）强制同步一次。 */
+    if (game && typeof game._refreshCreditRatingTier === 'function') {
+      game._refreshCreditRatingTier();
+    }
+
+    /* Step 2：渲染评级行 */
+    var tier = (game && game.getCreditRatingTier) ? game.getCreditRatingTier() : null;
+    if (deployCreditRatingEl) {
+      var copy = (tier && CREDIT_RATING_COPY[tier.rating]) || null;
+      if (!tier || !tier.enabled || !copy || !copy.text) {
+        deployCreditRatingEl.setAttribute('hidden', '');
+        deployCreditRatingEl.textContent = '';
+        deployCreditRatingEl.className = 'deploy-panel__credit-rating';
+      } else {
+        deployCreditRatingEl.textContent = copy.text;
+        deployCreditRatingEl.className = 'deploy-panel__credit-rating ' + copy.klass;
+        deployCreditRatingEl.removeAttribute('hidden');
+      }
+    }
+
+    /* Step 2.5：v0.07.2 渲染探测协议行——仅在 active 时显示。
+       文案模板：// 探测协议生效中（剩 N 局）· 流通损耗 +X% */
+    if (deployPressureProtocolEl) {
+      var pp = (tier && tier.pressureProtocol) ? tier.pressureProtocol : null;
+      if (!pp || !pp.active || !pp.remainingRuns) {
+        deployPressureProtocolEl.setAttribute('hidden', '');
+        deployPressureProtocolEl.textContent = '';
+      } else {
+        var ppPct = Math.round((pp.edgeRateBoost || 0) * 100);
+        var ppText = '// 探测协议生效中（剩 ' + pp.remainingRuns + ' 局）' +
+          (ppPct > 0 ? ' \u00b7 流通损耗 +' + ppPct + '%' : '');
+        deployPressureProtocolEl.textContent = ppText;
+        deployPressureProtocolEl.removeAttribute('hidden');
+      }
+    }
+
+    /* Step 3：buy-in 上限钳位（C/D 档收紧上限；玩家从高档跌到低档时把超额值钳回） */
+    if (deployAmountEl && game && typeof game.getEffectiveMaxBuyIn === 'function') {
+      var maxBase = 99999;
+      var effMax  = game.getEffectiveMaxBuyIn(maxBase);
+      deployAmountEl.max = String(effMax);
+      var current = Math.floor(Number(deployAmountEl.value) || 0);
+      if (current > effMax) deployAmountEl.value = String(effMax);
+    }
+  }
 
   function updateCareerStats() {
     if (!fbcCareerStatsEl) return;
@@ -8682,6 +9042,7 @@
       refreshProtocolLeverageDisplay();
       applyDeployPanelOnboardingChrome();
       updateCareerStats();
+      refreshCreditRatingUI();   /* v0.07：boot 完成进入 PRE_GAME 时刷新信用评级行与 buy-in 上限 */
       bootCompleted = true;
     }
 
@@ -8945,6 +9306,27 @@
       committeeBarEl.classList.remove('active', 'committee-bar--directive');
       committeeTextEl.textContent = '';
     }, 5200);
+  }
+
+  /* v0.07.2 庄家压迫低语（COMMITTEE_PRESSURE_LINES）：
+     与 directive 共用 committee-bar，但加 --pressure 修饰类（冷蓝官僚色，与红色 directive 区隔）。
+     单局触发限制：_pressureFiredKindsThisRun 集合记录本局已触发的类别，避免连层重复。 */
+  var _pressureFiredKindsThisRun = {};
+  function flashCommitteePressureLine(category, opts) {
+    var pool = COMMITTEE_PRESSURE_LINES[category] || [];
+    if (!pool.length) return;
+    if (!opts || !opts.allowRepeat) {
+      if (_pressureFiredKindsThisRun[category]) return;
+      _pressureFiredKindsThisRun[category] = true;
+    }
+    var msg = pool[Math.floor(Math.random() * pool.length)];
+    clearTimeout(_passengerCommitteeTimer);
+    committeeTextEl.textContent = msg;
+    committeeBarEl.classList.add('active', 'committee-bar--directive', 'committee-bar--pressure');
+    _passengerCommitteeTimer = setTimeout(function () {
+      committeeBarEl.classList.remove('active', 'committee-bar--directive', 'committee-bar--pressure');
+      committeeTextEl.textContent = '';
+    }, 5800);   /* 比标准 directive 略长 600ms，让"压迫感"有时间发酵 */
   }
 
   function flashEvacuationDirective() {
@@ -9422,7 +9804,7 @@
    * @param {string} tag
    * @param {number} delta
    * @param {boolean} hasLore
-   * @param {{ edgeAmount?: number, edgeRate?: number }} [meta] FBC 流通损耗等附加注脚
+   * @param {{ edgeAmount?: number, edgeRate?: number, discountAmount?: number, discountMult?: number }} [meta] FBC 流通损耗 / 浮盈折现等附加注脚
    */
   function showDoorResultFrame(tag, delta, hasLore, meta) {
     if (!drfEl) return;
@@ -9438,6 +9820,21 @@
       drfBriefEl.textContent = sign + '\u00a5' + Math.abs(d);
       drfBriefEl.className = 'door-result-frame__brief' +
         (d > 0 ? ' door-result-frame__brief--gain' : d < 0 ? ' door-result-frame__brief--loss' : '');
+    }
+
+    /* v0.07.1 浮盈折现注脚：仅在正向收益且 discountAmount > 0 时显示 */
+    if (drfDiscountEl) {
+      var discountAmount = (meta && Number(meta.discountAmount)) || 0;
+      var discountMult   = (meta && Number(meta.discountMult))   || 1;
+      if (d > 0 && discountAmount > 0 && discountMult < 1) {
+        var pctOff = Math.round((1 - discountMult) * 100);
+        drfDiscountEl.textContent = '// FBC §6.2 已折 \u00a5' + formatYuanComma(discountAmount) +
+          (pctOff > 0 ? ' · ' + pctOff + '% 浮动折现' : ' · 浮动折现');
+        drfDiscountEl.removeAttribute('hidden');
+      } else {
+        drfDiscountEl.textContent = '';
+        drfDiscountEl.setAttribute('hidden', '');
+      }
     }
 
     /* FBC 流通损耗注脚：仅在正向收益且本次税额 > 0 时显示 */
@@ -9463,6 +9860,11 @@
 
     drfEl.setAttribute('aria-hidden', 'false');
     drfEl.classList.add('active');
+
+    /* 三位一体展示框淡入 → 同步触发扫描打印音（直连 master，不受沉浸模式影响） */
+    if (typeof audioEngine !== 'undefined' && typeof audioEngine.playScanPrint === 'function') {
+      audioEngine.playScanPrint();
+    }
 
     /* 4s 后自动消隐；玩家点击上行/撤离可提前中断 */
     _drfHideTimer = setTimeout(hideDoorResultFrame, 4000);
@@ -9728,6 +10130,24 @@
       resultTitleEl.className = 'result-overlay__title result-overlay__title--success';
       resultTitleEl.textContent = '成功撤离 · 档案封存';
       resultBadgeEl.textContent = '// 委员会 · 计价归档';
+      /* v0.07.1：撤离税附加行——仅 surplus > 0 且 taxAmount > 0 时显示。
+         数字格式与战绩页同源：'fmt' = toLocaleString('zh-Hans-CN')。 */
+      var _evTax = data.evacuationTax || null;
+      var _evTaxHTML = '';
+      if (_evTax && _evTax.enabled && _evTax.amount > 0 && _evTax.surplus > 0) {
+        var _evPct = Math.round((_evTax.rate || 0) * 100);
+        var _evAmtStr = (typeof formatYuanComma === 'function')
+          ? formatYuanComma(_evTax.amount)
+          : String(_evTax.amount);
+        _evTaxHTML =
+          '<div class="result-overlay__stat-row result-overlay__stat-row--evtax">' +
+            '<span class="result-overlay__stat-key">手续费</span>' +
+            '<span class="result-overlay__stat-val result-overlay__stat-val--evtax">' +
+              '\u2212\u00a5' + _evAmtStr +
+              (_evPct > 0 ? ' \u00b7 ' + _evPct + '% \u00b7 FBC \u00a78.1' : ' \u00b7 FBC \u00a78.1') +
+            '</span>' +
+          '</div>';
+      }
       resultBodyEl.innerHTML =
         '<p class="result-overlay__directive">账面已封存；下一趟自许可界面起算。</p>' +
         '<div class="result-overlay__stat-sheet result-overlay__stat-sheet--success">' +
@@ -9739,6 +10159,7 @@
             '<span class="result-overlay__stat-key">净值</span>' +
             '<span class="result-overlay__stat-val result-overlay__stat-val--success">\u00a5' + data.payout + '</span>' +
           '</div>' +
+          _evTaxHTML +
           '<div class="result-overlay__stat-row">' +
             '<span class="result-overlay__stat-key">连胜</span>' +
             '<span class="result-overlay__stat-val result-overlay__stat-val--success">' + data.wins + ' \u5c40</span>' +
@@ -9837,7 +10258,13 @@
     consecutiveWins = 0;
     hideBreach();
     triggerFlash('rgba(50,180,80,.35)', 180);
-    showResult('cashout', { floor: exitFloor, payout: r.payout, wins: wins, quota: exitQuota }, function () {
+    showResult('cashout', {
+      floor:         exitFloor,
+      payout:        r.payout,
+      wins:          wins,
+      quota:         exitQuota,
+      evacuationTax: r.evacuationTax || null   /* v0.07.1：撤离税元信息，供结果屏渲染手续费行 */
+    }, function () {
       resetVisual(); syncUI();
     });
   }
@@ -10251,6 +10678,9 @@
     resetDirector();
     resetPassengerVisual();
 
+    /* v0.07.2 庄家压迫低语限频集合：每局重置 */
+    _pressureFiredKindsThisRun = {};
+
     clearBootTimers();
     pauseBootVideo();
     introCurtainEl.classList.add('intro-curtain--hidden', 'intro-curtain--gone');
@@ -10276,6 +10706,7 @@
     refreshProtocolLeverageDisplay();
     deployStatusEl.classList.remove('active', 'deploy-panel__status--seal');
     updateCareerStats();
+    refreshCreditRatingUI();   /* v0.07：局结束回到许可面板时刷新信用评级行与 buy-in 上限 */
   }
 
   /* ===========================================================
@@ -10713,14 +11144,25 @@
     if (o.kind !== 'LIQUIDATION') {
       var frameTag = (narrative && narrative.tag) ? narrative.tag : '';
       var edgeMeta = {
-        edgeAmount: (typeof o._fbcEdgeAmount === 'number') ? o._fbcEdgeAmount : 0,
-        edgeRate:   (typeof o._fbcEdgeRate   === 'number') ? o._fbcEdgeRate   : 0
+        edgeAmount:     (typeof o._fbcEdgeAmount        === 'number') ? o._fbcEdgeAmount        : 0,
+        edgeRate:       (typeof o._fbcEdgeRate          === 'number') ? o._fbcEdgeRate          : 0,
+        discountAmount: (typeof o._surplusDiscountAmount === 'number') ? o._surplusDiscountAmount : 0,
+        discountMult:   (typeof o._surplusDiscountMult   === 'number') ? o._surplusDiscountMult   : 1
       };
       showDoorResultFrame(frameTag, deltaMoney, !!_pendingReceiptData, edgeMeta);
-      /* 货舱清点 3 件子产物逐步揭露：在结果框淡入后顺次铺开 */
-      var manifestMs = runManifestReveal(o, deltaMoney, _biomeOfFloor(game.floor), payload.lockerNumber);
+
+      /* v0.07.2 庄家大赢反应：单层"实际到账"delta > quota×4 触发委员会专属低语。
+         判据用 deltaMoney（已扣折现+流通损耗的真实落袋数），与玩家屏幕看到的 +¥XXX 一致。
+         单局每类别仅触发一次（_pressureFiredKindsThisRun 限频）。 */
+      if (game && game.quota > 0 &&
+          (o.kind === 'POSITIVE' || o.kind === 'DOUBLE') &&
+          deltaMoney > game.quota * 4) {
+        setTimeout(function () { flashCommitteePressureLine('bigWin'); }, 900);
+      }
+      /* 货舱清点：onHide 回调在 overlay 实际开始淡出时触发（无论自然结束还是玩家跳过）。
+       * finishReveal() 在 onHide 里调用，bgOutMs 淡出动画天然作为 state 切换的视觉缓冲。 */
+      runManifestReveal(o, deltaMoney, _biomeOfFloor(game.floor), payload.lockerNumber, _doFinishReveal);
       holdMs = 0;
-      revealSettleMs = pace('doorRevealSettleMs', 900) + manifestMs;
     } else {
       holdMs = flashCreditsDeltaInScene(deltaMoney, o, {
         skipInSceneNarrative: true,
@@ -10774,29 +11216,39 @@
       }, pace('surpriseAfterDeltaMs', 300));
     }
 
-    setTimeout(function () {
-      var fr = game.finishReveal();
-      if (!fr.ok) return;
+    /* LIQUIDATION 路径仍走独立 setTimeout；manifest 路径已由 onHide 回调处理 */
+    if (o.kind === 'LIQUIDATION') {
+      setTimeout(_doFinishReveal, revealSettleMs);
+    }
+  }
 
-      if (fr.gameOver) {
-        var _fgLiqDebt  = game._liquidationDebtAmount;
-        var _fgLiqQuota = game.quota;
-        var _fgLiqFloor = game.floor;
-        var _fgLiqCor   = game.corruptionRatio;
-        var liqPanelMs = pace('liquidationPanelDelayMs', 720);
-        setTimeout(function () {
-          showResult('liquidation', { floor: _fgLiqFloor, corruption: _fgLiqCor, debt: _fgLiqDebt, quota: _fgLiqQuota }, function () {
-            game.acknowledgeGameOver(); resetVisual(); syncUI();
-          });
-        }, liqPanelMs);
-        return;
-      }
+  /*
+   * _doFinishReveal：结束揭示阶段的共用回调。
+   * manifest 路径：由 runManifestReveal 的 onHide 在 overlay 淡出时触发。
+   * LIQUIDATION 路径：由 setTimeout(revealSettleMs) 触发。
+   */
+  function _doFinishReveal() {
+    var fr = game.finishReveal();
+    if (!fr.ok) return;
 
-      if (fr.safeNode) return;
-      if (fr.breach) showBreach(game._breachDeadline);
-      syncUI();
-      if (!fr.breach) showReceiptTrigger();
-    }, revealSettleMs);
+    if (fr.gameOver) {
+      var _fgLiqDebt  = game._liquidationDebtAmount;
+      var _fgLiqQuota = game.quota;
+      var _fgLiqFloor = game.floor;
+      var _fgLiqCor   = game.corruptionRatio;
+      var liqPanelMs  = pace('liquidationPanelDelayMs', 720);
+      setTimeout(function () {
+        showResult('liquidation', { floor: _fgLiqFloor, corruption: _fgLiqCor, debt: _fgLiqDebt, quota: _fgLiqQuota }, function () {
+          game.acknowledgeGameOver(); resetVisual(); syncUI();
+        });
+      }, liqPanelMs);
+      return;
+    }
+
+    if (fr.safeNode) return;
+    if (fr.breach) showBreach(game._breachDeadline);
+    syncUI();
+    if (!fr.breach) showReceiptTrigger();
   }
 
   function attemptGoUp() {
@@ -11169,11 +11621,22 @@
     }
 
     if (lockerOverlaySubtitle) {
-      var subTpl = GameController.cfg('lockerSelection.subtitleTemplate',
-        '超时未选 · 委员会代决议（{{ratio}} 折）');
       var clamp = GameController.cfg('fbcOverride.creditsClampRatio', 0.55);
-      lockerOverlaySubtitle.textContent = subTpl
-        .replace('{{ratio}}', Math.round(clamp * 100) + '%');
+      var ratioStr = Math.round(clamp * 100) + '%';
+
+      /* v0.07.2 高偏移加码：副标题切换为"高偏移区"语义；保留 {{ratio}} 占位符兼容 */
+      var pressureMeta = payload.pressureCorruption || null;
+      var subTpl;
+      if (pressureMeta && pressureMeta.active) {
+        subTpl = GameController.cfg('pressureProtocol.corruption.subtitleTemplate',
+          'FBC \u00b7 高偏移区 \u00b7 代决议概率上升（{{ratio}} 折）');
+        lockerOverlaySubtitle.classList.add('locker-overlay__subtitle--pressure');
+      } else {
+        subTpl = GameController.cfg('lockerSelection.subtitleTemplate',
+          '超时未选 · 委员会代决议（{{ratio}} 折）');
+        lockerOverlaySubtitle.classList.remove('locker-overlay__subtitle--pressure');
+      }
+      lockerOverlaySubtitle.textContent = subTpl.replace('{{ratio}}', ratioStr);
     }
 
     _lockerLockedForSelect = false;
@@ -11279,6 +11742,18 @@
   var manifestRevealPage = document.getElementById('manifest-reveal-page');
   var manifestRevealHint = document.getElementById('manifest-reveal-hint');
   var _manifestTimers    = [];
+  /* v0.07.3 点击跳过：当前运行状态与点击处理句柄 */
+  var _manifestLive        = null;  /* { idx, phase } */
+  var _manifestSkipHandler = null;  /* click listener 引用，用于正确移除 */
+  /*
+   * _manifestOnHide：当前 runManifestReveal 的 onHide 回调。
+   *
+   * 必须存为模块变量：hideDoorResultFrame 会在 4000ms 自动调用 hideManifestStrip()，
+   * 触发 _clearManifestTimers()，导致 triggerHide 定时器被取消、onHide 永远不触发、
+   * finishReveal() 不调用、游戏流程卡死。
+   * hideManifestStrip 检测到此变量有值时立即调用，保证 finishReveal 无论何时都能执行。
+   */
+  var _manifestOnHide = null;
 
   /* polarity → 货箱位图 src 映射；后期补充资产时只改这张表 */
   var MANIFEST_CRATE_SRC = {
@@ -11336,14 +11811,22 @@
   }
 
   /**
-   * 渲染并依次揭露 3 件子产物（v0.06：全屏翻页 overlay）。
-   * 节拍：背板入场 → 卡 1（入 + 停 + 出）→ 卡 2 → 卡 3 → 背板出场
-   * @returns {number} 总揭露时长（ms），调用方据此延后 finishReveal。
+   * 渲染并依次揭露 3 件子产物（v0.07.3：全屏翻页 overlay + 点击跳过）。
+   *
+   * 节拍：背板入场 → 卡 1（入 + 停 + 出）→ 卡 2 → 卡 3 → 背板淡出
+   *
+   * v0.07.3 新增：
+   *   - 每张卡进入 holding 阶段后，点击 overlay 任意处立即跳到下一张（或结束）。
+   *   - onHide 回调在 overlay 实际开始淡出时触发（无论自然结束还是跳过），
+   *     调用方在此时执行 finishReveal()，消除状态死窗口。
+   *
+   * @param {Function} [onHide]  overlay 开始淡出时的回调（调用方用来 finishReveal）
    */
-  function runManifestReveal(o, deltaMoney, biome, lockerNumber) {
-    if (!manifestRevealEl || !manifestCardEl) return 0;
-    if (!GameController.cfg('manifestReveal.enabled', true)) return 0;
-    if (o.kind === 'LIQUIDATION' || o.kind === 'SAFE_NODE') return 0;
+  function runManifestReveal(o, deltaMoney, biome, lockerNumber, onHide) {
+    /* 早返回时同样异步触发 onHide，确保 finishReveal 路径畅通 */
+    if (!manifestRevealEl || !manifestCardEl) { if (onHide) setTimeout(onHide, 0); return; }
+    if (!GameController.cfg('manifestReveal.enabled', true)) { if (onHide) setTimeout(onHide, 0); return; }
+    if (o.kind === 'LIQUIDATION' || o.kind === 'SAFE_NODE') { if (onHide) setTimeout(onHide, 0); return; }
 
     biome = biome || _biomeOfFloor(game.floor);
     var pattern = _resolveSplitPattern(o.kind);
@@ -11380,101 +11863,174 @@
       });
     }
 
-    /* 节拍（v0.06：放慢一档，留出阅读 / 思考时间） */
-    var bgInMs       = pace('manifestBgInMs',     240);
-    var cardInMs     = pace('manifestCardInMs',   380);
-    var cardHold     = pace('manifestItemRevealMs', 1100);  /* 原 620 → 1100 */
-    var cardOutMs    = pace('manifestCardOutMs',  280);
-    var bgOutMs      = pace('manifestBgOutMs',    320);
-    var lastExtraMs  = pace('manifestLastExtraHoldMs', 480);  /* 末件再多停 0.48s */
+    /* 节拍（v0.07.3：从 config uiPacing 读取，兜底值对齐心流优化后的默认值） */
+    var bgInMs      = pace('manifestBgInMs',          260);
+    var cardInMs    = pace('manifestCardInMs',         360);
+    var cardHold    = pace('manifestItemRevealMs',     820);
+    var cardOutMs   = pace('manifestCardOutMs',        260);
+    var bgOutMs     = pace('manifestBgOutMs',          320);
+    var lastExtraMs = pace('manifestLastExtraHoldMs',  360);
 
-    /* 重置 */
+    /* ── 重置 ── */
     _clearManifestTimers();
+    _manifestLive = null;
+    _manifestOnHide = null;  /* 清掉上一轮残留，防旧回调在本轮被误触发 */
+    if (_manifestSkipHandler && manifestRevealEl) {
+      manifestRevealEl.removeEventListener('click', _manifestSkipHandler);
+      _manifestSkipHandler = null;
+    }
     manifestCardEl.classList.remove('entering', 'exiting');
     manifestCardEl.setAttribute('data-polarity', 'neutral');
+    if (manifestRevealLot) manifestRevealLot.textContent = 'LOT ' + _formatLockerForReveal(lockerNumber);
 
-    /* 标头 LOT / 极性提示 */
-    if (manifestRevealLot) {
-      manifestRevealLot.textContent = 'LOT ' + _formatLockerForReveal(lockerNumber);
-    }
+    /* 注册 onHide 到模块变量：hideManifestStrip 外部中断时可兜底调用，防流程卡死 */
+    _manifestOnHide = onHide || null;
 
-    /* 显示背板 */
+    /* ── 背板入场 ── */
     manifestRevealEl.classList.add('active');
-    manifestRevealEl.setAttribute('aria-hidden', 'false');
+    manifestRevealEl.removeAttribute('aria-hidden');
 
-    var t0 = bgInMs;
-    for (var ci = 0; ci < items.length; ci++) {
-      (function (it, idx) {
-        var inAt   = t0 + idx * (cardInMs + cardHold + cardOutMs);
-        var holdAt = inAt + cardInMs;
-        var outAt  = holdAt + cardHold;
-        /* 末件多停 lastExtraMs，让玩家盯住数字消化 */
-        if (idx === items.length - 1) outAt += lastExtraMs;
-        /* 卡片入场：填内容 + 加 entering */
-        _qManifest(function () {
-          if (manifestCardTagEl)   manifestCardTagEl.textContent   = it.tag;
-          if (manifestCardNameEl)  manifestCardNameEl.textContent  = it.name;
-          if (manifestCardDeltaEl) manifestCardDeltaEl.textContent = it.deltaText;
-          if (manifestRevealPage)  manifestRevealPage.textContent  =
-            (idx + 1 < 10 ? '0' : '') + (idx + 1) + ' / ' +
-            (items.length < 10 ? '0' : '') + items.length;
-          if (manifestRevealHint)  manifestRevealHint.textContent  =
-            idx === 0 ? '清点中…'
-            : (idx === items.length - 1 ? '末件登记中…' : '继续清点…');
-
-          manifestCardEl.setAttribute('data-polarity', it.dataPolarity);
-          /* 切换位图 src（占位阶段三态指向同一张图，后期可分别替换） */
-          if (manifestCardImgEl && MANIFEST_CRATE_SRC[it.dataPolarity]) {
-            var nextSrc = MANIFEST_CRATE_SRC[it.dataPolarity];
-            if (manifestCardImgEl.getAttribute('src') !== nextSrc) {
-              manifestCardImgEl.setAttribute('src', nextSrc);
-            }
-          }
-          /* 触发 reflow 让 transform/opacity 重置 */
-          manifestCardEl.classList.remove('entering', 'exiting');
-          /* eslint-disable no-unused-expressions */
-          void manifestCardEl.offsetWidth;
-          /* eslint-enable no-unused-expressions */
-          manifestCardEl.classList.add('entering');
-          if (typeof audioEngine !== 'undefined' && typeof audioEngine.playManifestRevealItem === 'function') {
-            audioEngine.playManifestRevealItem(
-              it.delta > 0 ? 'gain' : (it.delta < 0 ? 'loss' : 'neutral')
-            );
-          }
-        }, inAt);
-        /* 最后一张不退出，留给背板淡出统一处理 */
-        if (idx < items.length - 1) {
-          _qManifest(function () {
-            manifestCardEl.classList.remove('entering');
-            manifestCardEl.classList.add('exiting');
-          }, outAt);
-        }
-      })(items[ci], ci);
-    }
-
-    /* 末件持续时间相对加长 = cardHold + lastExtraMs + bgOutMs */
-    var totalMs = bgInMs + items.length * cardInMs
-                + (items.length - 1) * (cardHold + cardOutMs)
-                + cardHold + lastExtraMs + bgOutMs;
-    /* 自动淡出：在末件 hold 结束时让背板退出（让位 door-result-frame 与档案按钮） */
-    var hideAt = totalMs - bgOutMs;
-    _qManifest(function () {
+    /* ── triggerHide：overlay 淡出 + 调 onHide（自然完成或跳过末张时调用） ── */
+    function triggerHide() {
+      /* 先清模块变量，防止 hideManifestStrip 在此之后再次调用 onHide */
+      _manifestOnHide = null;
+      _clearManifestTimers();
+      _manifestLive = null;
+      if (_manifestSkipHandler && manifestRevealEl) {
+        manifestRevealEl.removeEventListener('click', _manifestSkipHandler);
+        _manifestSkipHandler = null;
+      }
       if (manifestRevealEl) {
-        manifestRevealEl.classList.remove('active');
+        manifestRevealEl.classList.remove('active', 'skippable');
         manifestRevealEl.setAttribute('aria-hidden', 'true');
       }
-      if (manifestCardEl) {
-        manifestCardEl.classList.add('exiting');
+      if (manifestCardEl) manifestCardEl.classList.add('exiting');
+      if (onHide) onHide();
+    }
+
+    /* ── scheduleFrom：从第 startIdx 张卡开始，delay ms 后入场 ── */
+    function scheduleFrom(startIdx, delay) {
+      for (var ci = startIdx; ci < items.length; ci++) {
+        /*jshint loopfunc:true*/
+        (function (it, idx) {
+          var offset = idx - startIdx;
+          var inAt   = delay + offset * (cardInMs + cardHold + cardOutMs);
+          var holdAt = inAt + cardInMs;
+          var outAt  = holdAt + cardHold;
+          if (idx === items.length - 1) outAt += lastExtraMs;
+
+          /* 卡片入场 */
+          _qManifest(function () {
+            if (manifestCardTagEl)   manifestCardTagEl.textContent   = it.tag;
+            if (manifestCardNameEl)  manifestCardNameEl.textContent  = it.name;
+            if (manifestCardDeltaEl) manifestCardDeltaEl.textContent = it.deltaText;
+            if (manifestRevealPage)  manifestRevealPage.textContent  =
+              (idx + 1 < 10 ? '0' : '') + (idx + 1) + ' / ' +
+              (items.length < 10 ? '0' : '') + items.length;
+            if (manifestRevealHint) {
+              manifestRevealHint.textContent =
+                idx === 0 ? '清点中…'
+                : (idx === items.length - 1 ? '末件登记中…' : '继续清点…');
+              manifestRevealHint.classList.remove('manifest-reveal-overlay__hint--skip');
+            }
+            manifestCardEl.setAttribute('data-polarity', it.dataPolarity);
+            if (manifestCardImgEl && MANIFEST_CRATE_SRC[it.dataPolarity]) {
+              var nextSrc = MANIFEST_CRATE_SRC[it.dataPolarity];
+              if (manifestCardImgEl.getAttribute('src') !== nextSrc) manifestCardImgEl.setAttribute('src', nextSrc);
+            }
+            manifestCardEl.classList.remove('entering', 'exiting');
+            /* eslint-disable no-unused-expressions */
+            void manifestCardEl.offsetWidth;
+            /* eslint-enable no-unused-expressions */
+            manifestCardEl.classList.add('entering');
+            if (_manifestLive) { _manifestLive.idx = idx; _manifestLive.phase = 'entering'; }
+            if (manifestRevealEl) manifestRevealEl.classList.remove('skippable');
+            if (typeof audioEngine !== 'undefined' && typeof audioEngine.playManifestRevealItem === 'function') {
+              audioEngine.playManifestRevealItem(it.delta > 0 ? 'gain' : (it.delta < 0 ? 'loss' : 'neutral'));
+            }
+          }, inAt);
+
+          /* 卡片完整入场后 → 进入 holding，开放跳过 */
+          _qManifest(function () {
+            if (!_manifestLive) return;
+            _manifestLive.phase = 'holding';
+            if (manifestRevealHint) {
+              manifestRevealHint.textContent = '// 点击任意处继续';
+              manifestRevealHint.classList.add('manifest-reveal-overlay__hint--skip');
+            }
+            if (manifestRevealEl) manifestRevealEl.classList.add('skippable');
+          }, holdAt);
+
+          /* 非末张：定时退出 */
+          if (idx < items.length - 1) {
+            _qManifest(function () {
+              if (!_manifestLive) return;
+              _manifestLive.phase = 'exiting';
+              if (manifestRevealHint) {
+                manifestRevealHint.textContent = '';
+                manifestRevealHint.classList.remove('manifest-reveal-overlay__hint--skip');
+              }
+              if (manifestRevealEl) manifestRevealEl.classList.remove('skippable');
+              manifestCardEl.classList.remove('entering');
+              manifestCardEl.classList.add('exiting');
+            }, outAt);
+          }
+        })(items[ci], ci);
       }
-    }, hideAt);
-    return totalMs;
+
+      /* 末张 hold+lastExtraMs 结束 → 触发淡出 */
+      var remaining    = items.length - startIdx;
+      var lastInAt     = delay + (remaining - 1) * (cardInMs + cardHold + cardOutMs);
+      var newHideAt    = lastInAt + cardInMs + cardHold + lastExtraMs;
+      _qManifest(triggerHide, newHideAt);
+    }
+
+    /* ── 点击跳过处理器 ── */
+    _manifestLive = { idx: -1, phase: 'idle' };
+    _manifestSkipHandler = function () {
+      if (!_manifestLive || _manifestLive.phase !== 'holding') return;
+      var idx    = _manifestLive.idx;
+      var isLast = idx === items.length - 1;
+
+      /* 轻音效反馈 */
+      if (typeof audioEngine !== 'undefined' && typeof audioEngine.playManifestRevealItem === 'function') {
+        audioEngine.playManifestRevealItem('neutral');
+      }
+
+      _clearManifestTimers();
+      _manifestLive.phase = 'skipping';
+      if (manifestRevealHint) {
+        manifestRevealHint.textContent = '';
+        manifestRevealHint.classList.remove('manifest-reveal-overlay__hint--skip');
+      }
+      if (manifestRevealEl) manifestRevealEl.classList.remove('skippable');
+
+      if (!isLast) {
+        /* 跳到下一张：先退出当前卡，再从下一张重排序列 */
+        manifestCardEl.classList.remove('entering');
+        manifestCardEl.classList.add('exiting');
+        scheduleFrom(idx + 1, cardOutMs);
+      } else {
+        /* 末张跳过：直接触发淡出（onHide 内部调用 finishReveal） */
+        triggerHide();
+      }
+    };
+    manifestRevealEl.addEventListener('click', _manifestSkipHandler);
+
+    /* ── 启动排序 ── */
+    scheduleFrom(0, bgInMs);
   }
 
   function hideManifestStrip() {
     /* 兼容旧调用：同时关闭新 overlay 与遗留 strip 容器 */
     _clearManifestTimers();
+    _manifestLive = null;
+    if (_manifestSkipHandler && manifestRevealEl) {
+      manifestRevealEl.removeEventListener('click', _manifestSkipHandler);
+      _manifestSkipHandler = null;
+    }
     if (manifestRevealEl) {
-      manifestRevealEl.classList.remove('active');
+      manifestRevealEl.classList.remove('active', 'skippable');
       manifestRevealEl.setAttribute('aria-hidden', 'true');
     }
     if (manifestCardEl) {
@@ -11484,6 +12040,16 @@
     if (manifestStripEl) {
       manifestStripEl.innerHTML = '';
       manifestStripEl.setAttribute('aria-hidden', 'true');
+    }
+    /*
+     * 中断保护：若 manifest 被外部强制终止（如 hideDoorResultFrame 4s 自动触发）
+     * 导致 triggerHide 定时器被 _clearManifestTimers 取消，onHide 未来得及调用，
+     * 则在此补调，确保 finishReveal() 路径畅通，防止游戏流程卡死。
+     */
+    if (_manifestOnHide) {
+      var _pendingOnHide = _manifestOnHide;
+      _manifestOnHide = null;
+      _pendingOnHide();
     }
   }
 
@@ -11666,8 +12232,30 @@
                    c.total_committee_overrides > 0;
 
       if (!hasAny) {
+        /* 空状态缺省图：实心块电梯井图示，无线形元素 */
+        var _floorDots = '';
+        for (var _f = 0; _f < 5; _f++) {
+          _floorDots += '<span class="fbc-career-empty__floor-dot' +
+            (_f === 2 ? ' fbc-career-empty__floor-dot--lit' : '') + '"></span>';
+        }
         careerCt.innerHTML =
-          '<div class="fbc-career-empty">// 暂无作业记录 · 上行后自动归档</div>' +
+          '<div class="fbc-career-empty">' +
+            '<div class="fbc-career-empty__illu" aria-hidden="true">' +
+              '<div class="fbc-career-empty__floors">' + _floorDots + '</div>' +
+              '<div class="fbc-career-empty__top-bar"></div>' +
+              '<div class="fbc-career-empty__cabin">' +
+                '<div class="fbc-career-empty__door"></div>' +
+                '<div class="fbc-career-empty__door"></div>' +
+              '</div>' +
+              '<div class="fbc-career-empty__bottom-bar"></div>' +
+              '<div class="fbc-career-empty__shaft">' +
+                '<div class="fbc-career-empty__shaft-col"></div>' +
+                '<div class="fbc-career-empty__shaft-col fbc-career-empty__shaft-col--right"></div>' +
+              '</div>' +
+              '<div class="fbc-career-empty__badge">VOID</div>' +
+            '</div>' +
+            '<span class="fbc-career-empty__msg">// 暂无作业记录 · 上行后自动归档</span>' +
+          '</div>' +
           '<div class="fbc-rules-section__body" style="margin-top:14px;line-height:1.7;">' +
           '档案库会在每趟上行 / 撤离 / 破产后自动留痕，含建仓投入、核销资产、综合损益、深度记录与破产损失。' +
           '</div>';

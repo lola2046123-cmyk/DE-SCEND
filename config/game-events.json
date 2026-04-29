@@ -271,20 +271,20 @@
     "odometerDelayAfterOpenMs": 160,
     "passengerResyncDelayMs": 560,
     "liquidationPanelDelayMs": 780,
-    "doorRevealSettleMs": 200,
-    "_doorRevealSettleNote_v0_06_1": "v0.06.1：从兜底 900ms 压到 200ms。以前 manifest overlay 退场后还会再 settle 900ms 才让按钮可点，这段是无信息死等。lastExtraMs(1200) + bgOutMs(360) 已经为玩家留足消化时间，settle 只需保留极短 finishReveal 调度延迟。",
+    "doorRevealSettleMs": 0,
+    "_doorRevealSettleNote_v0_07_3": "v0.07.3：彻底清零。finishReveal() 现在在 manifest overlay 开始淡出时（hideAt）就触发，bgOutMs(360ms) 淡出动画本身就是 state 切换的视觉缓冲，不再需要额外 settle 死等。",
     "lockerOverlayShowMs": 360,
     "lockerSelectFlipMs": 520,
     "lockerToManifestMs": 320,
     "manifestBgInMs": 260,
     "manifestCardInMs": 360,
-    "manifestItemRevealMs": 1500,
-    "manifestCardOutMs": 280,
-    "manifestBgOutMs": 360,
-    "manifestLastExtraHoldMs": 1200,
+    "manifestItemRevealMs": 820,
+    "manifestCardOutMs": 260,
+    "manifestBgOutMs": 320,
+    "manifestLastExtraHoldMs": 360,
     "manifestItemHoldMs": 820,
     "manifestSettleMs": 1600,
-    "_pacingNote_v0_06": "v0.06 中文物品名后阅读时长收紧：manifestItemRevealMs 兜底 1100→1500（每件 hold 多 ~0.4s），manifestLastExtraHoldMs 480→1200（末件再多停 ~0.72s 让玩家盯住总览/三件汇总）。runManifestReveal 实际通过 pace() 读取本节字段，manifestItemHoldMs / manifestSettleMs 仅作存档兼容。",
+    "_pacingNote_v0_07_3": "v0.07.3 心流修复：manifestItemRevealMs 1500→820ms（每件仍有足够阅读时间），manifestLastExtraHoldMs 1200→360ms（末件不再死等），manifestBgOutMs/CardOutMs 微调。结合 finishReveal 结构修复，总等待从 ~8.16s 压缩至 ~3.6s（减少 4.5s）。",
     "gainFlashHoldMultTier1": 1.32,
     "gainFlashHoldMultTier2": 1.58,
     "gainFlashHoldMultTier3": 1.98,
@@ -430,7 +430,7 @@
   },
 
   "lockerHintCopy": {
-    "_comment": "情报员/清扫员 等乘客上车后给出的柜号情报话术。${locker} 是柜号，${kind} 是情报极性（好/坏）。v0.06 中国本土化：加入老韭菜/赌徒/包工头口吻的『梭哈』『年终奖』『割肉』『闷声发大财』等中国式情绪词。",
+    "_comment": "情报员/清扫员 等乘客上车后给出的柜号情报话术。${locker} 是柜号，${kind} 是情报极性（好/坏）。v0.06 中国本土化：加入老韭菜/赌徒/包工头口吻的『梭哈』『年终奖』『割肉』『闷声发大财』等中国式情绪词。v0.06.4 按 passenger.identity 拆池：INFORMER 走 FBC 内部情报腔（官僚+精准），CLEANER 走市井 / 工人 / 老韭菜腔（烟火气+不精确）。引擎按 byIdentity[id][polarity] 取池，缺失时回落到顶层 good/bad 兜底池（兼容旧档案 / 未识别身份）。",
     "good": [
       "情报员低声: \"${locker} 号有油水。\"",
       "情报员: \"赌一把 ${locker} 号，错不了。\"",
@@ -446,6 +446,123 @@
       "情报员摇头: \"${locker} 号专坑新韭菜。\"",
       "老股民冷笑: \"${locker} 号——上一波就割在这。\"",
       "清扫员压低声音: \"${locker} 号别贪，止损要紧。\""
+    ],
+    "byIdentity": {
+      "_comment": "v0.06.4 拆池：每身份每极性当前 3 条，对应顶层 12 条的纯化分组；v0.07 可继续扩条至每池 6 条以减重复感。",
+      "INFORMER": {
+        "_persona": "FBC 内部情报腔——侦测/编号/规程语态，官僚冷感，信息精准但生硬。",
+        "good": [
+          "情报员低声: \"${locker} 号有油水。\"",
+          "情报员: \"赌一把 ${locker} 号，错不了。\"",
+          "情报员压低声音: \"${locker} 号押对了，年终奖。\""
+        ],
+        "bad": [
+          "情报员低声: \"${locker} 号别碰，里面不干净。\"",
+          "情报员: \"听说 ${locker} 号是套子。\"",
+          "情报员摇头: \"${locker} 号专坑新韭菜。\""
+        ]
+      },
+      "CLEANER": {
+        "_persona": "市井 / 工人 / 老韭菜腔——烟火气，非官方情报源，信息不精确，带怀疑与情绪。",
+        "good": [
+          "清扫员瞥了眼 ${locker}: \"昨天那柜……重得很。\"",
+          "老韭菜耳语: \"${locker} 号——这把不割。\"",
+          "包工头叼着烟: \"${locker} 号？闷声发大财。\""
+        ],
+        "bad": [
+          "清扫员摇头: \"${locker} 号？我刚擦过血迹。\"",
+          "老股民冷笑: \"${locker} 号——上一波就割在这。\"",
+          "清扫员压低声音: \"${locker} 号别贪，止损要紧。\""
+        ]
+      }
+    }
+  },
+
+  "surplusDiscount": {
+    "_comment": "v0.07.1 浮盈折现（House Edge 升级 ⑤）：高资产玩家的正向 delta 按 stakeRatio = stake / quota 分档折现，先于 fbcEdge 生效。tiers 按 stakeRatioMin 降序遍历，第一个命中返回 multiplier；stakeRatio < 最小 tier 时返回 1（无折现）。语义为'守钱比赚钱难——超过 quota×3 后涨幅缩水 12%、超过 quota×6 后再砍 28%'。仅 delta > 0 时生效；与 fbcEdge 串行（折现先扣，流通损耗再切剩余 delta）。enabled=false 整段 no-op。",
+    "enabled": true,
+    "tiers": [
+      { "stakeRatioMin": 6.0, "multiplier": 0.72, "label": "millionaire-trap" },
+      { "stakeRatioMin": 3.0, "multiplier": 0.88, "label": "freeze" }
     ]
+  },
+
+  "evacuationTax": {
+    "_comment": "v0.07.1 撤离税（House Edge 升级 ⑥）：cashOut 路径（已校验 credits ≥ quota）对超出配额部分征收 surplusTaxRate 的'联邦资产核销手续费'；配额内的收益不征税，玩家感受是'赚得多交得多'而非'赚了还扣'。debtCashout 不在此机制内（未达配额已自然失血）。enabled=false 整段 no-op。",
+    "enabled": true,
+    "surplusTaxRate": 0.08
+  },
+
+  "pressureProtocol": {
+    "_comment": "v0.07.2 探测协议（庄家三触发的连胜+高偏移分支）。子节点：(a) 连胜干预——careerArchive.consecutive_evacuations 达到 triggerEvacuations 时激活，持续 durationRuns 局，期间 fbcEdge +edgeRateBoost；(b) 高偏移加码——corruption.thresholdRatio 之上时本局选盘 countdown × corruption.countdownMult，副标题改为高偏移区文案。enabled=false 全部 no-op；两类子触发独立判定，互不依赖。",
+    "enabled": true,
+    "triggerEvacuations": 3,
+    "durationRuns": 3,
+    "edgeRateBoost": 0.02,
+    "corruption": {
+      "_comment": "高偏移加码（庄家三触发③）：corruptionRatio > thresholdRatio 时缩短选盘 countdown 并改写副标题。countdownMult ∈ (0,1]，越小越紧迫；下限钳到 1500ms 防止误关闭决策窗口。",
+      "thresholdRatio": 0.65,
+      "countdownMult": 0.9,
+      "minCountdownMs": 1500,
+      "subtitleTemplate": "FBC \u00b7 高偏移区 \u00b7 代决议概率上升（{{ratio}} 折）"
+    }
+  },
+
+  "creditRating": {
+    "_comment": "v0.07 信用评级 v1（跨局张力系统）：连续清算驱动降档，连续成功撤离驱动升档。所有数值修饰量均相对 A 档基线（A 档全为单位元，关闭等价于始终 A）。enabled=false 时引擎读取 careerArchive 仍照常累加 consecutive_*，但 credit_rating 强制锁定为 'A'，UI 与数值挂钩零副作用——可作为'软回退'紧急开关。一键 git revert 也可。",
+    "enabled": true,
+
+    "downgradeAt": {
+      "_comment": "连续清算次数 → 降档触发。判定顺序 D > C > B（取最严档）。例：4 次连续清算直接落到 D 档。",
+      "B": 2,
+      "C": 3,
+      "D": 4
+    },
+    "upgradeAt": {
+      "_comment": "连续成功撤离（cashOut 路径，已校验 credits ≥ quota）→ 升档触发。当前仅 AAA 一档。",
+      "AAA": 2
+    },
+
+    "tiers": {
+      "_comment": "各档位修饰量。baselineGrowthMult 直接乘在 _applyBaselineGrowth 末端；informerWeightDelta 直接加到 createPassenger 的 INFORMER 权重（最低限 1）；initialBetMaxMult 由 UI 层 getEffectiveMaxBuyIn() 消费，约束授权面板输入上限。pigPeriodMaxFloorDelta 与 debtRestructure 预留 v0.07.1，引擎层暂未挂钩。",
+
+      "AAA": {
+        "_label": "AAA · 联邦优先通道",
+        "baselineGrowthMult":     1.00,
+        "pigPeriodMaxFloorDelta": -1,
+        "initialBetMaxMult":      1.20,
+        "informerWeightDelta":    0
+      },
+      "A": {
+        "_label": "A · 基线",
+        "baselineGrowthMult":     1.00,
+        "pigPeriodMaxFloorDelta": 0,
+        "initialBetMaxMult":      1.00,
+        "informerWeightDelta":    0
+      },
+      "B": {
+        "_label": "B · 联邦侧偿区间",
+        "baselineGrowthMult":     0.90,
+        "pigPeriodMaxFloorDelta": 2,
+        "initialBetMaxMult":      1.00,
+        "informerWeightDelta":    0
+      },
+      "C": {
+        "_label": "C · 流动性管理介入",
+        "baselineGrowthMult":     0.85,
+        "pigPeriodMaxFloorDelta": 2,
+        "initialBetMaxMult":      0.70,
+        "informerWeightDelta":    -7
+      },
+      "D": {
+        "_label": "D · 债务重组期",
+        "baselineGrowthMult":     0.80,
+        "pigPeriodMaxFloorDelta": 2,
+        "initialBetMaxMult":      0.50,
+        "informerWeightDelta":    -7,
+        "debtRestructure":        true,
+        "debtRestructureQuotaRatio": 0.5
+      }
+    }
   }
 }

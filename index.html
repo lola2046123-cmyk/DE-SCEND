@@ -19,6 +19,22 @@
    * ======================================================= */
 
   /* =======================================================
+   * 工具类：FBC 暗锈滚动条（Design System § SC-01）
+   * 用法：在需要自定义滚动条的容器上添加 .fbc-scrollbar，
+   *       并在该容器自身的规则里声明 overflow-y: auto（或 scroll）。
+   * 规格：宽 6px / 轨道暗棕黑 / thumb 暗锈红 / hover 亮锈
+   * ======================================================= */
+  .fbc-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 75, 60, 0.4) rgba(15, 10, 8, 0.55);
+  }
+  .fbc-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+  .fbc-scrollbar::-webkit-scrollbar-track  { background: rgba(15, 10, 8, 0.55); }
+  .fbc-scrollbar::-webkit-scrollbar-thumb  { background: rgba(120, 75, 60, 0.4); border-radius: 3px; }
+  .fbc-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(170, 105, 80, 0.6); }
+  .fbc-scrollbar::-webkit-scrollbar-corner { background: transparent; }
+
+  /* =======================================================
    * 启动界面（解锁浏览器音频）
    * ======================================================= */
   #game-start-screen {
@@ -1817,7 +1833,15 @@
     padding: 14px 18px 18px;
     flex: 1;
     min-height: 0; /* 允许 flex 子项收缩，防溢出 */
+    /* 暗锈滚动条复用（§ SC-01），与授权面板保持一致 */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 75, 60, 0.4) rgba(15, 10, 8, 0.55);
   }
+  .fbc-menu-panel__body::-webkit-scrollbar { width: 6px; height: 6px; }
+  .fbc-menu-panel__body::-webkit-scrollbar-track  { background: rgba(15, 10, 8, 0.55); }
+  .fbc-menu-panel__body::-webkit-scrollbar-thumb  { background: rgba(120, 75, 60, 0.4); border-radius: 3px; }
+  .fbc-menu-panel__body::-webkit-scrollbar-thumb:hover { background: rgba(170, 105, 80, 0.6); }
+  .fbc-menu-panel__body::-webkit-scrollbar-corner { background: transparent; }
   /* 两 tab 都用 display:flex 填满 body，非激活时隐藏但不占高度 */
   .fbc-menu-page { display: none; }
   .fbc-menu-page.active {
@@ -4796,27 +4820,15 @@
     /* 避免出现纵向滚动条时主内容区宽度突变引发二次排版抖动 */
     scrollbar-gutter: stable;
 
-    /* v0.06：暗锈滚动条（FBC 调性） */
+    /* 暗锈滚动条：使用 .fbc-scrollbar 工具类（见下方全局定义） */
     scrollbar-width: thin;
     scrollbar-color: rgba(120, 75, 60, 0.4) rgba(15, 10, 8, 0.55);
   }
-  .deploy-panel::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  .deploy-panel::-webkit-scrollbar-track {
-    background: rgba(15, 10, 8, 0.55);
-  }
-  .deploy-panel::-webkit-scrollbar-thumb {
-    background: rgba(120, 75, 60, 0.4);
-    border-radius: 3px;
-  }
-  .deploy-panel::-webkit-scrollbar-thumb:hover {
-    background: rgba(170, 105, 80, 0.6);
-  }
-  .deploy-panel::-webkit-scrollbar-corner {
-    background: transparent;
-  }
+  .deploy-panel::-webkit-scrollbar { width: 6px; height: 6px; }
+  .deploy-panel::-webkit-scrollbar-track  { background: rgba(15, 10, 8, 0.55); }
+  .deploy-panel::-webkit-scrollbar-thumb  { background: rgba(120, 75, 60, 0.4); border-radius: 3px; }
+  .deploy-panel::-webkit-scrollbar-thumb:hover { background: rgba(170, 105, 80, 0.6); }
+  .deploy-panel::-webkit-scrollbar-corner { background: transparent; }
   .deploy-panel.hidden { opacity: 0; pointer-events: none; }
 
   .deploy-panel.deploy-panel--pre-reveal {

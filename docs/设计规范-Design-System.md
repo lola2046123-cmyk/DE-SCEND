@@ -1,4 +1,4 @@
-# Last Floor · Design System 设计规范 (v0.06.3)
+# Last Floor · Design System 设计规范 (v0.07.3)
 
 > 作者注：本文档面向 **后续 UI / 关卡 / 弹窗 / 前端组件迭代** 的设计师与工程师，
 > 以 *Control · Federal Bureau of Control* 的官僚美学为基准，
@@ -608,6 +608,55 @@ LED 闪烁动画必须使用 `steps()` 而非 `linear`，模拟 CRT 跳帧。
 
 ---
 
+## SC-01 · 滚动条规范（FBC 暗锈样式）
+
+> 首次在 `deploy-panel` 定义，v0.07.3 起提取为全局工具类 `.fbc-scrollbar`，已复用至 `fbc-menu-panel__body`。
+> **凡需自定义滚动条的容器，一律复用此规格，不得自行设定颜色。**
+
+### 视觉规格
+
+| 属性 | 值 | 说明 |
+|---|---|---|
+| 宽度 | `6px` | 极细，不抢占内容视线 |
+| 轨道（track） | `rgba(15, 10, 8, 0.55)` | 近黑暗棕，融入面板底色 |
+| 滑块（thumb）默认 | `rgba(120, 75, 60, 0.4)` | 暗锈红，FBC 官僚质感 |
+| 滑块 hover | `rgba(170, 105, 80, 0.6)` | 亮锈，给出可拖拽反馈 |
+| 圆角 | `3px` | 与 FBC 面板元素圆角一致 |
+| corner | `transparent` | 消除角落方块 |
+
+### 使用方法
+
+**方法 A：HTML class（推荐，最简洁）**
+```html
+<div class="fbc-scrollbar" style="overflow-y: auto;">...</div>
+<!-- 或叠加到已有 class -->
+<div class="fbc-menu-panel__body fbc-scrollbar">...</div>
+```
+
+**方法 B：CSS 复写（当无法改 HTML 时）**
+```css
+.my-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 75, 60, 0.4) rgba(15, 10, 8, 0.55);
+}
+.my-container::-webkit-scrollbar { width: 6px; height: 6px; }
+.my-container::-webkit-scrollbar-track  { background: rgba(15, 10, 8, 0.55); }
+.my-container::-webkit-scrollbar-thumb  { background: rgba(120, 75, 60, 0.4); border-radius: 3px; }
+.my-container::-webkit-scrollbar-thumb:hover { background: rgba(170, 105, 80, 0.6); }
+.my-container::-webkit-scrollbar-corner { background: transparent; }
+```
+
+### 已复用场景
+
+| 容器 | 方式 |
+|---|---|
+| `#deploy-panel`（授权面板） | CSS 复写（首次定义） |
+| `.fbc-menu-panel__body`（菜单战绩/规则面板） | CSS 复写（v0.07.3 补齐） |
+
+> 若未来出现新的可滚动面板（结果弹窗、档案弹窗等），优先在 HTML 上加 `.fbc-scrollbar` 类，不要再写新的 `-webkit-scrollbar` 规则。
+
+---
+
 ## 15 · 检查清单 Checklist（提交新组件前必过）
 
 - [ ] 颜色全部用 `--ds-*` 或既有 token，无硬编码黄/暖金/暖橙；
@@ -695,5 +744,6 @@ LED 闪烁动画必须使用 `steps()` 而非 `linear`，模拟 CRT 跳帧。
 
 ---
 
-*文档维护：v0.06.3 · 2026-04-28*
-*下一步迭代建议：v0.07 引入 `--ds-info-cyan` 用于"信息提示"语义层（仅在确实需要第三色时再加）。*
+*文档维护：v0.07.3 · 2026-04-30*
+*v0.07.3 新增：SC-01 滚动条规范（FBC 暗锈样式）+ `.fbc-scrollbar` 全局工具类。*
+*v0.07 色彩注：全局财务数值颜色已翻转为红涨绿跌（中国金融惯例），P-02 "红=警示/绿=增益"规则仅适用于 UI 状态/情报标记，不适用于财务数字读数。*

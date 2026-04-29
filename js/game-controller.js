@@ -426,7 +426,7 @@
   /* v0.07.1 浮盈折现（House Edge 升级 ⑤）：仅 delta > 0 时生效，按 stake / quota 分档查表。
      tiers 在配置中按 stakeRatioMin 降序排列；引擎从高到低遍历命中第一个返回。 */
   var SURPLUS_DISCOUNT_CFG = (function () {
-    var enabled = cfg('surplusDiscount.enabled', false);
+    var enabled = cfg('surplusDiscount.enabled', true);
     var raw = cfg('surplusDiscount.tiers', []) || [];
     var tiers = [];
     if (Array.isArray(raw)) {
@@ -441,6 +441,13 @@
         }
       }
       tiers.sort(function (a, b) { return b.stakeRatioMin - a.stakeRatioMin; });
+    }
+    /* config 加载失败时的硬编码保底 tiers，与 game-events.json 保持同步 */
+    if (!tiers.length) {
+      tiers = [
+        { stakeRatioMin: 6.0, multiplier: 0.72, label: 'millionaire-trap' },
+        { stakeRatioMin: 3.0, multiplier: 0.88, label: 'freeze'           }
+      ];
     }
     return { enabled: !!enabled, tiers: tiers };
   })();
@@ -2247,10 +2254,10 @@
     /* v0.07.1 撤离税（House Edge 升级 ⑥）：仅对超额部分（surplus = max(0, credits − quota)）征税，
        配额内的收益不征税——玩家感受是"赚得多交得多"而非"赚了还扣"。
        enabled=false 或 surplus=0 时整段 no-op，payout = grossCredits。 */
-    var taxEnabled = !!cfg('evacuationTax.enabled', false);
+    var taxEnabled = !!cfg('evacuationTax.enabled', true);
     var surplus    = Math.max(0, grossCredits - this.quota);
     var taxRate    = (taxEnabled && surplus > 0)
-      ? Math.max(0, Math.min(0.5, Number(cfg('evacuationTax.surplusTaxRate', 0)) || 0))
+      ? Math.max(0, Math.min(0.5, Number(cfg('evacuationTax.surplusTaxRate', 0.08)) || 0))
       : 0;
     var taxAmount  = Math.floor(surplus * taxRate);
     var payout     = Math.max(0, grossCredits - taxAmount);

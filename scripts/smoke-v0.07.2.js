@@ -194,7 +194,11 @@ const game2 = new GC({ initialBet: 1000 });
 // 强制设置 credits = quota × 2（表示已超额）
 game2.credits = game2.quota * 2;
 const expectSurplus = game2.quota;
-const expectTax = Math.floor(expectSurplus * 0.08);
+/* v0.08.0：撤离税从单一 8% 切换为阶梯查表，期望从 GC.pickEvacuationTaxRate 动态算 */
+const _expectRate = (typeof GC.pickEvacuationTaxRate === 'function')
+  ? GC.pickEvacuationTaxRate(expectSurplus)
+  : 0.08;
+const expectTax = Math.floor(expectSurplus * _expectRate);
 const expectPayout = (game2.quota * 2) - expectTax;
 
 // 设到 IDLE — canCashOut 允许 IDLE / DECIDING / SAFE_NODE / HISS_BREACH

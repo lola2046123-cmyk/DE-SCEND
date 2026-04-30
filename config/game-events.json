@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "version": "0.07.5",
-    "description": "《暴富电梯》事件概率与数值配置表（局内计价规程）。修改此文件即可调整游戏平衡，无需改动代码。v0.07.5：庄家经济重平衡（Layer 1 + Layer 3）——outcomeBands 全面下调（DOUBLE 倍率 2.0→1.55、概率 15%→12%；POSITIVE 1.10-1.20→1.06-1.12）+ liquidationClawback 跨局追溯（清算时从生涯净利润追扣 8%，封顶 20%）。v0.07.4：货舱清点稀缺感（6 档梯度 + 钓鱼噪声 40%）。v0.07：信用评级 + 浮盈折现 + 撤离税 + 委员会三触发。v0.06：动态配额 + FBC 边际抽佣。",
+    "version": "0.08.0",
+    "description": "《暴富电梯》事件概率与数值配置表（局内计价规程）。修改此文件即可调整游戏平衡，无需改动代码。v0.08.0：累进税制（Layer 2 + Layer 4）——fbcEdgeCareerScale 按生涯净利润放大流通损耗（高资产玩家边际抽水可达基础 4.5x）+ evacuationTax.tiers 累进撤离税（surplus 阶梯 6%/16%/30%/45%）。v0.07.5：庄家经济重平衡——outcomeBands 全面下调 + liquidationClawback 跨局追溯。v0.07.4：货舱清点稀缺感。v0.07：信用评级 + 浮盈折现 + 撤离税 + 委员会三触发。v0.06：动态配额 + FBC 边际抽佣。",
     "lastUpdated": "2026-04-30"
   },
 
@@ -64,7 +64,7 @@
   },
 
   "fbcEdge": {
-    "_comment": "联邦资产流通损耗（House Edge）。对每次结算的正向 delta 按结果带分级抽水；亏损/清算不抽税。所有税额计入 outcome._fbcEdgeAmount 供 UI 显示。",
+    "_comment": "联邦资产流通损耗（House Edge）。对每次结算的正向 delta 按结果带分级抽水；亏损/清算不抽税。所有税额计入 outcome._fbcEdgeAmount 供 UI 显示。v0.08.0：在基础税率上叠加 careerScale 累进倍率，让 high-roller 玩家承担更高边际税。",
     "enabled": true,
     "rates": {
       "POSITIVE":    0.04,
@@ -73,7 +73,21 @@
       "NEGATIVE":    0.0,
       "LIQUIDATION": 0.0
     },
-    "label": "联邦资产流通损耗"
+    "label": "联邦资产流通损耗",
+    "careerScale": {
+      "_comment": "v0.08.0 累进抽佣（Layer 2）：根据生涯净利润对 fbcEdge 实时缩放。仿效真实赌场对 'high-roller' 的隐形加税——你赢得越多，每一次正向收益被抽走的比例越大。tiers 按 pnlAtLeast 升序排列；引擎从高到低反向遍历命中第一个返回。pnl 越大 → edgeMult 越大；pnl < 第一档 (-20000) 时启用最低 mult（默认 0.6 减税挽留），实际抽水率被钳到 [0, 0.5]。enabled=false 整段 no-op，等价 v0.07.5 行为。",
+      "enabled": true,
+      "tiers": [
+        { "pnlAtLeast":  -20000, "edgeMult": 0.6,  "label": "deep-loss-mercy"   },
+        { "pnlAtLeast":   -5000, "edgeMult": 0.85, "label": "shallow-loss"      },
+        { "pnlAtLeast":       0, "edgeMult": 1.0,  "label": "baseline"          },
+        { "pnlAtLeast":    5000, "edgeMult": 1.5,  "label": "modest-winner"     },
+        { "pnlAtLeast":   20000, "edgeMult": 2.2,  "label": "wealthy"           },
+        { "pnlAtLeast":   50000, "edgeMult": 3.2,  "label": "high-roller"       },
+        { "pnlAtLeast":  100000, "edgeMult": 4.5,  "label": "millionaire-trap"  }
+      ],
+      "fallbackMult": 0.6
+    }
   },
 
   "floorsJumped": {
@@ -264,8 +278,8 @@
   "uiPacing": {
     "_comment": "开门后主流程节拍：避免叙事/金额/惊喜/弹窗在同一帧抢拍。单位 ms。",
     "narrativeFlashMs": 680,
-    "deltaFlashMs": 2400,
-    "afterDeltaHoldMs": 320,
+    "deltaFlashMs": 2800,
+    "afterDeltaHoldMs": 400,
     "safeNodeOverlayDelayMs": 960,
     "surpriseAfterDeltaMs": 320,
     "odometerDelayAfterOpenMs": 160,
@@ -503,7 +517,14 @@
   "evacuationTax": {
     "_comment": "v0.07.1 撤离税（House Edge 升级 ⑥）：cashOut 路径（已校验 credits ≥ quota）对超出配额部分征收 surplusTaxRate 的'联邦资产核销手续费'；配额内的收益不征税，玩家感受是'赚得多交得多'而非'赚了还扣'。debtCashout 不在此机制内（未达配额已自然失血）。enabled=false 整段 no-op。",
     "enabled": true,
-    "surplusTaxRate": 0.08
+    "_legacyComment": "v0.07.1: 单一 surplusTaxRate；v0.08.0 起优先读 tiers，缺省回退到 surplusTaxRate（保持向后兼容）。",
+    "surplusTaxRate": 0.08,
+    "tiers": [
+      { "surplusAtLeast":     0, "rate": 0.06, "label": "modest"      },
+      { "surplusAtLeast":  5000, "rate": 0.16, "label": "comfortable" },
+      { "surplusAtLeast": 15000, "rate": 0.30, "label": "wealthy"     },
+      { "surplusAtLeast": 50000, "rate": 0.45, "label": "jackpot-tax" }
+    ]
   },
 
   "liquidationClawback": {

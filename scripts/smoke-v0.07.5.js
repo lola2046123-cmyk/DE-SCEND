@@ -63,7 +63,9 @@ function section(title) { console.log('\n[' + title + ']'); }
  * Test 1：config 健全性
  * =================================================================== */
 section('Test 1 · config 健全性');
-expect(cfg('_meta.version') === '0.07.5',                 '_meta.version = 0.07.5');
+/* v0.07.5 引入的核心字段必须仍存在；版本号已被后续版本继承（不再硬比较） */
+expect(/^0\.0[7-9]\./.test(cfg('_meta.version', '')) || cfg('_meta.version', '') >= '0.07.5',
+  '_meta.version >= 0.07.5（当前 ' + cfg('_meta.version') + '）');
 expect(cfg('thresholds.liquidationMax') === 0.13,         'liquidationMax = 0.13 (旧 0.12，+1pp)');
 expect(cfg('thresholds.positiveMax') === 0.88,            'positiveMax = 0.88 (DOUBLE 概率 12%)');
 expect(cfg('outcomeBands.positive.creditsMultiplierMin') === 1.06, 'positive.min = 1.06');

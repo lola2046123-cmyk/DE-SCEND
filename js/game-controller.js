@@ -486,6 +486,25 @@
     var label   = cfg('fbcEdge.label', '联邦资产流通损耗');
     /* 硬编码保底：config 加载失败时确保 House Edge 税率不归零 */
     var RATE_FALLBACK = { POSITIVE: 0.04, DOUBLE: 0.08, GOLDEN: 0.12, NEGATIVE: 0, LIQUIDATION: 0 };
+
+    /* v0.08.0 累进抽佣（Layer 2）：把 careerScale 配置规整成升序 tiers，
+       便于 _pickFbcEdgeCareerMult 反向遍历命中第一个区间。 */
+    var careerScaleRaw = cfg('fbcEdge.careerScale', null) || {};
+    var careerScaleTiers = [];
+    if (Array.isArray(careerScaleRaw.tiers)) {
+      for (var ti = 0; ti < careerScaleRaw.tiers.length; ti++) {
+        var t = careerScaleRaw.tiers[ti];
+        if (t && typeof t === 'object' && typeof t.pnlAtLeast === 'number' && typeof t.edgeMult === 'number') {
+          careerScaleTiers.push({
+            pnlAtLeast: Number(t.pnlAtLeast),
+            edgeMult:   Math.max(0, Number(t.edgeMult)),
+            label:      String(t.label || '')
+          });
+        }
+      }
+      careerScaleTiers.sort(function (a, b) { return a.pnlAtLeast - b.pnlAtLeast; });
+    }
+
     return {
       enabled: !!enabled,
       label:   String(label),
@@ -495,15 +514,85 @@
         GOLDEN:      Number(rates.GOLDEN)      || RATE_FALLBACK.GOLDEN,
         NEGATIVE:    Number(rates.NEGATIVE)    || RATE_FALLBACK.NEGATIVE,
         LIQUIDATION: Number(rates.LIQUIDATION) || RATE_FALLBACK.LIQUIDATION
+      },
+      careerScale: {
+        enabled:      !!careerScaleRaw.enabled,
+        tiers:        careerScaleTiers,
+        fallbackMult: Math.max(0, Number(careerScaleRaw.fallbackMult || 1))
       }
     };
   })();
 
-  function pickFbcEdgeRate(outcome) {
+  /**
+   * v0.08.0 累进抽佣：按生涯 P&L 命中 careerScale.tiers 返回 edgeMult。
+   * tiers 已按 pnlAtLeast 升序排序，从高到低反向遍历，命中第一个 pnl >= pnlAtLeast 即返回。
+   * 若无 tier 命中（即 pnl < 第一档），返回 fallbackMult（默认 0.6 减税挽留）。
+   * careerScale.enabled=false 时直接返回 1（no-op）。
+   */
+  function _pickFbcEdgeCareerMult(careerPnl) {
+    var cs = FBC_EDGE_CFG.careerScale;
+    if (!cs || !cs.enabled || !cs.tiers || !cs.tiers.length) return 1;
+    var pnl = Number(careerPnl) || 0;
+    for (var i = cs.tiers.length - 1; i >= 0; i--) {
+      if (pnl >= cs.tiers[i].pnlAtLeast) return cs.tiers[i].edgeMult;
+    }
+    return cs.fallbackMult;
+  }
+
+  /**
+   * v0.08.0 累进撤离税（Layer 4）：按 surplus 命中 evacuationTax.tiers 返回 rate。
+   * tiers 缺省（或非数组）时回退到 surplusTaxRate 单一档（v0.07.1 行为）。
+   * 最终 rate 钳到 [0, 0.5]。
+   */
+  function _getEvacuationTaxTiers() {
+    var raw = cfg('evacuationTax.tiers', null);
+    if (!Array.isArray(raw) || !raw.length) return null;
+    var out = [];
+    for (var i = 0; i < raw.length; i++) {
+      var t = raw[i];
+      if (t && typeof t === 'object' && typeof t.surplusAtLeast === 'number' && typeof t.rate === 'number') {
+        out.push({
+          surplusAtLeast: Number(t.surplusAtLeast),
+          rate:           Math.max(0, Math.min(0.5, Number(t.rate))),
+          label:          String(t.label || '')
+        });
+      }
+    }
+    if (!out.length) return null;
+    out.sort(function (a, b) { return a.surplusAtLeast - b.surplusAtLeast; });
+    return out;
+  }
+
+  function _pickEvacuationTaxRate(surplus) {
+    if (surplus <= 0) return 0;
+    var tiers = _getEvacuationTaxTiers();
+    if (tiers) {
+      for (var i = tiers.length - 1; i >= 0; i--) {
+        if (surplus >= tiers[i].surplusAtLeast) return tiers[i].rate;
+      }
+      return tiers[0].rate;
+    }
+    /* 缺省回退：v0.07.1 单一档 */
+    return Math.max(0, Math.min(0.5, Number(cfg('evacuationTax.surplusTaxRate', 0.08)) || 0));
+  }
+
+  /**
+   * pickFbcEdgeRate(outcome [, archive])
+   * 第二参数为可选生涯档案；若提供且 careerScale.enabled，则按 _pickFbcEdgeCareerMult 放大基础税率。
+   * 最终值钳到 [0, 0.5]。
+   */
+  function pickFbcEdgeRate(outcome, archive) {
     if (!FBC_EDGE_CFG.enabled || !outcome) return 0;
-    if (outcome.kind === 'POSITIVE' && outcome.goldenFloor) return FBC_EDGE_CFG.rates.GOLDEN || 0;
-    var r = FBC_EDGE_CFG.rates[outcome.kind];
-    return (typeof r === 'number' && r > 0) ? Math.min(r, 0.5) : 0;
+    var base;
+    if (outcome.kind === 'POSITIVE' && outcome.goldenFloor) base = FBC_EDGE_CFG.rates.GOLDEN || 0;
+    else                                                    base = FBC_EDGE_CFG.rates[outcome.kind];
+    if (typeof base !== 'number' || base <= 0) return 0;
+
+    var mult = 1;
+    if (FBC_EDGE_CFG.careerScale.enabled && archive) {
+      mult = _pickFbcEdgeCareerMult(careerNetPnl(archive));
+    }
+    return Math.min(0.5, base * mult);
   }
 
   /* v0.07.1 浮盈折现（House Edge 升级 ⑤）：仅 delta > 0 时生效，按 stake / quota 分档查表。
@@ -1267,6 +1356,11 @@
       surplusDiscountTiers: SURPLUS_DISCOUNT_CFG.tiers,
       evacuationTaxEnabled: !!cfg('evacuationTax.enabled', true),
       evacuationTaxRate: Number(cfg('evacuationTax.surplusTaxRate', 0.08)) || 0,
+      /* v0.08.0 累进撤离税（Layer 4） */
+      evacuationTaxTiers: _getEvacuationTaxTiers() || [],
+      /* v0.08.0 累进抽佣（Layer 2） */
+      fbcEdgeCareerScaleEnabled: !!FBC_EDGE_CFG.careerScale.enabled,
+      fbcEdgeCareerScaleTiers:   FBC_EDGE_CFG.careerScale.tiers,
       /* v0.07.5 破产追责开关 */
       liquidationClawbackEnabled: !!cfg('liquidationClawback.enabled', false),
       liquidationClawbackRate:    Number(cfg('liquidationClawback.rate', 0.08)) || 0,
@@ -1285,6 +1379,11 @@
   /* v0.07.5：暴露 P&L 计算器与 clawback 预演接口（UI/烟雾测试可调） */
   GameController.careerNetPnl               = careerNetPnl;
   GameController.calcLiquidationClawback    = _calcLiquidationClawback;
+  /* v0.08.0：暴露累进抽佣 / 累进撤离税预演接口（UI/烟雾测试可调） */
+  GameController.pickFbcEdgeRate            = pickFbcEdgeRate;
+  GameController.pickFbcEdgeCareerMult      = _pickFbcEdgeCareerMult;
+  GameController.pickEvacuationTaxRate      = _pickEvacuationTaxRate;
+  GameController.getEvacuationTaxTiers      = _getEvacuationTaxTiers;
   GameController.pickQuotaForBuyIn          = pickQuotaForBuyIn;
 
   /* ---- 重置 ---- */
@@ -1836,8 +1935,15 @@
 
     /* FBC 流通损耗：仅对正向 delta 抽水。
        税基为已叠加 speculator/blindConfidence/surplusDiscount 的最终增益，
-       语义为"FBC 对所有渠道的正面收益统一切片"。 */
-    var edgeRate   = (delta > 0) ? pickFbcEdgeRate(outcome) : 0;
+       语义为"FBC 对所有渠道的正面收益统一切片"。
+       v0.08.0：传入生涯档案，让 careerScale 累进倍率参与计算。 */
+    var careerArchiveSnapshot = (delta > 0) ? careerLoad() : null;
+    var edgeRate   = (delta > 0) ? pickFbcEdgeRate(outcome, careerArchiveSnapshot) : 0;
+    /* v0.08.0 careerScale 元数据回写：方便 UI 判断"是否被累进抽水加倍"，可显示注脚 */
+    if (edgeRate > 0 && careerArchiveSnapshot && FBC_EDGE_CFG.careerScale.enabled) {
+      outcome._fbcEdgeCareerMult = _pickFbcEdgeCareerMult(careerNetPnl(careerArchiveSnapshot));
+      outcome._fbcEdgeCareerPnl  = careerNetPnl(careerArchiveSnapshot);
+    }
     /* v0.07.2 探测协议加码：连胜达标后激活 N 局，期间 fbcEdge +edgeRateBoost。
        仅 enabled && active 时生效；与 baselineRate 直接相加，最终钳到 [0, 0.5]。 */
     if (edgeRate > 0 && this._creditRatingTier && this._creditRatingTier.pressureProtocol &&
@@ -2387,12 +2493,21 @@
 
     /* v0.07.1 撤离税（House Edge 升级 ⑥）：仅对超额部分（surplus = max(0, credits − quota)）征税，
        配额内的收益不征税——玩家感受是"赚得多交得多"而非"赚了还扣"。
+       v0.08.0：surplus 按 evacuationTax.tiers 阶梯查表，缺省回退到 surplusTaxRate（向后兼容）。
        enabled=false 或 surplus=0 时整段 no-op，payout = grossCredits。 */
     var taxEnabled = !!cfg('evacuationTax.enabled', true);
     var surplus    = Math.max(0, grossCredits - this.quota);
-    var taxRate    = (taxEnabled && surplus > 0)
-      ? Math.max(0, Math.min(0.5, Number(cfg('evacuationTax.surplusTaxRate', 0.08)) || 0))
-      : 0;
+    var taxRate    = (taxEnabled && surplus > 0) ? _pickEvacuationTaxRate(surplus) : 0;
+    var taxTierLabel = '';
+    if (taxRate > 0) {
+      var _evTiers = _getEvacuationTaxTiers();
+      for (var _ti = _evTiers.length - 1; _ti >= 0; _ti--) {
+        if (surplus >= _evTiers[_ti].surplusAtLeast) {
+          taxTierLabel = _evTiers[_ti].label || '';
+          break;
+        }
+      }
+    }
     var taxAmount  = Math.floor(surplus * taxRate);
     var payout     = Math.max(0, grossCredits - taxAmount);
 
@@ -2402,6 +2517,7 @@
       quota:        this.quota,
       surplus:      surplus,
       rate:         taxRate,
+      tierLabel:    taxTierLabel,
       amount:       taxAmount,
       payout:       payout
     };

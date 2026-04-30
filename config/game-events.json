@@ -1,23 +1,23 @@
 {
   "_meta": {
-    "version": "0.07.3",
-    "description": "《暴富电梯》事件概率与数值配置表（局内计价规程）。修改此文件即可调整游戏平衡，无需改动代码。v0.07：信用评级（creditRating）+ 浮盈折现（surplusDiscount）+ 撤离税（evacuationTax）+ 委员会三触发（pressureProtocol）+ uiPacing 心流优化（货舱清点等待压缩 ~61%）。v0.06 基础：动态配额 + FBC 边际抽佣 + 配额过线庆贺 + 局长生涯档案 + 货舱清点中文本土化。",
+    "version": "0.07.5",
+    "description": "《暴富电梯》事件概率与数值配置表（局内计价规程）。修改此文件即可调整游戏平衡，无需改动代码。v0.07.5：庄家经济重平衡（Layer 1 + Layer 3）——outcomeBands 全面下调（DOUBLE 倍率 2.0→1.55、概率 15%→12%；POSITIVE 1.10-1.20→1.06-1.12）+ liquidationClawback 跨局追溯（清算时从生涯净利润追扣 8%，封顶 20%）。v0.07.4：货舱清点稀缺感（6 档梯度 + 钓鱼噪声 40%）。v0.07：信用评级 + 浮盈折现 + 撤离税 + 委员会三触发。v0.06：动态配额 + FBC 边际抽佣。",
     "lastUpdated": "2026-04-30"
   },
 
   "thresholds": {
-    "_comment": "基础事件带阈值（未受偏移/乘客/环境影响时）。单随机数 r∈[0,1) 按区间映射到四种结果。",
-    "liquidationMax": 0.12,
+    "_comment": "v0.07.5 重平衡：清算概率从 12% 升到 13%（+1pp），DOUBLE 概率从 15% 降到 12%（positiveMax 0.85→0.88）。",
+    "liquidationMax": 0.13,
     "negativeMax": 0.25,
-    "positiveMax": 0.85
+    "positiveMax": 0.88
   },
 
   "outcomeBands": {
-    "_comment": "各结果带的资产倍率参数",
+    "_comment": "v0.07.5 重平衡：positive 1.10-1.20→1.06-1.12（砍 6pp 上限/4pp 下限），double 2.0→1.55（砍 22%）。配合 thresholds 收紧把单层 EV 从 +52% 压到 ~+18%（lev=3）。",
     "liquidation": { "creditsMultiplier": 0 },
-    "negative":    { "creditsMultiplierMin": 0.7, "creditsMultiplierMax": 0.9 },
-    "positive":    { "creditsMultiplierMin": 1.1, "creditsMultiplierMax": 1.2 },
-    "double":      { "creditsMultiplier": 2 }
+    "negative":    { "creditsMultiplierMin": 0.7,  "creditsMultiplierMax": 0.9  },
+    "positive":    { "creditsMultiplierMin": 1.06, "creditsMultiplierMax": 1.12 },
+    "double":      { "creditsMultiplier": 1.55 }
   },
 
   "corruption": {
@@ -264,8 +264,8 @@
   "uiPacing": {
     "_comment": "开门后主流程节拍：避免叙事/金额/惊喜/弹窗在同一帧抢拍。单位 ms。",
     "narrativeFlashMs": 680,
-    "deltaFlashMs": 1200,
-    "afterDeltaHoldMs": 420,
+    "deltaFlashMs": 2400,
+    "afterDeltaHoldMs": 320,
     "safeNodeOverlayDelayMs": 960,
     "surpriseAfterDeltaMs": 320,
     "odometerDelayAfterOpenMs": 160,
@@ -330,7 +330,17 @@
       "NEGATIVE": [0.30, 0.30, 0.40],
       "LIQUIDATION": [0.0, 0.0, 1.0]
     },
-    "fallbackSplit": [0.33, 0.33, 0.34]
+    "fallbackSplit": [0.33, 0.33, 0.34],
+    "fakeout": {
+      "_comment": "v0.07.4 钓鱼噪声：按概率把'三连红'分布覆写为'前两件假摔/中性、第三件吃掉全部 delta'，制造竞拍式情绪曲线。仅对 POSITIVE/DOUBLE 且 deltaMoney > 0 生效，NEGATIVE/LIQUIDATION 不动（亏损保持冷酷）。覆写后 deltaMoney 总额不变，只是分布被重排。",
+      "enabled": true,
+      "appliesTo": ["POSITIVE", "DOUBLE"],
+      "triggerProbability": 0.40,
+      "firstItemMin":  -0.10,
+      "firstItemMax":   0.00,
+      "secondItemMin": -0.02,
+      "secondItemMax":  0.02
+    }
   },
 
   "manifestPool": {
@@ -338,13 +348,14 @@
 
     "admin": {
       "_localComment": "行政区 (F1–10): 体制内文档/凭证/证件/票据 — 中国硬通货",
+      "_rarityNote": "v0.07.4 6 档稀有度梯度（按真实硬通货价值排序，sum=100）：T1普通35 / T2常见26 / T3中级20 / T4稀有12 / T5史诗6 / T6神话1。神话级（上海老洋房房契）平均每 ~50 次清点 1 次。",
       "positive": [
-        { "id": "beijing_hukou",        "name": "北京户口指标",     "tag": "FBC-A02", "weight": 18 },
-        { "id": "school_district_deed", "name": "学区房房本",       "tag": "FBC-A07", "weight": 18 },
-        { "id": "monkey_stamp_1980",    "name": "1980 猴票全张",    "tag": "FBC-A11", "weight": 14 },
-        { "id": "moutai_vintage",       "name": "飞天茅台陈酿",     "tag": "FBC-A18", "weight": 16 },
-        { "id": "gold_bar_999",         "name": "千足金金条",       "tag": "FBC-A23", "weight": 18 },
-        { "id": "shanghai_lao_yangfang","name": "上海老洋房房契",   "tag": "FBC-A29", "weight": 16 }
+        { "id": "moutai_vintage",       "name": "飞天茅台陈酿",     "tag": "FBC-A18", "weight": 35, "tier": "T1-common" },
+        { "id": "monkey_stamp_1980",    "name": "1980 猴票全张",    "tag": "FBC-A11", "weight": 26, "tier": "T2-uncommon" },
+        { "id": "gold_bar_999",         "name": "千足金金条",       "tag": "FBC-A23", "weight": 20, "tier": "T3-mid" },
+        { "id": "beijing_hukou",        "name": "北京户口指标",     "tag": "FBC-A02", "weight": 12, "tier": "T4-rare" },
+        { "id": "school_district_deed", "name": "学区房房本",       "tag": "FBC-A07", "weight":  6, "tier": "T5-epic" },
+        { "id": "shanghai_lao_yangfang","name": "上海老洋房房契",   "tag": "FBC-A29", "weight":  1, "tier": "T6-mythic" }
       ],
       "negative": [
         { "id": "p2p_blowup",        "name": "暴雷 P2P 合同",     "tag": "FBC-D03", "weight": 18 },
@@ -363,13 +374,14 @@
 
     "maintenance": {
       "_localComment": "维护区 (F11–25): 工业老物件 / 中国制造 / 老三件 / 八九十年代家庭硬件",
+      "_rarityNote": "v0.07.4 6 档稀有度梯度（按真实价值排序，sum=100）：T1普通35 / T2常见26 / T3中级20 / T4稀有12 / T5史诗6 / T6神话1。神话级（千足金小金鱼）平均每 ~50 次清点 1 次。",
       "positive": [
-        { "id": "yongjiu_bike",      "name": "永久二八大杠",      "tag": "MNT-A04", "weight": 18 },
-        { "id": "butterfly_machine", "name": "蝴蝶牌缝纫机头",    "tag": "MNT-A09", "weight": 16 },
-        { "id": "shanghai_watch",    "name": "上海牌手表机芯",    "tag": "MNT-A12", "weight": 18 },
-        { "id": "redwood_stool",     "name": "老山红木条凳",      "tag": "MNT-A19", "weight": 16 },
-        { "id": "peony_camera",      "name": "牡丹牌胶卷相机",    "tag": "MNT-A23", "weight": 16 },
-        { "id": "mini_gold_fish",    "name": "千足金小金鱼",      "tag": "MNT-A29", "weight": 16 }
+        { "id": "peony_camera",      "name": "牡丹牌胶卷相机",    "tag": "MNT-A23", "weight": 35, "tier": "T1-common" },
+        { "id": "butterfly_machine", "name": "蝴蝶牌缝纫机头",    "tag": "MNT-A09", "weight": 26, "tier": "T2-uncommon" },
+        { "id": "yongjiu_bike",      "name": "永久二八大杠",      "tag": "MNT-A04", "weight": 20, "tier": "T3-mid" },
+        { "id": "shanghai_watch",    "name": "上海牌手表机芯",    "tag": "MNT-A12", "weight": 12, "tier": "T4-rare" },
+        { "id": "redwood_stool",     "name": "老山红木条凳",      "tag": "MNT-A19", "weight":  6, "tier": "T5-epic" },
+        { "id": "mini_gold_fish",    "name": "千足金小金鱼",      "tag": "MNT-A29", "weight":  1, "tier": "T6-mythic" }
       ],
       "negative": [
         { "id": "scrap_ebike",       "name": "报废电动车",        "tag": "MNT-D01", "weight": 18 },
@@ -388,13 +400,14 @@
 
     "supernatural": {
       "_localComment": "超自然区 (F26+): 神药 / 古董 / 风水 — 中国式天价 + 玄学",
+      "_rarityNote": "v0.07.4 6 档稀有度梯度（按真实拍卖价值排序，sum=100）：T1普通35 / T2常见26 / T3中级20 / T4稀有12 / T5史诗6 / T6神话1。神话级（成化斗彩鸡缸杯片，2.8 亿拍卖纪录）平均每 ~50 次清点 1 次。",
       "positive": [
-        { "id": "angong_niuhuang",   "name": "安宫牛黄丸（94 配方）", "tag": "SUP-A03", "weight": 18 },
-        { "id": "imperial_jade",     "name": "帝王绿翡翠手镯",       "tag": "SUP-A07", "weight": 16 },
-        { "id": "tianhuang_seal",    "name": "清代田黄石印",         "tag": "SUP-A11", "weight": 14 },
-        { "id": "chenghua_cup",      "name": "成化斗彩鸡缸杯片",     "tag": "SUP-A15", "weight": 14 },
-        { "id": "agarwood_carving",  "name": "千年沉香雕件",         "tag": "SUP-A19", "weight": 16 },
-        { "id": "dahongpao_cake",    "name": "大红袍母树茶饼",       "tag": "SUP-A23", "weight": 22 }
+        { "id": "dahongpao_cake",    "name": "大红袍母树茶饼",       "tag": "SUP-A23", "weight": 35, "tier": "T1-common" },
+        { "id": "angong_niuhuang",   "name": "安宫牛黄丸（94 配方）", "tag": "SUP-A03", "weight": 26, "tier": "T2-uncommon" },
+        { "id": "agarwood_carving",  "name": "千年沉香雕件",         "tag": "SUP-A19", "weight": 20, "tier": "T3-mid" },
+        { "id": "imperial_jade",     "name": "帝王绿翡翠手镯",       "tag": "SUP-A07", "weight": 12, "tier": "T4-rare" },
+        { "id": "tianhuang_seal",    "name": "清代田黄石印",         "tag": "SUP-A11", "weight":  6, "tier": "T5-epic" },
+        { "id": "chenghua_cup",      "name": "成化斗彩鸡缸杯片",     "tag": "SUP-A15", "weight":  1, "tier": "T6-mythic" }
       ],
       "negative": [
         { "id": "fake_hetian",       "name": "伪和田玉手镯",         "tag": "SUP-D02", "weight": 18 },
@@ -491,6 +504,21 @@
     "_comment": "v0.07.1 撤离税（House Edge 升级 ⑥）：cashOut 路径（已校验 credits ≥ quota）对超出配额部分征收 surplusTaxRate 的'联邦资产核销手续费'；配额内的收益不征税，玩家感受是'赚得多交得多'而非'赚了还扣'。debtCashout 不在此机制内（未达配额已自然失血）。enabled=false 整段 no-op。",
     "enabled": true,
     "surplusTaxRate": 0.08
+  },
+
+  "liquidationClawback": {
+    "_comment": "v0.07.5 破产追责（House Edge 升级 ⑥·跨局追溯）：清算时若生涯净利润 > 0，按 rate 从已撤离封存的财富中追扣，作为'联邦委员会调查滞纳金'。仅在生涯 P&L > onlyIfPnlAbove 时触发，扣额受 floorMin / ceilingRatio 双向钳制；P&L 为负时完全 no-op（保留新手挽留）。生涯 P&L 计算：total_credits_collected − total_buy_in − total_clawback_paid。所有扣额累计到 careerArchive.total_clawback_paid，便于审计与生涯页 UI 透明展示。enabled=false 整段 no-op，回退到 v0.07.4 行为。",
+    "enabled": true,
+    "rate": 0.08,
+    "floorMin": 200,
+    "ceilingRatio": 0.20,
+    "onlyIfPnlAbove": 0,
+    "auditEvent": true,
+    "narrative": {
+      "title": "委员会调查档案",
+      "body": "本局清算后，FBC 委员会对您的生涯账户启动追溯审查。\n依据《资产流通损耗条例》第 7.5 条，追扣调查滞纳金 ¥{{amount}}（约生涯净利润的 {{pct}}%）。\n本次扣款已完成，生涯档案已更新。",
+      "tag": "FBC-INVESTIGATION"
+    }
   },
 
   "pressureProtocol": {

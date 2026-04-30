@@ -91,7 +91,12 @@
          触发：consecutive_evacuations 达到 pressureProtocol.triggerEvacuations 时设为 durationRuns。
          消耗：每次 buyIn（开新局）-1，最低 0。
          提前清空：liquidation 归 0；debtCashout 不归 0（与连胜计数同套规则，不允许投机规避）。 */
-      pressure_protocol_remaining_runs: 0
+      pressure_protocol_remaining_runs: 0,
+
+      /* v0.07.5 破产追责 ▼ —— 累计被 liquidationClawback 扣除的"联邦委员会调查滞纳金"。
+         每次清算时若生涯 P&L > 0 则按 rate 追扣，金额累加到此字段。
+         生涯净 P&L 计算：total_credits_collected − total_buy_in − total_clawback_paid。 */
+      total_clawback_paid:        0
     };
   }
 
@@ -120,7 +125,10 @@
           credit_rating_history:      Array.isArray(d.credit_rating_history) ? d.credit_rating_history.slice(-_CREDIT_RATING_HISTORY_MAX) : [],
 
           /* v0.07.2：旧档案缺失时回落 0（无 protocol 生效，等价无效化） */
-          pressure_protocol_remaining_runs: Math.max(0, Math.floor(d.pressure_protocol_remaining_runs || 0))
+          pressure_protocol_remaining_runs: Math.max(0, Math.floor(d.pressure_protocol_remaining_runs || 0)),
+
+          /* v0.07.5：破产追责累计金额；旧档案缺失时回落 0（不影响 P&L 公式） */
+          total_clawback_paid:        Math.max(0, Math.floor(d.total_clawback_paid || 0))
         };
       }
     } catch (e) {}
@@ -202,6 +210,56 @@
    *   - debtCashout:           中性事件，**不重置任何连续计数**（防止用债务撤离规避降档）
    *   - 其它事件:               不动评级
    */
+  /**
+   * v0.07.5：返回生涯净 P&L（净盈亏）。
+   *   P&L = total_credits_collected − total_buy_in − total_clawback_paid
+   * 已封存到账的财富 - 累计建仓投入 - 已被庄家追扣的滞纳金。
+   * 此值 > 0 即玩家"在庄家眼里有威胁"，liquidationClawback 即基于此扣款。
+   */
+  function careerNetPnl(archive) {
+    var a = archive || careerLoad();
+    return Math.floor(
+      (a.total_credits_collected || 0) -
+      (a.total_buy_in || 0) -
+      (a.total_clawback_paid || 0)
+    );
+  }
+
+  /**
+   * v0.07.5 破产追责计算：根据当前生涯 P&L 计算本次清算应追扣的"调查滞纳金"。
+   *   - P&L ≤ onlyIfPnlAbove → 0（保留新手挽留）
+   *   - P&L > 0 → max(rate * pnl, floorMin)，但被 ceilingRatio * pnl 钳上限，且不超过 pnl 本身
+   * 不直接修改 archive；返回结果由 caller 决定是否落账（careerMerge）。
+   *
+   * @param {object} archive  当前生涯档案（careerLoad() 结果）
+   * @returns {object} { amount, pnlBefore, pnlAfter, rate, capped }
+   */
+  function _calcLiquidationClawback(archive) {
+    var enabled = cfg('liquidationClawback.enabled', false);
+    if (!enabled) return { amount: 0, pnlBefore: 0, pnlAfter: 0, rate: 0, capped: false };
+
+    var pnl = careerNetPnl(archive);
+    var threshold = Number(cfg('liquidationClawback.onlyIfPnlAbove', 0)) || 0;
+    if (pnl <= threshold) return { amount: 0, pnlBefore: pnl, pnlAfter: pnl, rate: 0, capped: false };
+
+    var rate         = Number(cfg('liquidationClawback.rate', 0.08)) || 0;
+    var floorMin     = Math.max(0, Math.floor(Number(cfg('liquidationClawback.floorMin', 200)) || 0));
+    var ceilingRatio = Math.max(0, Math.min(1, Number(cfg('liquidationClawback.ceilingRatio', 0.20)) || 0));
+
+    var base    = Math.max(Math.floor(pnl * rate), floorMin);
+    var ceiling = Math.floor(pnl * ceilingRatio);
+    var amount  = Math.min(base, ceiling, pnl);
+    if (amount < 0) amount = 0;
+
+    return {
+      amount:    amount,
+      pnlBefore: pnl,
+      pnlAfter:  pnl - amount,
+      rate:      pnl > 0 ? amount / pnl : 0,
+      capped:    base > ceiling
+    };
+  }
+
   function careerMerge(delta) {
     var a = careerLoad();
     if (delta.buyIn) {
@@ -218,6 +276,12 @@
     if (delta.committeeOverride)   a.total_committee_overrides += 1;
     if (delta.quotaCrossing)       a.total_quota_crossings     += 1;
     if (delta.debtCashout)         a.total_debt_cashouts       += 1;
+
+    /* v0.07.5 破产追责落账：caller 在调用 careerMerge({ liquidation: true, ... }) 前
+       由引擎层调用 _calcLiquidationClawback() 计算并塞 delta.clawbackAmount。 */
+    if (delta.clawbackAmount && delta.clawbackAmount > 0) {
+      a.total_clawback_paid += Math.max(0, Math.floor(delta.clawbackAmount));
+    }
 
     if (delta.liquidation) {
       a.total_liquidations          += 1;
@@ -1202,12 +1266,25 @@
       surplusDiscountEnabled: SURPLUS_DISCOUNT_CFG.enabled,
       surplusDiscountTiers: SURPLUS_DISCOUNT_CFG.tiers,
       evacuationTaxEnabled: !!cfg('evacuationTax.enabled', true),
-      evacuationTaxRate: Number(cfg('evacuationTax.surplusTaxRate', 0.08)) || 0
+      evacuationTaxRate: Number(cfg('evacuationTax.surplusTaxRate', 0.08)) || 0,
+      /* v0.07.5 破产追责开关 */
+      liquidationClawbackEnabled: !!cfg('liquidationClawback.enabled', false),
+      liquidationClawbackRate:    Number(cfg('liquidationClawback.rate', 0.08)) || 0,
+      liquidationClawbackCeiling: Number(cfg('liquidationClawback.ceilingRatio', 0.20)) || 0,
+      /* v0.07.5 outcomeBands & thresholds 关键参数（便于一眼看到是否生效） */
+      outcomePositiveMin:  Number(cfg('outcomeBands.positive.creditsMultiplierMin', 1.10)) || 0,
+      outcomePositiveMax:  Number(cfg('outcomeBands.positive.creditsMultiplierMax', 1.20)) || 0,
+      outcomeDoubleMult:   Number(cfg('outcomeBands.double.creditsMultiplier', 2.0)) || 0,
+      thresholdLiqMax:     Number(cfg('thresholds.liquidationMax', 0.12)) || 0,
+      thresholdPositiveMax: Number(cfg('thresholds.positiveMax', 0.85)) || 0
     };
   };
   GameController.careerLoad                 = careerLoad;
   GameController.careerMerge                = careerMerge;
   GameController.careerGetRating            = careerGetRating;
+  /* v0.07.5：暴露 P&L 计算器与 clawback 预演接口（UI/烟雾测试可调） */
+  GameController.careerNetPnl               = careerNetPnl;
+  GameController.calcLiquidationClawback    = _calcLiquidationClawback;
   GameController.pickQuotaForBuyIn          = pickQuotaForBuyIn;
 
   /* ---- 重置 ---- */
@@ -1650,13 +1727,22 @@
       ? Math.max(0, Math.floor(this.quota - this.credits))
       : 0;
     this.credits     = 0;
+    /* v0.07.5 破产追责：先读取生涯档案 → 计算 clawback → 挂到 outcome → 落账。
+       逻辑与 finishReveal 中清算路径完全一致，确保 Hiss 自动清算路径同样收税。 */
+    var preLiqArchive = careerLoad();
+    var clawback      = _calcLiquidationClawback(preLiqArchive);
     this.lastOutcome = {
       kind: 'LIQUIDATION', raw: -1, band: 'HISS_AUTO_LIQUIDATION',
-      creditsMultiplier: 0, autoLiquidate: true
+      creditsMultiplier: 0, autoLiquidate: true,
+      _clawback: clawback
     };
     this._emitOutcome(this.lastOutcome);
-    /* v0.06：清算同时把该局建仓投入计入累计损失，用于赢/亏对账 */
-    careerMerge({ liquidation: true, creditsLost: this.initialBet });
+    /* v0.06：清算同时把该局建仓投入计入累计损失；v0.07.5：附带 clawback 落账 */
+    careerMerge({
+      liquidation:    true,
+      creditsLost:    this.initialBet,
+      clawbackAmount: clawback.amount
+    });
     this._setState(STATES.GAME_OVER);
   };
 
@@ -2199,10 +2285,21 @@
     if (this.state !== STATES.REVEALING) return { ok: false, reason: 'not_revealing' };
 
     if (this.lastOutcome && this.lastOutcome.kind === 'LIQUIDATION' && !this.lastOutcome.mitigated) {
-      /* v0.06：清算同时把该局建仓投入计入累计损失，用于赢/亏对账 */
-      careerMerge({ liquidation: true, creditsLost: this.initialBet });
+      /* v0.07.5 破产追责：在落账 liquidation 之前先计算 clawback，
+         保证 _calcLiquidationClawback 读到的是"被本局清算之前"的生涯 P&L。
+         careerLoad() 读当前档案 → _calcLiquidationClawback 输出金额 → careerMerge 合并 liquidation+clawback。
+         结果挂到 lastOutcome 供 UI 读取（叙事框 / 清算面板） */
+      var preLiqArchive = careerLoad();
+      var clawback      = _calcLiquidationClawback(preLiqArchive);
+      this.lastOutcome._clawback = clawback;
+
+      careerMerge({
+        liquidation:     true,
+        creditsLost:     this.initialBet,
+        clawbackAmount:  clawback.amount
+      });
       this._setState(STATES.GAME_OVER);
-      return { ok: true, gameOver: true, breach: false };
+      return { ok: true, gameOver: true, breach: false, clawback: clawback };
     }
 
     if (this.lastOutcome && this.lastOutcome.kind === 'SAFE_NODE') {

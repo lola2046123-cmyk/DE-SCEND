@@ -18,14 +18,21 @@
    * ===================================================================== */
 
   var _externalConfig = null;
+  var _configSource   = 'fallback';
 
   function loadConfigSync() {
-    if (global.__GAME_CONFIG__) return global.__GAME_CONFIG__;
+    if (global.__GAME_CONFIG__) {
+      _configSource = 'inline';
+      return global.__GAME_CONFIG__;
+    }
     try {
       var xhr = new XMLHttpRequest();
       xhr.open('GET', 'config/game-events.json', false);
       xhr.send(null);
-      if (xhr.status === 200) return JSON.parse(xhr.responseText);
+      if (xhr.status === 200) {
+        _configSource = 'xhr';
+        return JSON.parse(xhr.responseText);
+      }
     } catch (e) {
       console.warn('[GameController] config/game-events.json 加载失败，使用内置默认值。', e);
     }
@@ -1180,6 +1187,24 @@
   GameController.generateLockerHand         = generateLockerHand;
   GameController.biomeForFloor              = biomeForFloor;
   GameController.cfg                        = cfg;
+  GameController.getRuntimeConfigStatus     = function () {
+    return {
+      buildId: (typeof global.__FBC_BUILD_ID__ === 'string') ? global.__FBC_BUILD_ID__ : 'unknown',
+      configSource: _configSource,
+      configVersion: cfg('_meta.version', 'fallback'),
+      fbcEdgeEnabled: FBC_EDGE_CFG.enabled,
+      fbcEdgeRates: {
+        POSITIVE: FBC_EDGE_CFG.rates.POSITIVE,
+        DOUBLE: FBC_EDGE_CFG.rates.DOUBLE,
+        GOLDEN: FBC_EDGE_CFG.rates.GOLDEN
+      },
+      baselineGrowthTiers: BASELINE_GROWTH_TIERS,
+      surplusDiscountEnabled: SURPLUS_DISCOUNT_CFG.enabled,
+      surplusDiscountTiers: SURPLUS_DISCOUNT_CFG.tiers,
+      evacuationTaxEnabled: !!cfg('evacuationTax.enabled', true),
+      evacuationTaxRate: Number(cfg('evacuationTax.surplusTaxRate', 0.08)) || 0
+    };
+  };
   GameController.careerLoad                 = careerLoad;
   GameController.careerMerge                = careerMerge;
   GameController.careerGetRating            = careerGetRating;
